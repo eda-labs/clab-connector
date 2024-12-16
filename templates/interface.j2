@@ -1,0 +1,23 @@
+apiVersion: interfaces.eda.nokia.com/v1alpha1
+kind: Interface
+metadata:
+  name: {{ interface_name }}
+  namespace: default
+{%- if label_value %}
+  labels: 
+    {{ label_key }}: {{ label_value }}
+{%- endif %}
+spec:
+  enabled: true
+  encapType: {{ encap_type}}
+  ethernet:
+    stormControl:
+      enabled: false
+  lldp: true
+  members:
+    - enabled: true
+      interface: {{ interface }}
+      lacpPortPriority: 32768
+      node: {{ node_name }}
+  type: interface
+  description: '{{ description }}'
