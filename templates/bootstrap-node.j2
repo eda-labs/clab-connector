@@ -1,0 +1,24 @@
+apiVersion: core.eda.nokia.com/v1
+kind: TopoNode
+metadata:
+  name: {{ node_name }}
+  labels:
+    eda.nokia.com/role: {{ role_value }}
+    eda-connector.nokia.com/topology: {{ topology_name }}
+    eda-connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
+  namespace: default
+spec:
+  macAddress: ''
+  serialNumber: ''
+  nodeProfile: {{ node_profile }}
+  onBoarded: false
+  operatingSystem: {{ kind }}
+  platform: {{ platform }}
+  version: {{ sw_version }}
+  productionAddress: {{ mgmt_ip }}
+  systemInterface: {{ system_interface }}
+  license: ''
+  component: []
+  npp:
+    deviationsOnConnect: false
+    mode: normal
