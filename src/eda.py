@@ -222,6 +222,7 @@ class EDA:
                     "kind": kind,
                 },
                 "name": name,
+                "namespace": "eda"
             },
         )
 

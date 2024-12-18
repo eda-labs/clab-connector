@@ -3,9 +3,10 @@ apiVersion: core.eda.nokia.com/v1
 kind: NodeProfile
 metadata:
   name: {{ profile_name }}
+  namespace: eda
 spec:
   port: {{ gnmi_port }}
-  transport: GNMI
+  annotate: false
   operatingSystem: {{ operating_system }}
   version: {{ sw_version }}
   versionPath: {{ version_path }}
@@ -14,10 +15,6 @@ spec:
   nodeUser: {{ node_user }}
   dhcp:
     managementPoolv4: '{{ pool_name }}'
-  gnmiOptions:
-    annotate: false
-    commitConfirmed: true
-    configSubscription: true
   images:
   - image: {{ sw_image }}
-    imageMd5: {{ sw_image_md5 }}
+    imageMd5: {{ sw_image_md5 }}  

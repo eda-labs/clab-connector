@@ -6,7 +6,8 @@ metadata:
     eda.nokia.com/role: {{ role_value }}
     eda-connector.nokia.com/topology: {{ topology_name }}
     eda-connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
-  namespace: default
+    eda.nokia.com/security-profile: managed
+  namespace: eda
 spec:
   macAddress: ''
   serialNumber: ''
@@ -15,10 +16,11 @@ spec:
   operatingSystem: {{ kind }}
   platform: {{ platform }}
   version: {{ sw_version }}
-  productionAddress: {{ mgmt_ip }}
+  productionAddress: 
+    ipv4: {{ mgmt_ip }}
+    ipv6: ''
   systemInterface: {{ system_interface }}
   license: ''
   component: []
   npp:
-    deviationsOnConnect: false
     mode: normal
