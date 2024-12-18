@@ -3,6 +3,7 @@ apiVersion: core.eda.nokia.com/v1
 kind: IPInSubnetAllocationPool
 metadata:
   name: {{ pool_name }}
+  namespace: eda
 spec:
   segments:
   - subnet: {{ subnet }}

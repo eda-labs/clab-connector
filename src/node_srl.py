@@ -27,10 +27,10 @@ class SRLNode(Node):
     GNMI_PORT = "57400"
     VERSION_PATH = ".system.information.version"
     YANG_PATH = (
-        "https://eda-asvr/schemaprofiles/srlinux-ghcr-{version}/srlinux-{version}.zip"
+        "https://eda-asvr/eda-system/schemaprofiles/srlinux-ghcr-{version}/srlinux-{version}.zip"
     )
-    SRL_IMAGE = "srlimages/srlinux-{version}-bin/srlinux.bin"
-    SRL_IMAGE_MD5 = "srlimages/srlinux-{version}-bin/srlinux.bin.md5"
+    SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
+    SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
     def __init__(self, name, kind, node_type, version, mgmt_ipv4):
         super().__init__(name, kind, node_type, version, mgmt_ipv4)
