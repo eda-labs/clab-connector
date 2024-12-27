@@ -1,7 +1,7 @@
 # Containerlab EDA Connector Tool
 
 
-Integrate your [Containerlab](https://containerlab.dev/) topology seamlessly with [EDA (Event-Driven Automation)](https://eda.nokia.com/) to streamline network automation and management.
+Integrate your [Containerlab](https://containerlab.dev/) topology seamlessly with [EDA (Event-Driven Automation)](https://docs.eda.dev) to streamline network automation and management.
 
 ## Overview
 
@@ -17,7 +17,7 @@ There are two primary methods to create and experiment with network functions pr
 > [!IMPORTANT]
 > **EDA Installation Mode:** This tool **requires EDA to be installed with `Simulate=False`**. Ensure that your EDA deployment is configured accordingly.
 >
-> **Hardware License:** A valid **hardware license for EDA version 24.12.0** is mandatory for using this connector tool.
+> **Hardware License:** A valid **`hardware license` for EDA version 24.12.0** is mandatory for using this connector tool.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 
 - **EDA Setup:**
   - Installed without simulation (`Simulate=False`).
-  - Contains a valid hardware license for version 24.12.0.
+  - Contains a valid `hardware license` for version 24.12.0.
 - **Network Connectivity:**
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab Configuration:**
