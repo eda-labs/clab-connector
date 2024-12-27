@@ -30,10 +30,31 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab Configuration:**
   - Deployed with the required [startup configurations](./startup-configurations/).
-- **Software Images:**
-  - Node software images are uploaded to EDA using the provided templates. ( Need to verfify this, if its really needed )
-- **Credentials:**
-  - Default passwords for remote nodes are changed for security. (I think there is now a before bootstrap pw, need to check)
+- **srlinux YANG Models:**
+  - The `srlinux-yang-models` for your specific SR Linux version must be uploaded to EDA. By default, `srlinux-yang-models` for SR Linux version `24.10.1` are installed. For other versions, you need to create and apply an Artifact.
+  
+    **Example Artifact YAML for SR Linux 24.7.1:**
+    ~~~yaml
+    apiVersion: artifacts.eda.nokia.com/v1
+    kind: Artifact
+    metadata:
+      name: srlinux-ghcr-24.7.1
+      namespace: eda-system
+    spec:
+      filePath: srlinux-24.7.1.zip
+      remoteFileUrl:
+        fileUrl: https://github.com/nokia/srlinux-yang-models/releases/download/v24.7.1/srlinux-24.7.1.zip
+      repo: schemaprofiles
+    ~~~
+    
+    Apply this configuration using:
+    ~~~
+    kubectl apply -f path/to/artifact.yaml
+    ~~~
+    
+    You can find all YANG model releases [here](https://github.com/nokia/srlinux-yang-models/releases).
+    
+
 
 > [!NOTE]
 > **Proxy Settings:** This tool does not utilize the system's proxy (`$http_proxy`) variables. Instead, it provides optional arguments to specify HTTP and HTTPS proxies for communicating with EDA.
