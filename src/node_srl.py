@@ -130,6 +130,8 @@ class SRLNode(Node):
             "version_match": "v{}.*".format(self.version.replace(".", "\.")),
             "yang_path": self.YANG_PATH.format(version=self.version),
             "node_user": "admin",
+            "onboarding_password": self.SRL_PASSWORD,
+            "onboarding_username": self.SRL_USERNAME,
             "pool_name": topology.get_mgmt_pool_name(),
             "sw_image": self.SRL_IMAGE.format(version=self.version),
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),

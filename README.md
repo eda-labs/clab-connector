@@ -54,6 +54,17 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
     
     You can find all YANG model releases [here](https://github.com/nokia/srlinux-yang-models/releases).
     
+> [!TIP]
+> **Network Connectivity between Kind and Containerlab:**
+>
+> If you're running EDA in Kind (Kubernetes in Docker) and Containerlab on the same host, and need network connectivity between the EDA nodes and the Containerlab containers, you can add the following iptables rules:
+>
+> ```bash
+> sudo iptables -I DOCKER-ISOLATION-STAGE-2 1 -i <kind_bridge> -o <clab_bridge> -j ACCEPT
+> sudo iptables -I DOCKER-ISOLATION-STAGE-2 1 -i <clab_bridge> -o <kind_bridge> -j ACCEPT
+> ```
+>
+> Replace `<kind_bridge>` and `<clab_bridge>` with the actual bridge names used by Kind and Containerlab respectively.
 
 
 > [!NOTE]
@@ -148,12 +159,7 @@ Explore the [example-topologies](./example-topologies/) directory for sample Con
 
 The video below shows off how the tool can be run:
 
-<p align="center">
-  <video width="100%" controls>
-    <source src="./assets/demo.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-</p>
+<a href="./assets/demo.mp4">View demo video</a>
 
 ## Requesting Support
 
