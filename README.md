@@ -60,8 +60,8 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 > If you're running EDA in Kind (Kubernetes in Docker) and Containerlab on the same host, and need network connectivity between the EDA nodes and the Containerlab containers, you can add the following iptables rules:
 >
 > ```bash
-> sudo iptables -I DOCKER-ISOLATION-STAGE-2 1 -i <kind_bridge> -o <clab_bridge> -j ACCEPT
-> sudo iptables -I DOCKER-ISOLATION-STAGE-2 1 -i <clab_bridge> -o <kind_bridge> -j ACCEPT
+> sudo iptables -I DOCKER-USER -i <kind_bridge> -o <clab_bridge> -j ACCEPT
+> sudo iptables -I DOCKER-USER -i <clab_bridge> -o <kind_bridge> -j ACCEPT
 > ```
 >
 > Replace `<kind_bridge>` and `<clab_bridge>` with the actual bridge names used by Kind and Containerlab respectively.
