@@ -1,6 +1,5 @@
 # Containerlab EDA Connector Tool
 
-
 Integrate your [Containerlab](https://containerlab.dev/) topology seamlessly with [EDA (Event-Driven Automation)](https://docs.eda.dev) to streamline network automation and management.
 
 ## Overview
@@ -34,6 +33,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
   - The `srlinux-yang-models` for your specific SR Linux version must be uploaded to EDA. By default, `srlinux-yang-models` for SR Linux version `24.10.1` are installed. For other versions, you need to create and apply an Artifact.
   
     **Example Artifact YAML for SR Linux 24.7.1:**
+
     ~~~yaml
     apiVersion: artifacts.eda.nokia.com/v1
     kind: Artifact
@@ -46,26 +46,25 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
         fileUrl: https://github.com/nokia/srlinux-yang-models/releases/download/v24.7.1/srlinux-24.7.1.zip
       repo: schemaprofiles
     ~~~
-    
+
     Apply this configuration using:
+
     ~~~
     kubectl apply -f path/to/artifact.yaml
     ~~~
-    
+
     You can find all YANG model releases [here](https://github.com/nokia/srlinux-yang-models/releases).
-    
+
 > [!TIP]
 > **Network Connectivity between Kind and Containerlab:**
 >
-> If you're running EDA in Kind (Kubernetes in Docker) and Containerlab on the same host, and need network connectivity between the EDA nodes and the Containerlab containers, you can add the following iptables rules:
+> If you're running EDA in KinD (Kubernetes in Docker) and Containerlab on the same host, you need to allow communication between containerlab and kind docker networks:
 >
 > ```bash
-> sudo iptables -I DOCKER-USER -i <kind_bridge> -o <clab_bridge> -j ACCEPT
-> sudo iptables -I DOCKER-USER -i <clab_bridge> -o <kind_bridge> -j ACCEPT
+> sudo iptables -I DOCKER-USER 2 \
+> -o $(sudo docker network inspect kind -f '{{.Id}}' | cut -c 1-12 | awk '{print "br-"$1}') \
+> -m comment --comment "allow communications to kind bridge" -j ACCEPT
 > ```
->
-> Replace `<kind_bridge>` and `<clab_bridge>` with the actual bridge names used by Kind and Containerlab respectively.
-
 
 > [!NOTE]
 > **Proxy Settings:** This tool does not utilize the system's proxy (`$http_proxy`) variables. Instead, it provides optional arguments to specify HTTP and HTTPS proxies for communicating with EDA.
@@ -77,21 +76,17 @@ Follow these steps to set up the Containerlab EDA Connector tool:
 > [!TIP]
 > Using a virtual environment is recommended to avoid version conflicts with global Python packages.
 
-
 1. **Create a Virtual Environment:**
 
     ```
     python3 -m venv venv/
     ```
 
-
 2. **Activate the Virtual Environment:**
 
-    
     ```
     source venv/bin/activate
     ```
-
 
 3. **Upgrade pip:**
 
@@ -166,8 +161,7 @@ The video below shows off how the tool can be run:
 If you encounter issues or have questions, please reach out through the following channels:
 
 - **GitHub Issues:** [Create an issue](https://github.com/eda-labs/clab-connector/issues) on GitHub.
-- **Discord:** Join our [Discord community](https://eda.dev/discord) 
-
+- **Discord:** Join our [Discord community](https://eda.dev/discord)
 
 > [!TIP]
 > Running the script with `-l INFO` or `-l DEBUG` flags can provide additional insights into any failures or issues.
@@ -176,9 +170,7 @@ If you encounter issues or have questions, please reach out through the followin
 
 Contributions are welcome! Please fork the repository and submit a pull request with your enhancements.
 
-
 ## Acknowledgements
 
 - [Containerlab](https://containerlab.dev/) for providing an excellent network emulation platform.
 - [EDA (Event-Driven Automation)](https://docs.eda.dev/) for the robust automation capabilities.
-
