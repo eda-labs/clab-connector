@@ -1,6 +1,9 @@
 import os.path
 import logging
 import yaml
+import requests
+import subprocess
+import tempfile
 
 import src.topology as topology
 
@@ -55,3 +58,58 @@ def render_template(template_name, data):
     """
     template = template_environment.get_template(template_name)
     return template.render(data)
+
+def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
+    """
+    Applies the given YAML string in the specified namespace via 'kubectl apply'.
+    """
+    fd, tmp_path = tempfile.mkstemp(suffix=".yaml")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(yaml_str)
+
+        cmd = ["kubectl", "apply", "-n", namespace, "-f", tmp_path]
+        logger.info(f"Applying manifest with: {cmd}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Failed to apply manifest:\nstdout={result.stdout}\nstderr={result.stderr}"
+            )
+        else:
+            logger.info(f"Successfully applied manifest:\n{result.stdout}")
+    finally:
+        os.remove(tmp_path)
+
+def get_srlinux_artifact_from_github(version: str):
+    """
+    Queries the GitHub Releases API for 'nokia/srlinux-yang-models' at tag 'v<version>'.
+    Returns a tuple (artifact_filename, artifact_url).
+    Returns (None, None) if no suitable asset is found.
+    """
+    tag = f"v{version}"  # e.g. "v24.10.1"
+    api_url = f"https://api.github.com/repos/nokia/srlinux-yang-models/releases/tags/{tag}"
+
+    resp = requests.get(api_url)
+    if resp.status_code != 200:
+        raise Exception(f"Failed to fetch release info for {tag}: HTTP {resp.status_code} - {resp.text}")
+
+    data = resp.json()
+    assets = data.get("assets", [])
+
+    for asset in assets:
+        # e.g. "srlinux-24.10.1-492.zip", "Source code (zip)", "Source code (tar.gz)"
+        name = asset.get("name", "")
+        download_url = asset.get("browser_download_url", "")
+        if "Source code" in name:
+            # skip the built-in source code assets
+            continue
+        if name.endswith(".zip") and name.startswith("srlinux-"):
+            # likely our main artifact, e.g. "srlinux-24.10.1-492.zip"
+            
+            logger.info(name)
+            logger.info(download_url)
+            return (name, download_url)
+
+    # If we didn't find a matching asset
+    return (None, None)

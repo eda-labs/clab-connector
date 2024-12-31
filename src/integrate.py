@@ -5,6 +5,9 @@ import src.helpers as helpers
 from src.subcommand import SubCommand
 from src.eda import EDA
 
+import tempfile
+import subprocess
+
 # set up logging
 logger = logging.getLogger(__name__)
 
@@ -33,8 +36,14 @@ class IntegrateCommand(SubCommand):
             args.verify,
         )
 
-        print("== Running pre-checks ==")
-        self.prechecks()
+        #print("== Running pre-checks ==")
+        #self.prechecks()
+
+        #print("== Creating SR Linux artifacts for YANG models (if needed) ==")
+        self.create_srl_artifacts()
+
+        exit()
+
 
         print("== Creating allocation pool ==")
         self.create_allocation_pool()
@@ -85,6 +94,41 @@ class IntegrateCommand(SubCommand):
             raise Exception(
                 "Could not authenticate to EDA with the provided credentials"
             )
+
+    def create_srl_artifacts(self):
+        logger.info("Creating SR Linux Artifact resources (via kubectl)")
+
+        created_versions = set()
+
+        for node in self.topology.nodes:
+            if node.kind == "srl":
+                version = node.version  # e.g. "24.10.1"
+                if version in created_versions:
+                    continue
+                created_versions.add(version)
+
+                # 1) Query GitHub
+                filename, download_url = helpers.get_srlinux_artifact_from_github(version)
+                if not filename or not download_url:
+                    logger.warning(f"No suitable YANG artifact found in GitHub for version {version}. Skipping.")
+                    continue
+
+                artifact_name = f"srlinux-ghcr-{version}"
+
+                # 3) Render template
+                data = {
+                    "artifact_name": artifact_name,
+                    "namespace": "eda-system",
+                    "artifact_filename": filename,
+                    "artifact_url": download_url
+                }
+                artifact_yaml = helpers.render_template("artifact.j2", data)
+                logger.debug("Artifact YAML:\n" + artifact_yaml)
+
+                # 4) Apply via kubectl
+                helpers.apply_manifest_via_kubectl(artifact_yaml, namespace="eda-system")
+                logger.info(f"Artifact '{artifact_name}' for version '{version}' applied.")
+
 
     def create_allocation_pool(self):
         """
