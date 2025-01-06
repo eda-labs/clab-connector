@@ -116,7 +116,7 @@ If you’d rather use pip or can’t install uv:
     python eda_containerlab_connector.py --help
     ```
 
-## Usage
+### Quick try 
 
 With either uv or pip, you can now run:
 ```
