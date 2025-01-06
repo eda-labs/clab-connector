@@ -24,7 +24,7 @@ class SRLNode(Node):
     SRL_USERNAME = "admin"
     SRL_PASSWORD = "NokiaSrl1!"
     NODE_TYPE = "srlinux"
-    GNMI_PORT = "57400"
+    GNMI_PORT = "57410"
     VERSION_PATH = ".system.information.version"
     YANG_PATH = (
         "https://eda-asvr/eda-system/schemaprofiles/srlinux-ghcr-{version}/srlinux-{version}.zip"

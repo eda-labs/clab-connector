@@ -5,9 +5,6 @@ import src.helpers as helpers
 from src.subcommand import SubCommand
 from src.eda import EDA
 
-import tempfile
-import subprocess
-
 # set up logging
 logger = logging.getLogger(__name__)
 
@@ -36,14 +33,11 @@ class IntegrateCommand(SubCommand):
             args.verify,
         )
 
-        #print("== Running pre-checks ==")
-        #self.prechecks()
+        print("== Running pre-checks ==")
+        self.prechecks()
 
-        #print("== Creating SR Linux artifacts for YANG models (if needed) ==")
+        print("== Creating SR Linux artifacts for YANG models (if needed) ==")
         self.create_srl_artifacts()
-
-        exit()
-
 
         print("== Creating allocation pool ==")
         self.create_allocation_pool()
@@ -96,26 +90,26 @@ class IntegrateCommand(SubCommand):
             )
 
     def create_srl_artifacts(self):
-        logger.info("Creating SR Linux Artifact resources (via kubectl)")
+        logger.info("Creating SR Linux Artifact resources via 'kubectl create'")
 
         created_versions = set()
 
         for node in self.topology.nodes:
             if node.kind == "srl":
-                version = node.version  # e.g. "24.10.1"
+                version = node.version
                 if version in created_versions:
                     continue
                 created_versions.add(version)
 
-                # 1) Query GitHub
+                # (1) get the actual .zip filename & URL from GitHub
                 filename, download_url = helpers.get_srlinux_artifact_from_github(version)
                 if not filename or not download_url:
-                    logger.warning(f"No suitable YANG artifact found in GitHub for version {version}. Skipping.")
+                    logger.warning(f"No suitable YANG artifact found for version {version}. Skipping.")
                     continue
 
                 artifact_name = f"srlinux-ghcr-{version}"
 
-                # 3) Render template
+                # (2) Render the Jinja2 template
                 data = {
                     "artifact_name": artifact_name,
                     "namespace": "eda-system",
@@ -125,9 +119,16 @@ class IntegrateCommand(SubCommand):
                 artifact_yaml = helpers.render_template("artifact.j2", data)
                 logger.debug("Artifact YAML:\n" + artifact_yaml)
 
-                # 4) Apply via kubectl
-                helpers.apply_manifest_via_kubectl(artifact_yaml, namespace="eda-system")
-                logger.info(f"Artifact '{artifact_name}' for version '{version}' applied.")
+                # (3) Attempt creation with kubectl
+                try:
+                    helpers.apply_manifest_via_kubectl(artifact_yaml, namespace="eda-system")
+                    logger.info(f"Artifact '{artifact_name}' for version '{version}' has been created.")
+                except RuntimeError as ex:
+                    # (4) If resource already exists, skip; otherwise raise
+                    if "AlreadyExists" in str(ex):
+                        logger.info(f"Artifact '{artifact_name}' already exists, skipping.")
+                    else:
+                        logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 
 
     def create_allocation_pool(self):

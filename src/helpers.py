@@ -61,55 +61,49 @@ def render_template(template_name, data):
 
 def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
     """
-    Applies the given YAML string in the specified namespace via 'kubectl apply'.
+    Creates the given resource via `kubectl create -f` in the specified namespace.
+    If the resource already exists, 'AlreadyExists' will appear in stderr,
+    and we raise RuntimeError so the caller can decide what to do.
     """
     fd, tmp_path = tempfile.mkstemp(suffix=".yaml")
     try:
         with os.fdopen(fd, "w") as f:
             f.write(yaml_str)
 
-        cmd = ["kubectl", "apply", "-n", namespace, "-f", tmp_path]
-        logger.info(f"Applying manifest with: {cmd}")
+        cmd = ["kubectl", "create", "-n", namespace, "-f", tmp_path, "--save-config"]
+        logger.debug(f"Running command: {cmd}")
 
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
+            # Raise an error so the caller can parse if it's "AlreadyExists" or some other error
             raise RuntimeError(
-                f"Failed to apply manifest:\nstdout={result.stdout}\nstderr={result.stderr}"
+                f"kubectl create failed:\nstdout={result.stdout}\nstderr={result.stderr}"
             )
         else:
-            logger.info(f"Successfully applied manifest:\n{result.stdout}")
+            logger.info(f"kubectl create succeeded:\n{result.stdout}")
     finally:
         os.remove(tmp_path)
 
 def get_srlinux_artifact_from_github(version: str):
     """
-    Queries the GitHub Releases API for 'nokia/srlinux-yang-models' at tag 'v<version>'.
-    Returns a tuple (artifact_filename, artifact_url).
-    Returns (None, None) if no suitable asset is found.
+    Queries GitHub for the 'nokia/srlinux-yang-models' release at tag 'v<version>'.
+    Returns (filename, download_url) for the .zip asset, or (None, None) if not found.
     """
-    tag = f"v{version}"  # e.g. "v24.10.1"
-    api_url = f"https://api.github.com/repos/nokia/srlinux-yang-models/releases/tags/{tag}"
 
-    resp = requests.get(api_url)
+    tag = f"v{version}"  # e.g. "v24.7.2"
+    url = f"https://api.github.com/repos/nokia/srlinux-yang-models/releases/tags/{tag}"
+    resp = requests.get(url)
+
     if resp.status_code != 200:
-        raise Exception(f"Failed to fetch release info for {tag}: HTTP {resp.status_code} - {resp.text}")
+        logger.warning(f"Failed to fetch release for {tag}, status={resp.status_code}")
+        return None, None
 
     data = resp.json()
     assets = data.get("assets", [])
-
     for asset in assets:
-        # e.g. "srlinux-24.10.1-492.zip", "Source code (zip)", "Source code (tar.gz)"
         name = asset.get("name", "")
-        download_url = asset.get("browser_download_url", "")
-        if "Source code" in name:
-            # skip the built-in source code assets
-            continue
-        if name.endswith(".zip") and name.startswith("srlinux-"):
-            # likely our main artifact, e.g. "srlinux-24.10.1-492.zip"
-            
-            logger.info(name)
-            logger.info(download_url)
-            return (name, download_url)
+        if name.endswith(".zip") and name.startswith("srlinux-") and "Source code" not in name:
+            return name, asset.get("browser_download_url")
 
-    # If we didn't find a matching asset
-    return (None, None)
+    # no .zip found
+    return None, None
