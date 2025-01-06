@@ -73,9 +73,9 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 
 Follow these steps to set up the Containerlab EDA Connector tool:
 
-> [!TIP] **Why uv?**  
+> [!TIP] 
+> **Why uv?**  
 > [uv](https://docs.astral.sh/uv) is a single, ultra-fast tool that can replace `pip`, `pipx`, `virtualenv`, `pip-tools`, `poetry`, and more. It automatically manages Python versions, handles ephemeral or persistent virtual environments (`uv venv`), lockfiles, and often runs **10–100× faster** than pip installs.
-
 
 1. **Install uv** (no Python or Rust needed):
     ```
