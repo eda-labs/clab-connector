@@ -1,0 +1,22 @@
+[project]
+name = "clab-connector"
+version = "0.1.0"
+description = "EDA Containerlab Connector"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "bcrypt==4.2.0",
+    "certifi==2024.8.30",
+    "cffi==1.17.1",
+    "charset-normalizer==3.3.2",
+    "cryptography==43.0.1",
+    "idna==3.10",
+    "jinja2==3.1.4",
+    "markupsafe==2.1.5",
+    "paramiko==3.5.0",
+    "pycparser==2.22",
+    "pynacl==1.5.0",
+    "pyyaml==6.0.2",
+    "requests==2.32.3",
+    "urllib3==2.2.3",
+]

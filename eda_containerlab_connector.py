@@ -1,10 +1,13 @@
 import argparse
 import logging
-import requests
 import os
+
+import urllib3
 
 from src.integrate import IntegrateCommand
 from src.remove import RemoveCommand
+
+urllib3.disable_warnings()
 
 subcommands = [IntegrateCommand(), RemoveCommand()]
 
@@ -58,7 +61,7 @@ logging.basicConfig(
     format="[%(asctime)s][%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
 )
-requests.packages.urllib3.disable_warnings()
+
 print(args)
 
 # this will bite me in the ass someday
