@@ -34,12 +34,10 @@ class IntegrateCommand(SubCommand):
         )
 
         print("== Running pre-checks ==")
-        #self.prechecks()
+        self.prechecks()
 
         print("== Creating artifacts ==")
         self.create_artifacts()
-
-        exit()
 
         print("== Creating allocation pool ==")
         self.create_allocation_pool()

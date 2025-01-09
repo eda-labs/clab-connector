@@ -168,6 +168,34 @@ class Node:
         logger.info(f"Topolink interface is not supported for {self}")
         return None
 
+    def needs_artifact(self):
+        """
+        Returns whether this node type needs an artifact to be created in EDA
+        """
+        return False
+
+    def get_artifact_info(self):
+        """
+        Gets artifact information required for this node type.
+        Should be implemented by node types that return True for needs_artifact()
+
+        Returns
+        -------
+        Tuple of (artifact_name, filename, download_url) or (None, None, None) if not found
+        """
+        return None, None, None
+
+    def get_artifact_yaml(self, artifact_name, filename, download_url):
+        """
+        Returns the YAML definition for creating the artifact in EDA.
+        Should be implemented by node types that return True for needs_artifact()
+
+        Returns
+        -------
+        str containing the artifact YAML definition or None if not supported
+        """
+        return None
+
 
 # import specific nodes down here to avoid circular dependencies
 from src.node_srl import SRLNode  # noqa: E402
