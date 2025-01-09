@@ -34,7 +34,12 @@ class IntegrateCommand(SubCommand):
         )
 
         print("== Running pre-checks ==")
-        self.prechecks()
+        #self.prechecks()
+
+        print("== Creating artifacts ==")
+        self.create_artifacts()
+
+        exit()
 
         print("== Creating allocation pool ==")
         self.create_allocation_pool()
@@ -85,6 +90,46 @@ class IntegrateCommand(SubCommand):
             raise Exception(
                 "Could not authenticate to EDA with the provided credentials"
             )
+
+    def create_artifacts(self):
+        """
+        Creates artifacts needed by nodes in the topology
+        """
+        logger.info("Creating artifacts for nodes that need them")
+
+        processed = set()  # Track which artifacts we've already created
+
+        for node in self.topology.nodes:
+            if not node.needs_artifact():
+                continue
+
+            # Get artifact details
+            artifact_name, filename, download_url = node.get_artifact_info()
+
+            if not artifact_name or not filename or not download_url:
+                logger.warning(f"Could not get artifact details for {node}. Skipping.")
+                continue
+
+            # Skip if we already processed this artifact
+            if artifact_name in processed:
+                continue
+            processed.add(artifact_name)
+
+            # Get the YAML and create the artifact
+            artifact_yaml = node.get_artifact_yaml(artifact_name, filename, download_url)
+            if not artifact_yaml:
+                logger.warning(f"Could not generate artifact YAML for {node}. Skipping.")
+                continue
+
+            try:
+                helpers.apply_manifest_via_kubectl(artifact_yaml, namespace="eda-system")
+                logger.info(f"Artifact '{artifact_name}' has been created.")
+            except RuntimeError as ex:
+                if "AlreadyExists" in str(ex):
+                    logger.info(f"Artifact '{artifact_name}' already exists, skipping.")
+                else:
+                    logger.error(f"Error creating artifact '{artifact_name}': {ex}")
+
 
     def create_allocation_pool(self):
         """

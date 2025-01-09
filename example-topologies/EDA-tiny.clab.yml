@@ -13,17 +13,14 @@ topology:
       kind: srl
       type: ixrd3l
       mgmt-ipv4: 10.58.2.130
-      startup-config: srlinux.cfg
     dut2:
       kind: srl
       type: ixrd3l
       mgmt-ipv4: 10.58.2.131
-      startup-config: srlinux.cfg
     dut3:
       kind: srl
       type: ixrd5
       mgmt-ipv4: 10.58.2.132
-      startup-config: srlinux.cfg
   links:
     # spine - leaf
     - endpoints: ["dut1:e1-1", "dut3:e1-1"]

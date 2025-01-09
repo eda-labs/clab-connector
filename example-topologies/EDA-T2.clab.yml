@@ -2,7 +2,7 @@ name: eda_t2
 
 mgmt:
   network: eda_t2_mgmt
-  ipv4-subnet: 10.58.2.112/28
+  ipv4-subnet: 10.58.2.0/24
 
 topology:
   kinds:

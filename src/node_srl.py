@@ -24,7 +24,7 @@ class SRLNode(Node):
     SRL_USERNAME = "admin"
     SRL_PASSWORD = "NokiaSrl1!"
     NODE_TYPE = "srlinux"
-    GNMI_PORT = "57400"
+    GNMI_PORT = "57410"
     VERSION_PATH = ".system.information.version"
     YANG_PATH = (
         "https://eda-asvr/eda-system/schemaprofiles/srlinux-ghcr-{version}/srlinux-{version}.zip"
@@ -294,3 +294,40 @@ class SRLNode(Node):
         }
 
         return helpers.render_template("interface.j2", data)
+
+    def needs_artifact(self):
+        """
+        SR Linux nodes need YANG model artifacts
+        """
+        return True
+
+    def get_artifact_info(self):
+        """
+        Gets SR Linux YANG models artifact information from GitHub
+        """
+        def srlinux_filter(name):
+            return (name.endswith(".zip") and 
+                    name.startswith("srlinux-") and 
+                    "Source code" not in name)
+
+        artifact_name = f"srlinux-ghcr-{self.version}"
+        filename, download_url = helpers.get_artifact_from_github(
+            owner="nokia",
+            repo="srlinux-yang-models",
+            version=self.version,
+            asset_filter=srlinux_filter
+        )
+
+        return artifact_name, filename, download_url
+
+    def get_artifact_yaml(self, artifact_name, filename, download_url):
+        """
+        Renders the artifact YAML for SR Linux YANG models
+        """
+        data = {
+            "artifact_name": artifact_name,
+            "namespace": "eda-system",
+            "artifact_filename": filename, 
+            "artifact_url": download_url
+        }
+        return helpers.render_template("artifact.j2", data)
