@@ -84,14 +84,25 @@ def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
     finally:
         os.remove(tmp_path)
 
-def get_srlinux_artifact_from_github(version: str):
+def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=None):
     """
-    Queries GitHub for the 'nokia/srlinux-yang-models' release at tag 'v<version>'.
-    Returns (filename, download_url) for the .zip asset, or (None, None) if not found.
-    """
+    Queries GitHub for a specific release artifact.
 
-    tag = f"v{version}"  # e.g. "v24.7.2"
-    url = f"https://api.github.com/repos/nokia/srlinux-yang-models/releases/tags/{tag}"
+    Parameters
+    ----------
+    owner:          GitHub repository owner
+    repo:           GitHub repository name
+    version:        Version tag to search for (without 'v' prefix)
+    asset_filter:   Optional function(asset_name) -> bool to filter assets
+
+    Returns
+    -------
+    Tuple of (filename, download_url) or (None, None) if not found
+    """
+    tag = f"v{version}"  # Assume GitHub tags are prefixed with 'v'
+    url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
+
+    logger.info(f"Querying GitHub release {tag} from {owner}/{repo}")
     resp = requests.get(url)
 
     if resp.status_code != 200:
@@ -100,10 +111,11 @@ def get_srlinux_artifact_from_github(version: str):
 
     data = resp.json()
     assets = data.get("assets", [])
+
     for asset in assets:
         name = asset.get("name", "")
-        if name.endswith(".zip") and name.startswith("srlinux-") and "Source code" not in name:
+        if asset_filter is None or asset_filter(name):
             return name, asset.get("browser_download_url")
 
-    # no .zip found
+    # No matching asset found
     return None, None

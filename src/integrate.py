@@ -34,10 +34,12 @@ class IntegrateCommand(SubCommand):
         )
 
         print("== Running pre-checks ==")
-        self.prechecks()
+        #self.prechecks()
 
-        print("== Creating SR Linux artifacts for YANG models (if needed) ==")
-        self.create_srl_artifacts()
+        print("== Creating artifacts ==")
+        self.create_artifacts()
+
+        exit()
 
         print("== Creating allocation pool ==")
         self.create_allocation_pool()
@@ -89,46 +91,44 @@ class IntegrateCommand(SubCommand):
                 "Could not authenticate to EDA with the provided credentials"
             )
 
-    def create_srl_artifacts(self):
-        logger.info("Creating SR Linux Artifact resources via 'kubectl create'")
+    def create_artifacts(self):
+        """
+        Creates artifacts needed by nodes in the topology
+        """
+        logger.info("Creating artifacts for nodes that need them")
 
-        created_versions = set()
+        processed = set()  # Track which artifacts we've already created
 
         for node in self.topology.nodes:
-            if node.kind == "srl":
-                version = node.version
-                if version in created_versions:
-                    continue
-                created_versions.add(version)
+            if not node.needs_artifact():
+                continue
 
-                # (1) get the actual .zip filename & URL from GitHub
-                filename, download_url = helpers.get_srlinux_artifact_from_github(version)
-                if not filename or not download_url:
-                    logger.warning(f"No suitable YANG artifact found for version {version}. Skipping.")
-                    continue
+            # Get artifact details
+            artifact_name, filename, download_url = node.get_artifact_info()
 
-                artifact_name = f"srlinux-ghcr-{version}"
+            if not artifact_name or not filename or not download_url:
+                logger.warning(f"Could not get artifact details for {node}. Skipping.")
+                continue
 
-                # (2) Render the Jinja2 template
-                data = {
-                    "artifact_name": artifact_name,
-                    "namespace": "eda-system",
-                    "artifact_filename": filename,
-                    "artifact_url": download_url
-                }
-                artifact_yaml = helpers.render_template("artifact.j2", data)
-                logger.debug("Artifact YAML:\n" + artifact_yaml)
+            # Skip if we already processed this artifact
+            if artifact_name in processed:
+                continue
+            processed.add(artifact_name)
 
-                # (3) Attempt creation with kubectl
-                try:
-                    helpers.apply_manifest_via_kubectl(artifact_yaml, namespace="eda-system")
-                    logger.info(f"Artifact '{artifact_name}' for version '{version}' has been created.")
-                except RuntimeError as ex:
-                    # (4) If resource already exists, skip; otherwise raise
-                    if "AlreadyExists" in str(ex):
-                        logger.info(f"Artifact '{artifact_name}' already exists, skipping.")
-                    else:
-                        logger.error(f"Error creating artifact '{artifact_name}': {ex}")
+            # Get the YAML and create the artifact
+            artifact_yaml = node.get_artifact_yaml(artifact_name, filename, download_url)
+            if not artifact_yaml:
+                logger.warning(f"Could not generate artifact YAML for {node}. Skipping.")
+                continue
+
+            try:
+                helpers.apply_manifest_via_kubectl(artifact_yaml, namespace="eda-system")
+                logger.info(f"Artifact '{artifact_name}' has been created.")
+            except RuntimeError as ex:
+                if "AlreadyExists" in str(ex):
+                    logger.info(f"Artifact '{artifact_name}' already exists, skipping.")
+                else:
+                    logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 
 
     def create_allocation_pool(self):

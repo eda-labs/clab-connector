@@ -29,7 +29,6 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab:**
   - You need at latest containerlab version `v0.61.0`
-  - Environment var `CLAB_EDA_MODE=1` needs to bet set
 - **kubectl:**
   - You must have `kubectl` installed and configured to connect to the same Kubernetes cluster that is running EDA. The connector will use `kubectl apply` in the background to create the necessary `Artifact` resources.
 
@@ -51,8 +50,8 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 
 Follow these steps to set up the Containerlab EDA Connector tool:
 
-> [!TIP] 
-> **Why uv?**  
+> [!TIP]
+> **Why uv?**
 > [uv](https://docs.astral.sh/uv) is a single, ultra-fast tool that can replace `pip`, `pipx`, `virtualenv`, `pip-tools`, `poetry`, and more. It automatically manages Python versions, handles ephemeral or persistent virtual environments (`uv venv`), lockfiles, and often runs **10–100× faster** than pip installs.
 
 1. **Install uv** (no Python or Rust needed):
