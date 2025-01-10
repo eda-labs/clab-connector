@@ -113,12 +113,12 @@ The tool offers two primary subcommands: `integrate` and `remove`.
 Integrate your Containerlab topology into EDA:
 
 ```
-python eda_containerlab_connector.py --verify integrate
---topology-file path/to/topology.yaml
---eda-url https://eda.example.com
---eda-user admin
---eda-password yourpassword
---http-proxy http://proxy.example.com:8080
+python eda_containerlab_connector.py integrate \
+--topology-file path/to/topology.yaml \
+--eda-url https://eda.example.com \
+--eda-user admin \
+--eda-password yourpassword \
+--http-proxy http://proxy.example.com:8080 \
 --https-proxy https://proxy.example.com:8443
 ```
 
