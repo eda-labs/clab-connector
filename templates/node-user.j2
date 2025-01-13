@@ -10,8 +10,5 @@ spec:
     - groups:
         - sudo
       nodeSelector:
-        - eda.nokia.com/role=spine
-        - eda.nokia.com/role=borderleaf
-        - eda.nokia.com/role=leaf
-        - eda.nokia.com/role=UNKNOWN
+        - containerlab=true
   sshPublicKeys: []
