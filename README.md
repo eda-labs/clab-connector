@@ -28,7 +28,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 - **Network Connectivity:**
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab:**
-  - You need at latest containerlab version `v0.61.0`
+  - Minimum required version - `v0.61.0`
 - **kubectl:**
   - You must have `kubectl` installed and configured to connect to the same Kubernetes cluster that is running EDA. The connector will use `kubectl apply` in the background to create the necessary `Artifact` resources.
 
@@ -55,51 +55,60 @@ Follow these steps to set up the Containerlab EDA Connector tool:
 > [uv](https://docs.astral.sh/uv) is a single, ultra-fast tool that can replace `pip`, `pipx`, `virtualenv`, `pip-tools`, `poetry`, and more. It automatically manages Python versions, handles ephemeral or persistent virtual environments (`uv venv`), lockfiles, and often runs **10–100× faster** than pip installs.
 
 1. **Install uv** (no Python or Rust needed):
+
     ```
     # On macOS and Linux
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
 2. **(Optional) Create a Persistent Virtual Environment with uv**:
+
     ```
     uv venv
     ```
+
     This pins a Python version (if you haven't installed one yet) and creates a `.venv/` folder.
 
-
 3. **Run the Connector** (uv automatically installs dependencies in a venv from `pyproject.toml`):
+
     ```
     uv run python eda_containerlab_connector.py --help
     ```
+
 ## Alternative: Using pip
 
 If you’d rather use pip or can’t install uv:
 
 1. **(Optional) Create & Activate a Virtual Environment**:
+
     ```
     python -m venv venv
     source venv/bin/activate
     ```
 
-
 2. **Install Your Project** (which reads `pyproject.toml` for dependencies):
+
     ```
     python -m pip install --upgrade pip
     pip install .
     ```
 
 3. **Run the Connector**:
+
     ```
     python eda_containerlab_connector.py --help
     ```
 
-### Quick try 
+### Quick try
 
 With either uv or pip, you can now run:
+
 ```
 python eda_containerlab_connector.py <subcommand> [options]
 ```
+
 Or, using uv:
+
 ```
 uv run python eda_containerlab_connector.py <subcommand> [options]
 ```

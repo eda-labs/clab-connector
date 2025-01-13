@@ -1,18 +1,18 @@
 import logging
-import socket
 import os
 import re
+import socket
 import tempfile
-import src.helpers as helpers
 
 from paramiko import (
-    SSHClient,
-    BadHostKeyException,
     AuthenticationException,
-    SSHException,
     AutoAddPolicy,
+    BadHostKeyException,
+    SSHClient,
+    SSHException,
 )
 
+import src.helpers as helpers
 from src.node import Node
 
 # set up logging
@@ -26,9 +26,7 @@ class SRLNode(Node):
     NODE_TYPE = "srlinux"
     GNMI_PORT = "57410"
     VERSION_PATH = ".system.information.version"
-    YANG_PATH = (
-        "https://eda-asvr/eda-system/schemaprofiles/srlinux-ghcr-{version}/srlinux-{version}.zip"
-    )
+    YANG_PATH = "https://eda-asvr.eda-system.svc/eda-system/schemaprofiles/srlinux-ghcr-{version}/srlinux-{version}.zip"
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
@@ -211,7 +209,9 @@ class SRLNode(Node):
         elif "dcgw" in self.name:
             role_value = "dcgw"
         else:
-            logger.warning(f"Could not determine role of node {self}, defaulting to eda.nokia.com/role=leaf")
+            logger.warning(
+                f"Could not determine role of node {self}, defaulting to eda.nokia.com/role=leaf"
+            )
 
         data = {
             "node_name": self.get_node_name(topology),
@@ -305,17 +305,20 @@ class SRLNode(Node):
         """
         Gets SR Linux YANG models artifact information from GitHub
         """
+
         def srlinux_filter(name):
-            return (name.endswith(".zip") and 
-                    name.startswith("srlinux-") and 
-                    "Source code" not in name)
+            return (
+                name.endswith(".zip")
+                and name.startswith("srlinux-")
+                and "Source code" not in name
+            )
 
         artifact_name = f"srlinux-ghcr-{self.version}"
         filename, download_url = helpers.get_artifact_from_github(
             owner="nokia",
             repo="srlinux-yang-models",
             version=self.version,
-            asset_filter=srlinux_filter
+            asset_filter=srlinux_filter,
         )
 
         return artifact_name, filename, download_url
@@ -327,7 +330,7 @@ class SRLNode(Node):
         data = {
             "artifact_name": artifact_name,
             "namespace": "eda-system",
-            "artifact_filename": filename, 
-            "artifact_url": download_url
+            "artifact_filename": filename,
+            "artifact_url": download_url,
         }
         return helpers.render_template("artifact.j2", data)

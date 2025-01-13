@@ -1,9 +1,8 @@
 import logging
 
 import src.helpers as helpers
-
-from src.subcommand import SubCommand
 from src.eda import EDA
+from src.subcommand import SubCommand
 
 # set up logging
 logger = logging.getLogger(__name__)
@@ -36,8 +35,8 @@ class IntegrateCommand(SubCommand):
         print("== Running pre-checks ==")
         self.prechecks()
 
-        print("== Creating artifacts ==")
-        self.create_artifacts()
+        # print("== Creating artifacts ==")
+        # self.create_artifacts()
 
         # print("== Creating allocation pool ==")
         # self.create_allocation_pool()
@@ -114,20 +113,25 @@ class IntegrateCommand(SubCommand):
             processed.add(artifact_name)
 
             # Get the YAML and create the artifact
-            artifact_yaml = node.get_artifact_yaml(artifact_name, filename, download_url)
+            artifact_yaml = node.get_artifact_yaml(
+                artifact_name, filename, download_url
+            )
             if not artifact_yaml:
-                logger.warning(f"Could not generate artifact YAML for {node}. Skipping.")
+                logger.warning(
+                    f"Could not generate artifact YAML for {node}. Skipping."
+                )
                 continue
 
             try:
-                helpers.apply_manifest_via_kubectl(artifact_yaml, namespace="eda-system")
+                helpers.apply_manifest_via_kubectl(
+                    artifact_yaml, namespace="eda-system"
+                )
                 logger.info(f"Artifact '{artifact_name}' has been created.")
             except RuntimeError as ex:
                 if "AlreadyExists" in str(ex):
                     logger.info(f"Artifact '{artifact_name}' already exists, skipping.")
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
-
 
     def create_allocation_pool(self):
         """
@@ -184,6 +188,7 @@ class IntegrateCommand(SubCommand):
         for bootstrap_node in bootstrap_nodes:
             logger.debug(bootstrap_node)
             item = self.eda.add_create_to_transaction(bootstrap_node)
+            logger.debug(item)
             if not self.eda.is_transaction_item_valid(item):
                 raise Exception(
                     "Validation error when trying to create a bootstrap node, see warning above. Exiting..."
