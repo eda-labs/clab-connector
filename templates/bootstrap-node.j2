@@ -9,10 +9,7 @@ metadata:
     eda.nokia.com/security-profile: managed
   namespace: eda
 spec:
-  macAddress: ''
-  serialNumber: ''
   nodeProfile: {{ node_profile }}
-  onBoarded: false
   operatingSystem: {{ kind }}
   platform: {{ platform }}
   version: {{ sw_version }}
@@ -20,7 +17,3 @@ spec:
     ipv4: {{ mgmt_ip }}
     ipv6: ''
   systemInterface: {{ system_interface }}
-  license: ''
-  component: []
-  npp:
-    mode: normal
