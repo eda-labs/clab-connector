@@ -6,7 +6,7 @@ metadata:
   namespace: eda
 spec:
   port: {{ gnmi_port }}
-  annotate: false
+  annotate: true
   operatingSystem: {{ operating_system }}
   version: {{ sw_version }}
   versionPath: {{ version_path }}
@@ -15,8 +15,6 @@ spec:
   nodeUser: {{ node_user }}
   onboardingPassword: {{ onboarding_password }}
   onboardingUsername: {{ onboarding_username}}
-  dhcp:
-    managementPoolv4: '{{ pool_name }}'
   images:
   - image: fake.bin
     imageMd5: fake.bin.md5
