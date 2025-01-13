@@ -1,8 +1,9 @@
-import os
 import logging
+import os
 
 # set up logging
 logger = logging.getLogger(__name__)
+
 
 class Node:
     def __init__(self, name, kind, node_type, version, mgmt_ipv4):
@@ -195,17 +196,16 @@ class Node:
         """
         return None
 
+
 # import specific nodes down here to avoid circular dependencies
 from src.node_srl import SRLNode  # noqa: E402
 
-KIND_MAPPING = {
-    "nokia_srlinux": "srl",
-    "srl": "srl"
-}
+KIND_MAPPING = {"nokia_srlinux": "srl", "srl": "srl"}
 
 SUPPORTED_NODE_TYPES = {
     "srl": SRLNode,
 }
+
 
 def from_obj(name, python_object, kinds):
     """
@@ -230,13 +230,15 @@ def from_obj(name, python_object, kinds):
     # Translate kind if needed
     kind = KIND_MAPPING.get(original_kind)
     if not kind:
-        logger.warning(f"Unsupported kind '{original_kind}' for node '{name}', skipping. Supported kinds: {list(KIND_MAPPING.keys())}")
+        logger.warning(
+            f"Unsupported kind '{original_kind}' for node '{name}', skipping. Supported kinds: {list(KIND_MAPPING.keys())}"
+        )
         return None
 
     node_type = python_object.get("type", None)
     mgmt_ipv4 = python_object.get("mgmt-ipv4") or python_object.get("mgmt_ipv4")
     version = python_object.get("version")  # Get version directly if provided
-    
+
     if not mgmt_ipv4:
         logger.warning(f"No management IP found for node {name}")
         return None

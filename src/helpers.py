@@ -1,14 +1,14 @@
-import os.path
-import logging
-import requests
-import subprocess
-import tempfile
 import json
+import logging
+import os.path
+import subprocess
 import sys
+import tempfile
+
+import requests
+from jinja2 import Environment, FileSystemLoader
 
 import src.topology as topology
-
-from jinja2 import Environment, FileSystemLoader
 
 # set up jinja2 templating engine
 template_loader = FileSystemLoader(searchpath="templates")
@@ -16,6 +16,7 @@ template_environment = Environment(loader=template_loader)
 
 # set up logging
 logger = logging.getLogger(__name__)
+
 
 def parse_topology(topology_file):
     """
@@ -46,8 +47,11 @@ def parse_topology(topology_file):
             # If not a topology-data.json file, parse as regular topology file
             return topo.from_topology_data(data)
     except json.JSONDecodeError:
-        logger.critical(f"File '{topology_file}' is not supported. Please provide a valid JSON topology file.")
+        logger.critical(
+            f"File '{topology_file}' is not supported. Please provide a valid JSON topology file."
+        )
         sys.exit(1)
+
 
 def render_template(template_name, data):
     """
@@ -64,6 +68,7 @@ def render_template(template_name, data):
     """
     template = template_environment.get_template(template_name)
     return template.render(data)
+
 
 def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
     """
@@ -89,6 +94,7 @@ def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
             logger.info(f"kubectl create succeeded:\n{result.stdout}")
     finally:
         os.remove(tmp_path)
+
 
 def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=None):
     """
