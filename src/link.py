@@ -83,7 +83,7 @@ def from_obj(python_object, nodes):
 
     Parameters
     ----------
-    python_object:  the python object containing the endpoints from the input yaml file
+    python_object:  the python object containing the endpoints from the input json file
     nodes:          nodes part of the topology
 
     Returns

@@ -138,37 +138,64 @@ class Topology:
 
         return interfaces
 
+    def from_topology_data(self, json_obj):
+        """
+        Parses a topology from a topology-data.json file
 
-def from_obj(python_obj):
-    """
-    Parsers a topology from a Python object
+        Parameters
+        ----------
+        json_obj: the python object parsed from the topology-data.json file
 
-    Parameters
-    ----------
-    python_obj: the python object parsed from the yaml input file
-
-    Returns
-    -------
-    The parsed Topology entity
-    """
-    logger.info(
-        f"Parsing topology with name '{python_obj['name']}' which contains {len(python_obj['topology']['nodes'])} nodes"
-    )
-
-    name = python_obj["name"]
-    mgmt_ipv4_subnet = python_obj["mgmt"]["ipv4-subnet"]
-    nodes = []
-    for node in python_obj["topology"]["nodes"]:
-        nodes.append(
-            node_from_obj(
-                node,
-                python_obj["topology"]["nodes"][node],
-                python_obj["topology"]["kinds"],
-            )
+        Returns
+        -------
+        The parsed Topology entity
+        """
+        logger.info(
+            f"Parsing topology data with name '{json_obj['name']}' which contains {len(json_obj['nodes'])} nodes"
         )
 
-    links = []
-    for link in python_obj["topology"]["links"]:
-        links.append(link_from_obj(link, nodes))
+        name = json_obj["name"]
+        mgmt_ipv4_subnet = json_obj["clab"]["config"]["mgmt"]["ipv4-subnet"]
+        
+        # Create nodes
+        nodes = []
+        for node_name, node_data in json_obj["nodes"].items():
+            try:
+                # Get version from image tag
+                image = node_data["image"]
+                version = image.split(":")[-1] if ":" in image else None
+                
+                node = node_from_obj(
+                    node_name,
+                    {
+                        "kind": node_data["kind"],
+                        "type": node_data["labels"].get("clab-node-type", ""),
+                        "mgmt-ipv4": node_data["mgmt-ipv4-address"],
+                        "version": version
+                    },
+                    None
+                )
+                if node is not None:  # Only add supported nodes
+                    nodes.append(node)
+            except Exception as e:
+                logger.warning(f"Failed to parse node {node_name}: {str(e)}")
+                continue
 
-    return Topology(name, mgmt_ipv4_subnet, nodes, links)
+        # Create links but only for supported nodes
+        supported_node_names = [node.name for node in nodes]
+        links = []
+        for link_data in json_obj["links"]:
+            # Only create links between supported nodes
+            if (link_data['a']['node'] in supported_node_names and 
+                link_data['z']['node'] in supported_node_names):
+                link_obj = {
+                    "endpoints": [
+                        f"{link_data['a']['node']}:{link_data['a']['interface']}",
+                        f"{link_data['z']['node']}:{link_data['z']['interface']}"
+                    ]
+                }
+                links.append(link_from_obj(link_obj, nodes))
+            else:
+                logger.debug(f"Skipping link between {link_data['a']['node']} and {link_data['z']['node']} as one or both nodes are not supported")
+
+        return Topology(name, mgmt_ipv4_subnet, nodes, links)

@@ -39,11 +39,11 @@ class IntegrateCommand(SubCommand):
         print("== Creating artifacts ==")
         self.create_artifacts()
 
-        print("== Creating allocation pool ==")
-        self.create_allocation_pool()
-        self.eda.commit_transaction(
-            "EDA Containerlab Connector: create IP-mgmt allocation pool"
-        )
+        # print("== Creating allocation pool ==")
+        # self.create_allocation_pool()
+        # self.eda.commit_transaction(
+        #     "EDA Containerlab Connector: create IP-mgmt allocation pool"
+        # )
 
         print("== Creating node profiles ==")
         self.create_node_profiles()

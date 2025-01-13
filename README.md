@@ -114,7 +114,7 @@ Integrate your Containerlab topology into EDA:
 
 ```
 python eda_containerlab_connector.py --verify integrate
---topology-file path/to/topology.yaml
+--topology-file path/to/topology-data.json
 --eda-url https://eda.example.com
 --eda-user admin
 --eda-password yourpassword
@@ -128,7 +128,7 @@ Remove the previously integrated Containerlab topology from EDA:
 
 ```
 python eda_containerlab_connector.py remove \
-    --topology-file path/to/topology.yaml \
+    --topology-file path/to/topology-data.json \
     --eda-url https://eda.example.com \
     --eda-user admin \
     --eda-password yourpassword
@@ -140,7 +140,7 @@ python eda_containerlab_connector.py remove \
 ### Example Command
 
 ```
-python eda_containerlab_connector.py -l INFO integrate -t example-topology.yaml -e https://eda.example.com 
+python eda_containerlab_connector.py -l INFO integrate -t topology-data.json -e https://eda.example.com 
 ```
 
 ## Example Topologies

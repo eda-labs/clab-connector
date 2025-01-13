@@ -4,7 +4,6 @@ import logging
 # set up logging
 logger = logging.getLogger(__name__)
 
-
 class Node:
     def __init__(self, name, kind, node_type, version, mgmt_ipv4):
         self.name = name
@@ -196,10 +195,17 @@ class Node:
         """
         return None
 
-
 # import specific nodes down here to avoid circular dependencies
 from src.node_srl import SRLNode  # noqa: E402
 
+KIND_MAPPING = {
+    "nokia_srlinux": "srl",
+    "srl": "srl"
+}
+
+SUPPORTED_NODE_TYPES = {
+    "srl": SRLNode,
+}
 
 def from_obj(name, python_object, kinds):
     """
@@ -208,43 +214,33 @@ def from_obj(name, python_object, kinds):
     Parameters
     ----------
     name: the name of the node
-    python_obj: the python object for this node parsed from the yaml input file
-    kinds: the python object for the kinds in the topology yaml file
+    python_obj: the python object for this node parsed from the json input file
+    kinds: the python object for the kinds in the topology file (not used for topology-data.json)
 
     Returns
     -------
     The parsed Node entity
     """
     logger.info(f"Parsing node with name '{name}'")
-    kind = python_object["kind"]
-    node_type = python_object["type"] if "type" in python_object else None
+    original_kind = python_object.get("kind")
+    if not original_kind:
+        logger.warning(f"No kind specified for node '{name}', skipping")
+        return None
 
-    # support for legacy containerlab files
-    if "mgmt_ipv4" in python_object:
-        logger.warning(
-            "Property mgmt_ipv4 is deprecated, please use mgmt-ipv4 in your clab topology file"
-        )
-        mgmt_ipv4 = python_object["mgmt_ipv4"]
-    else:
-        mgmt_ipv4 = python_object["mgmt-ipv4"]
+    # Translate kind if needed
+    kind = KIND_MAPPING.get(original_kind)
+    if not kind:
+        logger.warning(f"Unsupported kind '{original_kind}' for node '{name}', skipping. Supported kinds: {list(KIND_MAPPING.keys())}")
+        return None
 
-    # check if the kind is in the kinds object
-    if kind not in kinds:
-        logger.warning(
-            f"Could not find kind '{kind}' for node '{name}' in the topology file"
-        )
-        kind = None
-        version = None
-    else:
-        image = kinds[kind]["image"]
-        parts = image.split(":")
-        if len(parts) != 2:
-            logger.warning(f"Could not parse version from node image '{image}'")
-            version = None
-        else:
-            version = parts[1]
+    node_type = python_object.get("type", None)
+    mgmt_ipv4 = python_object.get("mgmt-ipv4") or python_object.get("mgmt_ipv4")
+    version = python_object.get("version")  # Get version directly if provided
+    
+    if not mgmt_ipv4:
+        logger.warning(f"No management IP found for node {name}")
+        return None
 
-    if kind == "srl" or kind == "nokia_srlinux":
-        return SRLNode(name, kind, node_type, version, mgmt_ipv4)
-
-    return Node(name, kind, node_type, version, mgmt_ipv4)
+    # Create the appropriate node type using the mapping
+    NodeClass = SUPPORTED_NODE_TYPES[kind]
+    return NodeClass(name, kind, node_type, version, mgmt_ipv4)

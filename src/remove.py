@@ -57,11 +57,11 @@ class RemoveCommand(SubCommand):
         self.remove_node_profiles()
         self.eda.commit_transaction("EDA Containerlab Connector: remove node profiles")
 
-        print("== Removing allocation pool ==")
-        self.remove_allocation_pool()
-        self.eda.commit_transaction(
-            "EDA Containerlab Connector: remove allocation pool"
-        )
+        # print("== Removing allocation pool ==")
+        # self.remove_allocation_pool()
+        # self.eda.commit_transaction(
+        #     "EDA Containerlab Connector: remove allocation pool"
+        # )
 
         print("Done!")
 

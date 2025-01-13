@@ -1,9 +1,10 @@
 import os.path
 import logging
-import yaml
 import requests
 import subprocess
 import tempfile
+import json
+import sys
 
 import src.topology as topology
 
@@ -16,32 +17,37 @@ template_environment = Environment(loader=template_loader)
 # set up logging
 logger = logging.getLogger(__name__)
 
-
 def parse_topology(topology_file):
     """
-    Parses a topology yml file
+    Parses a topology file from JSON
 
     Parameters
     ----------
-    topology_file: containerlab topology file (yaml format)
+    topology_file: topology-data file (json format)
 
     Returns
     -------
-    A parsed Topology file
+    A parsed Topology object
     """
     logger.info(f"Parsing topology file '{topology_file}'")
     if not os.path.isfile(topology_file):
-        raise Exception(f"Topology file '{topology_file}' does not exist!")
+        logger.critical(f"Topology file '{topology_file}' does not exist!")
+        sys.exit(1)
 
-    with open(topology_file, "r") as f:
-        try:
-            obj = yaml.safe_load(f)
-        except yaml.YAMLError as exc:
-            logger.critical(f"Failed to parse yaml file '{topology_file}'")
-            raise exc
+    # Create empty topology object
+    topo = topology.Topology("", "", [], [])
 
-    return topology.from_obj(obj)
-
+    try:
+        with open(topology_file, "r") as f:
+            data = json.load(f)
+            # Check if this is a topology-data.json file
+            if "type" in data and data["type"] == "clab":
+                return topo.from_topology_data(data)
+            # If not a topology-data.json file, parse as regular topology file
+            return topo.from_topology_data(data)
+    except json.JSONDecodeError:
+        logger.critical(f"File '{topology_file}' is not supported. Please provide a valid JSON topology file.")
+        sys.exit(1)
 
 def render_template(template_name, data):
     """
