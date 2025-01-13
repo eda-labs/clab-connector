@@ -89,8 +89,7 @@ If you’d rather use pip or can’t install uv:
 2. **Install Your Project** (which reads `pyproject.toml` for dependencies):
 
     ```
-    python -m pip install --upgrade pip
-    pip install .
+    pip install -r requirements.txt
     ```
 
 3. **Run the Connector**:
