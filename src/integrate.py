@@ -44,6 +44,10 @@ class IntegrateCommand(SubCommand):
         #     "EDA Containerlab Connector: create IP-mgmt allocation pool"
         # )
 
+        print("== Creating node users ==")
+        self.create_node_users()
+        self.eda.commit_transaction("EDA Containerlab Connector: create node users")
+
         print("== Creating node profiles ==")
         self.create_node_profiles()
         self.eda.commit_transaction("EDA Containerlab Connector: create node profiles")
@@ -53,11 +57,11 @@ class IntegrateCommand(SubCommand):
         self.create_bootstrap_nodes()
         self.eda.commit_transaction("EDA Containerlab Connector: create nodes")
 
-        print("== Adding system interfaces ==")
-        self.create_system_interfaces()
-        self.eda.commit_transaction(
-            "EDA Containerlab Connector: create system interfaces"
-        )
+        # print("== Adding system interfaces ==")
+        # self.create_system_interfaces()
+        # self.eda.commit_transaction(
+        #     "EDA Containerlab Connector: create system interfaces"
+        # )
 
         print("== Adding topolink interfaces ==")
         self.create_topolink_interfaces()
@@ -157,6 +161,28 @@ class IntegrateCommand(SubCommand):
     #             "Validation error when trying to create a mgmt allocation pool, see warning above. Exiting..."
     #         )
 
+    def create_node_users(self):
+        """
+        Creates node users for the topology.
+
+        Currently simple changes the admin NodeUser to feature
+        NokiaSrl1! password instead of the default eda124! password.
+        """
+        logger.info("Creating node users")
+        data = {
+            "node_user": "admin",
+            "username": "admin",
+            "password": "NokiaSrl1!",
+        }
+
+        node_user = helpers.render_template("node-user.j2", data)
+        logger.debug(node_user)
+        item = self.eda.add_replace_to_transaction(node_user)
+        if not self.eda.is_transaction_item_valid(item):
+            raise Exception(
+                "Validation error when trying to create a node user, see warning above. Exiting..."
+            )
+
     def create_node_profiles(self):
         """
         Creates node profiles for the topology
@@ -166,7 +192,7 @@ class IntegrateCommand(SubCommand):
         logger.info(f"Discovered {len(profiles)} distinct node profile(s)")
         for profile in profiles:
             logger.debug(profile)
-            item = self.eda.add_create_to_transaction(profile)
+            item = self.eda.add_replace_to_transaction(profile)
             if not self.eda.is_transaction_item_valid(item):
                 raise Exception(
                     "Validation error when trying to create a node profile, see warning above. Exiting..."
@@ -187,7 +213,7 @@ class IntegrateCommand(SubCommand):
         bootstrap_nodes = self.topology.get_bootstrap_nodes()
         for bootstrap_node in bootstrap_nodes:
             logger.debug(bootstrap_node)
-            item = self.eda.add_create_to_transaction(bootstrap_node)
+            item = self.eda.add_replace_to_transaction(bootstrap_node)
             logger.debug(item)
             if not self.eda.is_transaction_item_valid(item):
                 raise Exception(
@@ -216,7 +242,7 @@ class IntegrateCommand(SubCommand):
         interfaces = self.topology.get_topolink_interfaces()
         for interface in interfaces:
             logger.debug(interface)
-            item = self.eda.add_create_to_transaction(interface)
+            item = self.eda.add_replace_to_transaction(interface)
             if not self.eda.is_transaction_item_valid(item):
                 raise Exception(
                     "Validation error when trying to create a topolink interface, see warning above. Exiting..."
@@ -230,7 +256,7 @@ class IntegrateCommand(SubCommand):
         topolinks = self.topology.get_topolinks()
         for topolink in topolinks:
             logger.debug(topolink)
-            item = self.eda.add_create_to_transaction(topolink)
+            item = self.eda.add_replace_to_transaction(topolink)
             if not self.eda.is_transaction_item_valid(item):
                 raise Exception(
                     "Validation error when trying to create a topolink, see warning above. Exiting..."

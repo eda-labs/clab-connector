@@ -1,7 +1,8 @@
+import json
 import logging
+
 import requests
 import yaml
-import json
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -197,6 +198,20 @@ class EDA:
         -------
         The created item
         """
+        return self.add_to_transaction("create", {"value": yaml.safe_load(resource)})
+
+    def add_replace_to_transaction(self, resource):
+        """
+        Adds a 'replace' operation to the transaction
+
+        Parameters
+        ----------
+        resource: the resource to be replaced
+
+        Returns
+        -------
+        The replaced item
+        """
         return self.add_to_transaction("replace", {"value": yaml.safe_load(resource)})
 
     def add_delete_to_transaction(
@@ -222,7 +237,7 @@ class EDA:
                     "kind": kind,
                 },
                 "name": name,
-                "namespace": "eda"
+                "namespace": "eda",
             },
         )
 

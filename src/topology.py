@@ -1,7 +1,7 @@
 import logging
 
-from src.node import from_obj as node_from_obj
 from src.link import from_obj as link_from_obj
+from src.node import from_obj as node_from_obj
 
 # set up logging
 logger = logging.getLogger(__name__)
@@ -156,7 +156,7 @@ class Topology:
 
         name = json_obj["name"]
         mgmt_ipv4_subnet = json_obj["clab"]["config"]["mgmt"]["ipv4-subnet"]
-        
+
         # Create nodes
         nodes = []
         for node_name, node_data in json_obj["nodes"].items():
@@ -164,16 +164,16 @@ class Topology:
                 # Get version from image tag
                 image = node_data["image"]
                 version = image.split(":")[-1] if ":" in image else None
-                
+
                 node = node_from_obj(
                     node_name,
                     {
                         "kind": node_data["kind"],
                         "type": node_data["labels"].get("clab-node-type", ""),
                         "mgmt-ipv4": node_data["mgmt-ipv4-address"],
-                        "version": version
+                        "version": version,
                     },
-                    None
+                    None,
                 )
                 if node is not None:  # Only add supported nodes
                     nodes.append(node)
@@ -186,16 +186,20 @@ class Topology:
         links = []
         for link_data in json_obj["links"]:
             # Only create links between supported nodes
-            if (link_data['a']['node'] in supported_node_names and 
-                link_data['z']['node'] in supported_node_names):
+            if (
+                link_data["a"]["node"] in supported_node_names
+                and link_data["z"]["node"] in supported_node_names
+            ):
                 link_obj = {
                     "endpoints": [
                         f"{link_data['a']['node']}:{link_data['a']['interface']}",
-                        f"{link_data['z']['node']}:{link_data['z']['interface']}"
+                        f"{link_data['z']['node']}:{link_data['z']['interface']}",
                     ]
                 }
                 links.append(link_from_obj(link_obj, nodes))
             else:
-                logger.debug(f"Skipping link between {link_data['a']['node']} and {link_data['z']['node']} as one or both nodes are not supported")
+                logger.debug(
+                    f"Skipping link between {link_data['a']['node']} and {link_data['z']['node']} as one or both nodes are not supported"
+                )
 
         return Topology(name, mgmt_ipv4_subnet, nodes, links)
