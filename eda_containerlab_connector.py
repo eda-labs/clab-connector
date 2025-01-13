@@ -64,6 +64,23 @@ logging.basicConfig(
 
 print(args)
 
+# set fancy logging colours
+logging.addLevelName(
+    logging.INFO, f"\x1b[1;32m{logging.getLevelName(logging.INFO)}\x1b[0m"
+)
+logging.addLevelName(
+    logging.WARN, f"\x1b[1;38;5;220m{logging.getLevelName(logging.WARN)}\x1b[0m"
+)
+logging.addLevelName(
+    logging.DEBUG, f"\x1b[1;94m{logging.getLevelName(logging.DEBUG)}\x1b[0m"
+)
+logging.addLevelName(
+    logging.ERROR, f"\x1b[1;91m{logging.getLevelName(logging.ERROR)}\x1b[0m"
+)
+logging.addLevelName(
+    logging.CRITICAL, f"\x1b[1;91m{logging.getLevelName(logging.CRITICAL)}\x1b[0m"
+)
+
 # this will bite me in the ass someday
 os.environ["no_proxy"] = args.eda_url
 

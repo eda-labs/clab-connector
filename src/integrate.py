@@ -133,29 +133,29 @@ class IntegrateCommand(SubCommand):
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 
-    def create_allocation_pool(self):
-        """
-        Creates an IP allocation pool for the mgmt network of the topology
-        """
-        logger.info("Creating mgmt allocation pool")
-        subnet_prefix = self.topology.mgmt_ipv4_subnet
-        (subnet, prefix) = subnet_prefix.split("/")
-        parts = subnet.split(".")
-        gateway = f"{parts[0]}.{parts[1]}.{parts[2]}.{int(parts[3]) + 1}/{prefix}"
+    # def create_allocation_pool(self):
+    #     """
+    #     Creates an IP allocation pool for the mgmt network of the topology
+    #     """
+    #     logger.info("Creating mgmt allocation pool")
+    #     subnet_prefix = self.topology.mgmt_ipv4_subnet
+    #     (subnet, prefix) = subnet_prefix.split("/")
+    #     parts = subnet.split(".")
+    #     gateway = f"{parts[0]}.{parts[1]}.{parts[2]}.{int(parts[3]) + 1}/{prefix}"
 
-        data = {
-            "pool_name": self.topology.get_mgmt_pool_name(),
-            "subnet": subnet_prefix,
-            "gateway": gateway,
-        }
+    #     data = {
+    #         "pool_name": self.topology.get_mgmt_pool_name(),
+    #         "subnet": subnet_prefix,
+    #         "gateway": gateway,
+    #     }
 
-        pool = helpers.render_template("allocation-pool.j2", data)
-        logger.debug(pool)
-        item = self.eda.add_create_to_transaction(pool)
-        if not self.eda.is_transaction_item_valid(item):
-            raise Exception(
-                "Validation error when trying to create a mgmt allocation pool, see warning above. Exiting..."
-            )
+    #     pool = helpers.render_template("allocation-pool.j2", data)
+    #     logger.debug(pool)
+    #     item = self.eda.add_create_to_transaction(pool)
+    #     if not self.eda.is_transaction_item_valid(item):
+    #         raise Exception(
+    #             "Validation error when trying to create a mgmt allocation pool, see warning above. Exiting..."
+    #         )
 
     def create_node_profiles(self):
         """
