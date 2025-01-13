@@ -4,7 +4,7 @@ metadata:
   name: {{ interface_name }}
   namespace: eda
 {%- if label_value %}
-  labels: 
+  labels:
     {{ label_key }}: {{ label_value }}
 {%- endif %}
 spec:
