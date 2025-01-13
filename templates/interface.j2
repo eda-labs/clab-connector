@@ -2,7 +2,7 @@ apiVersion: interfaces.eda.nokia.com/v1alpha1
 kind: Interface
 metadata:
   name: {{ interface_name }}
-  namespace: eda
+  namespace: {{ namespace }}
 {%- if label_value %}
   labels:
     {{ label_key }}: {{ label_value }}

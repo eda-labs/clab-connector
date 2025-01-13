@@ -3,7 +3,7 @@ apiVersion: core.eda.nokia.com/v1
 kind: NodeProfile
 metadata:
   name: {{ profile_name }}
-  namespace: eda
+  namespace: {{ namespace }}
 spec:
   port: {{ gnmi_port }}
   annotate: true

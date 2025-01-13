@@ -119,6 +119,7 @@ class SRLNode(Node):
         """
         logger.info(f"Rendering node profile for {self}")
         data = {
+            "namespace": f"clab-{topology.name}",
             "profile_name": self.get_profile_name(topology),
             "sw_version": self.version,
             "gnmi_port": self.GNMI_PORT,
@@ -191,7 +192,7 @@ class SRLNode(Node):
 
     def get_bootstrap_node(self, topology):
         """
-        Creates a bootstrap node for this node
+        Creates a topo node for this node
 
         Returns
         -------
@@ -214,6 +215,7 @@ class SRLNode(Node):
             )
 
         data = {
+            "namespace": f"clab-{topology.name}",
             "node_name": self.get_node_name(topology),
             "topology_name": topology.get_eda_safe_name(),
             "role_value": role_value,
@@ -284,6 +286,7 @@ class SRLNode(Node):
         logger.info(f"Creating topolink interface for {self}")
 
         data = {
+            "namespace": f"clab-{topology.name}",
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
             "label_value": "interSwitch",

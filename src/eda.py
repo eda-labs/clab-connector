@@ -215,14 +215,17 @@ class EDA:
         return self.add_to_transaction("replace", {"value": yaml.safe_load(resource)})
 
     def add_delete_to_transaction(
-        self, kind, name, group=CORE_GROUP, version=CORE_VERSION
+        self, namespace, kind, name, group=CORE_GROUP, version=CORE_VERSION
     ):
         """
         Adds a 'delete' operation to the transaction
 
         Parameters
         ----------
-        resource: the resource to be removed
+        namespace: the namespace of the resource to be deleted
+        kind:      the kind of the resource to be deleted
+        group:     the group of the resource to be deleted
+        version:   the version of the resource to be deleted
 
         Returns
         -------
@@ -237,7 +240,7 @@ class EDA:
                     "kind": kind,
                 },
                 "name": name,
-                "namespace": "eda",
+                "namespace": namespace,
             },
         )
 

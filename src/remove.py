@@ -32,37 +32,22 @@ class RemoveCommand(SubCommand):
             args.verify,
         )
 
-        print("== Removing topolinks ==")
-        self.remove_topolinks()
-        self.eda.commit_transaction("EDA Containerlab Connector: remove topolinks")
-
-        print("== Removing topolink interfaces ==")
-        self.remove_topolink_interfaces()
-        self.eda.commit_transaction(
-            "EDA Containerlab Connector: remove topolink interfaces"
-        )
-
-        print("== Removing system interfaces ==")
-        self.remove_system_interfaces()
-        self.eda.commit_transaction(
-            "EDA Containerlab Connector: remove system interfaces"
-        )
-
-        print("== Removing nodes ==")
-        self.remove_bootstrap_nodes()
-        self.eda.commit_transaction("EDA Containerlab Connector: remove nodes")
-
-        print("== Removing node profiles ==")
-        self.remove_node_profiles()
-        self.eda.commit_transaction("EDA Containerlab Connector: remove node profiles")
-
-        # print("== Removing allocation pool ==")
-        # self.remove_allocation_pool()
-        # self.eda.commit_transaction(
-        #     "EDA Containerlab Connector: remove allocation pool"
-        # )
+        print("== Removing namespace ==")
+        self.remove_namespace()
+        self.eda.commit_transaction("EDA Containerlab Connector: remove namespace")
 
         print("Done!")
+
+    def remove_namespace(self):
+        """
+        Removes the namespace for the topology
+        """
+        logger.info("Removing namespace")
+        self.eda.add_delete_to_transaction(
+            "",
+            "Namespace",
+            f"clab-{self.topology.name}",
+        )
 
     def remove_topolinks(self):
         """
@@ -75,7 +60,9 @@ class RemoveCommand(SubCommand):
                 logger.debug("Ignoring link, not a topolink")
                 continue
             self.eda.add_delete_to_transaction(
-                "TopoLink", link.get_link_name(self.topology)
+                f"clab-{self.topology.name}",
+                "TopoLink",
+                link.get_link_name(self.topology),
             )
 
     def remove_topolink_interfaces(self):
@@ -98,6 +85,7 @@ class RemoveCommand(SubCommand):
 
             for interface in [ifname_1, ifname_2]:
                 self.eda.add_delete_to_transaction(
+                    f"clab-{self.topology.name}",
                     "Interface",
                     interface,
                     group=self.eda.INTERFACE_GROUP,
@@ -116,6 +104,7 @@ class RemoveCommand(SubCommand):
                 logger.debug("Ignoring node, system interface not supported")
                 continue
             self.eda.add_delete_to_transaction(
+                f"clab-{self.topology.name}",
                 "Interface",
                 ifname,
                 group=self.eda.INTERFACE_GROUP,
@@ -130,7 +119,9 @@ class RemoveCommand(SubCommand):
         for node in self.topology.nodes:
             logger.debug(node)
             self.eda.add_delete_to_transaction(
-                "TopoNode", node.get_node_name(self.topology)
+                f"clab-{self.topology.name}",
+                "TopoNode",
+                node.get_node_name(self.topology),
             )
 
     def remove_node_profiles(self):
@@ -150,7 +141,9 @@ class RemoveCommand(SubCommand):
                 # avoids removing the same node profile twice
                 profile_names.append(profile_name)
                 logger.debug(f"Profile name: {profile_name}")
-                self.eda.add_delete_to_transaction("NodeProfile", profile_name)
+                self.eda.add_delete_to_transaction(
+                    f"clab-{self.topology.name}", "NodeProfile", profile_name
+                )
 
     def remove_allocation_pool(self):
         """
@@ -158,7 +151,9 @@ class RemoveCommand(SubCommand):
         """
         logger.info("Removing mgmt allocation pool")
         self.eda.add_delete_to_transaction(
-            "IPInSubnetAllocationPool", self.topology.get_mgmt_pool_name()
+            f"clab-{self.topology.name}",
+            "IPInSubnetAllocationPool",
+            self.topology.get_mgmt_pool_name(),
         )
 
     def create_parser(self, subparsers):

@@ -75,7 +75,7 @@ class Node:
         """
         Platform name to be used in the bootstrap node resource
         """
-        return "UNKOWN"
+        return "UNKNOWN"
 
     def get_node_profile(self, topology):
         """

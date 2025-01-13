@@ -66,6 +66,7 @@ class Link:
             return None
 
         data = {
+            "namespace": f"clab-{topology.name}",
             "link_role": "interSwitch",
             "link_name": self.get_link_name(topology),
             "local_node": self.node_1.get_node_name(topology),

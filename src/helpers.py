@@ -18,7 +18,7 @@ template_environment = Environment(loader=template_loader)
 logger = logging.getLogger(__name__)
 
 
-def parse_topology(topology_file):
+def parse_topology(topology_file) -> topology.Topology:
     """
     Parses a topology file from JSON
 
@@ -44,8 +44,8 @@ def parse_topology(topology_file):
             # Check if this is a topology-data.json file
             if "type" in data and data["type"] == "clab":
                 return topo.from_topology_data(data)
-            # If not a topology-data.json file, parse as regular topology file
-            return topo.from_topology_data(data)
+            # If not a topology-data.json file, error our
+            raise Exception("Not a valid topology data file provided")
     except json.JSONDecodeError:
         logger.critical(
             f"File '{topology_file}' is not supported. Please provide a valid JSON topology file."

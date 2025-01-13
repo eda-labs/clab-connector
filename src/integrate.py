@@ -44,9 +44,25 @@ class IntegrateCommand(SubCommand):
         #     "EDA Containerlab Connector: create IP-mgmt allocation pool"
         # )
 
+        print("== Creating namespace ==")
+        self.create_namespace()
+        self.eda.commit_transaction("EDA Containerlab Connector: create namespace")
+
+        print("== Creating init ==")
+        self.create_init()
+        self.eda.commit_transaction(
+            "EDA Containerlab Connector: create init (bootstrap)"
+        )
+
+        print("== Creating node security profile ==")
+        self.create_node_security_profile()
+
         print("== Creating node users ==")
+        self.create_node_user_groups()
         self.create_node_users()
-        self.eda.commit_transaction("EDA Containerlab Connector: create node users")
+        self.eda.commit_transaction(
+            "EDA Containerlab Connector: create node users and groups"
+        )
 
         print("== Creating node profiles ==")
         self.create_node_profiles()
@@ -161,6 +177,73 @@ class IntegrateCommand(SubCommand):
     #             "Validation error when trying to create a mgmt allocation pool, see warning above. Exiting..."
     #         )
 
+    def create_namespace(self):
+        """
+        Creates EDA namespace named after clab-<lab_name>.
+        """
+        logger.info("Creating namespace")
+        data = {
+            "namespace": f"clab-{self.topology.name}",
+            "namespace_description": f"Containerlab topology. Name: {self.topology.name}, Topology file: {self.topology.clab_file_path}, IPv4 subnet: {self.topology.mgmt_ipv4_subnet}",
+        }
+
+        ns = helpers.render_template("namespace.j2", data)
+        logger.debug(ns)
+        item = self.eda.add_replace_to_transaction(ns)
+        if not self.eda.is_transaction_item_valid(item):
+            raise Exception(
+                "Validation error when trying to create a namespace, see warning above. Exiting..."
+            )
+
+    def create_init(self):
+        """
+        Creates EDA init.
+        """
+        logger.info("Creating init")
+        data = {
+            "namespace": f"clab-{self.topology.name}",
+        }
+
+        nsp = helpers.render_template("init.yaml.j2", data)
+        logger.debug(nsp)
+        item = self.eda.add_replace_to_transaction(nsp)
+        if not self.eda.is_transaction_item_valid(item):
+            raise Exception(
+                "Validation error when trying to create a node security profile, see warning above. Exiting..."
+            )
+
+    def create_node_security_profile(self):
+        """
+        Creates EDA node security profile.
+        """
+        logger.info("Creating node security profile")
+        data = {
+            "namespace": f"clab-{self.topology.name}",
+        }
+
+        nsp = helpers.render_template("nodesecurityprofile.yaml.j2", data)
+        logger.debug(nsp)
+        helpers.apply_manifest_via_kubectl(
+            yaml_str=nsp, namespace=f"clab-{self.topology.name}"
+        )
+
+    def create_node_user_groups(self):
+        """
+        Creates node user groups for the topology.
+        """
+        logger.info("Creating node user groups")
+        data = {
+            "namespace": f"clab-{self.topology.name}",
+        }
+
+        node_user_group = helpers.render_template("node-user-group.yaml.j2", data)
+        logger.debug(node_user_group)
+        item = self.eda.add_replace_to_transaction(node_user_group)
+        if not self.eda.is_transaction_item_valid(item):
+            raise Exception(
+                "Validation error when trying to create a node user group, see warning above. Exiting..."
+            )
+
     def create_node_users(self):
         """
         Creates node users for the topology.
@@ -170,6 +253,7 @@ class IntegrateCommand(SubCommand):
         """
         logger.info("Creating node users")
         data = {
+            "namespace": f"clab-{self.topology.name}",
             "node_user": "admin",
             "username": "admin",
             "password": "NokiaSrl1!",

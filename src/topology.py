@@ -8,11 +8,35 @@ logger = logging.getLogger(__name__)
 
 
 class Topology:
-    def __init__(self, name, mgmt_ipv4_subnet, nodes, links):
+    def __init__(
+        self,
+        name,
+        mgmt_ipv4_subnet,
+        nodes,
+        links,
+    ):
+        """
+        Initialize a new Topology instance
+
+        Parameters
+        ----------
+        name: str
+            Name of the topology
+        mgmt_ipv4_subnet: str
+            Management IPv4 subnet for the topology
+        nodes: list
+            List of Node objects in the topology
+        links: list
+            List of Link objects connecting the nodes
+        clab_file_path: list
+            List of Link objects connecting the nodes
+        """
         self.name = name
         self.mgmt_ipv4_subnet = mgmt_ipv4_subnet
         self.nodes = nodes
         self.links = links
+        # path to the topology file a clab topology was spawned from
+        self.clab_file_path = ""
 
     def __repr__(self):
         return f"Topology(name={self.name}, mgmt_ipv4_subnet={self.mgmt_ipv4_subnet}) with {len(self.nodes)} nodes"
@@ -160,6 +184,9 @@ class Topology:
         # Create nodes
         nodes = []
         for node_name, node_data in json_obj["nodes"].items():
+            # fetch clab file path from node labels
+            if self.clab_file_path == "":
+                self.clab_file_path = node_data["labels"].get("clab-topo-file", "")
             try:
                 # Get version from image tag
                 image = node_data["image"]

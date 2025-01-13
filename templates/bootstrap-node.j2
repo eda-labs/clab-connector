@@ -8,7 +8,7 @@ metadata:
     eda-connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
     eda.nokia.com/security-profile: managed
     containerlab: managed
-  namespace: eda
+  namespace: {{ namespace }}
 spec:
   nodeProfile: {{ node_profile }}
   operatingSystem: {{ kind }}
