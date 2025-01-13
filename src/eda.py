@@ -170,7 +170,7 @@ class EDA:
 
         Parameters
         ----------
-        type:       action type, possible values: ['create', 'delete']
+        type:       action type, possible values: ['create', 'delete', 'replace', 'modify']
         payload:    the operation's payload
 
         Returns
@@ -197,7 +197,7 @@ class EDA:
         -------
         The created item
         """
-        return self.add_to_transaction("create", {"value": yaml.safe_load(resource)})
+        return self.add_to_transaction("replace", {"value": yaml.safe_load(resource)})
 
     def add_delete_to_transaction(
         self, kind, name, group=CORE_GROUP, version=CORE_VERSION
