@@ -182,7 +182,6 @@ class IntegrateCommand(SubCommand):
         Creates EDA namespace named after clab-<lab_name>.
         """
         logger.info("Creating namespace")
-        self.topology.name = self.topology.get_eda_safe_name()
         data = {
             "namespace": f"clab-{self.topology.name}",
             "namespace_description": f"Containerlab topology. Name: {self.topology.name}, Topology file: {self.topology.clab_file_path}, IPv4 subnet: {self.topology.mgmt_ipv4_subnet}",

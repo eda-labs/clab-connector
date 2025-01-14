@@ -35,15 +35,18 @@ def parse_topology(topology_file) -> topology.Topology:
         logger.critical(f"Topology file '{topology_file}' does not exist!")
         sys.exit(1)
 
-    # Create empty topology object
-    topo = topology.Topology("", "", [], [])
-
     try:
         with open(topology_file, "r") as f:
             data = json.load(f)
             # Check if this is a topology-data.json file
             if "type" in data and data["type"] == "clab":
-                return topo.from_topology_data(data)
+                topo = topology.Topology(data["name"], "", [], [])
+                topo = topo.from_topology_data(data)
+                # Sanitize the topology name after parsing
+                original_name = topo.name
+                topo.name = topo.get_eda_safe_name()
+                logger.info(f"Sanitized topology name from '{original_name}' to '{topo.name}'")
+                return topo
             # If not a topology-data.json file, error our
             raise Exception("Not a valid topology data file provided")
     except json.JSONDecodeError:
