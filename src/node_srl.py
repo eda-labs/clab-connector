@@ -47,7 +47,10 @@ class SRLNode(Node):
 
         try:
             ssh.connect(
-                self.mgmt_ipv4, username=self.SRL_USERNAME, password=self.SRL_PASSWORD
+                self.mgmt_ipv4,
+                username=self.SRL_USERNAME,
+                password=self.SRL_PASSWORD,
+                allow_agent=False,
             )
             logger.info(
                 f"SSH test to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} was successful"
