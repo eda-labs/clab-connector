@@ -9,6 +9,8 @@ from src.remove import RemoveCommand
 
 urllib3.disable_warnings()
 
+SUPPORTED_KINDS = ["nokia_srlinux"]
+
 subcommands = [IntegrateCommand(), RemoveCommand()]
 
 parser = argparse.ArgumentParser(
@@ -80,6 +82,10 @@ logging.addLevelName(
 logging.addLevelName(
     logging.CRITICAL, f"\x1b[1;91m{logging.getLevelName(logging.CRITICAL)}\x1b[0m"
 )
+
+# set up logging
+logger = logging.getLogger(__name__)
+logger.warning(f"Supported containerlab kinds are: {SUPPORTED_KINDS}")
 
 # this will bite me in the ass someday
 os.environ["no_proxy"] = args.eda_url

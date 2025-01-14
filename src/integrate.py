@@ -4,7 +4,6 @@ import src.helpers as helpers
 from src.eda import EDA
 from src.subcommand import SubCommand
 
-# set up logging
 logger = logging.getLogger(__name__)
 
 
