@@ -200,12 +200,14 @@ class Topology:
         name = json_obj["name"]
         mgmt_ipv4_subnet = json_obj["clab"]["config"]["mgmt"]["ipv4-subnet"]
 
+        clab_file_path = ""
+        for node_name, node_data in json_obj["nodes"].items():
+            if clab_file_path == "":
+                clab_file_path = node_data["labels"].get("clab-topo-file", "")
+                break
         # Create nodes
         nodes = []
         for node_name, node_data in json_obj["nodes"].items():
-            # fetch clab file path from node labels
-            if self.clab_file_path == "":
-                self.clab_file_path = node_data["labels"].get("clab-topo-file", "")
             try:
                 # Get version from image tag
                 image = node_data["image"]
@@ -248,4 +250,6 @@ class Topology:
                     f"Skipping link between {link_data['a']['node']} and {link_data['z']['node']} as one or both nodes are not supported"
                 )
 
-        return Topology(name, mgmt_ipv4_subnet, nodes, links)
+        topology = Topology(name, mgmt_ipv4_subnet, nodes, links)
+        topology.clab_file_path = clab_file_path
+        return topology
