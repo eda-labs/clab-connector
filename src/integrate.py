@@ -35,16 +35,12 @@ class IntegrateCommand(SubCommand):
         print("== Running pre-checks ==")
         self.prechecks()
 
-        # print("== Creating allocation pool ==")
-        # self.create_allocation_pool()
-        # self.eda.commit_transaction(
-        #     "EDA Containerlab Connector: create IP-mgmt allocation pool"
-        # )
-
         try:
             print("== Creating namespace ==")
             self.create_namespace()
-            transactionId = self.eda.commit_transaction("EDA Containerlab Connector: create namespace")
+            transactionId = self.eda.commit_transaction(
+                "EDA Containerlab Connector: create namespace"
+            )
             # Store the first transaction ID
             self.initial_transaction_id = transactionId - 1
 
@@ -54,7 +50,7 @@ class IntegrateCommand(SubCommand):
             print("== Creating init ==")
             self.create_init()
             self.eda.commit_transaction(
-            "EDA Containerlab Connector: create init (bootstrap)"
+                "EDA Containerlab Connector: create init (bootstrap)"
             )
 
             print("== Creating node security profile ==")
@@ -64,28 +60,23 @@ class IntegrateCommand(SubCommand):
             self.create_node_user_groups()
             self.create_node_users()
             self.eda.commit_transaction(
-            "EDA Containerlab Connector: create node users and groups"
+                "EDA Containerlab Connector: create node users and groups"
             )
 
             print("== Creating node profiles ==")
             self.create_node_profiles()
-            self.eda.commit_transaction("EDA Containerlab Connector: create node profiles")
-            #self.bootstrap_config()
+            self.eda.commit_transaction(
+                "EDA Containerlab Connector: create node profiles"
+            )
 
             print("== Onboarding nodes ==")
             self.create_toponodes()
             self.eda.commit_transaction("EDA Containerlab Connector: create nodes")
 
-            # print("== Adding system interfaces ==")
-            # self.create_system_interfaces()
-            # self.eda.commit_transaction(
-            #     "EDA Containerlab Connector: create system interfaces"
-            # )
-
             print("== Adding topolink interfaces ==")
             self.create_topolink_interfaces()
             self.eda.commit_transaction(
-            "EDA Containerlab Connector: create topolink interfaces"
+                "EDA Containerlab Connector: create topolink interfaces"
             )
 
             print("== Creating topolinks ==")
@@ -162,30 +153,6 @@ class IntegrateCommand(SubCommand):
                     logger.info(f"Artifact '{artifact_name}' already exists, skipping.")
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
-
-    # def create_allocation_pool(self):
-    #     """
-    #     Creates an IP allocation pool for the mgmt network of the topology
-    #     """
-    #     logger.info("Creating mgmt allocation pool")
-    #     subnet_prefix = self.topology.mgmt_ipv4_subnet
-    #     (subnet, prefix) = subnet_prefix.split("/")
-    #     parts = subnet.split(".")
-    #     gateway = f"{parts[0]}.{parts[1]}.{parts[2]}.{int(parts[3]) + 1}/{prefix}"
-
-    #     data = {
-    #         "pool_name": self.topology.get_mgmt_pool_name(),
-    #         "subnet": subnet_prefix,
-    #         "gateway": gateway,
-    #     }
-
-    #     pool = helpers.render_template("allocation-pool.j2", data)
-    #     logger.debug(pool)
-    #     item = self.eda.add_create_to_transaction(pool)
-    #     if not self.eda.is_transaction_item_valid(item):
-    #         raise Exception(
-    #             "Validation error when trying to create a mgmt allocation pool, see warning above. Exiting..."
-    #         )
 
     def create_namespace(self):
         """
@@ -301,13 +268,6 @@ class IntegrateCommand(SubCommand):
                     "Validation error when trying to create a node profile, see warning above. Exiting..."
                 )
 
-    def bootstrap_config(self):
-        """
-        Push the bootstrap configuration to the nodes
-        """
-        logger.info("Pushing bootstrap config to the nodes")
-        self.topology.bootstrap_config()
-
     def create_toponodes(self):
         """
         Creates nodes for the topology
@@ -321,20 +281,6 @@ class IntegrateCommand(SubCommand):
             if not self.eda.is_transaction_item_valid(item):
                 raise Exception(
                     "Validation error when trying to create a toponode, see warning above. Exiting..."
-                )
-
-    def create_system_interfaces(self):
-        """
-        Creates the system interfaces for all nodes
-        """
-        logger.info("Creating system interfaces")
-        interfaces = self.topology.get_system_interfaces()
-        for interface in interfaces:
-            logger.debug(interface)
-            item = self.eda.add_create_to_transaction(interface)
-            if not self.eda.is_transaction_item_valid(item):
-                raise Exception(
-                    "Validation error when trying to create a system interface, see warning above. Exiting..."
                 )
 
     def create_topolink_interfaces(self):

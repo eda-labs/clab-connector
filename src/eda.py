@@ -376,7 +376,6 @@ class EDA:
         logger.info("Transaction revert successful")
         return True
 
-
     def restore_transaction(self, transactionId):
         """
         Restores to a specific transaction ID in EDA
@@ -393,7 +392,9 @@ class EDA:
         logger.info(f"Restoring to transaction ID {restore_point}")
 
         # First wait for the transaction details to ensure it's committed
-        self.get(f"core/transaction/v1/details/{transactionId}?waitForComplete=true").json()
+        self.get(
+            f"core/transaction/v1/details/{transactionId}?waitForComplete=true"
+        ).json()
 
         response = self.post(f"core/transaction/v1/restore/{restore_point}", {})
         result = response.json()

@@ -45,7 +45,9 @@ def parse_topology(topology_file) -> topology.Topology:
                 # Sanitize the topology name after parsing
                 original_name = topo.name
                 topo.name = topo.get_eda_safe_name()
-                logger.info(f"Sanitized topology name from '{original_name}' to '{topo.name}'")
+                logger.info(
+                    f"Sanitized topology name from '{original_name}' to '{topo.name}'"
+                )
                 return topo
             # If not a topology-data.json file, error our
             raise Exception("Not a valid topology data file provided")

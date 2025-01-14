@@ -131,64 +131,11 @@ class SRLNode(Node):
             "node_user": "admin",
             "onboarding_password": self.SRL_PASSWORD,
             "onboarding_username": self.SRL_USERNAME,
-            "pool_name": topology.get_mgmt_pool_name(),
             "sw_image": self.SRL_IMAGE.format(version=self.version),
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),
         }
 
         return helpers.render_template("node-profile.j2", data)
-
-    def bootstrap_config(self):
-        """
-        Pushes the bootstrap configuration to the node
-
-        Returns
-        -------
-        the rendered bootstrap config
-        """
-        logger.info(f"Pushing bootstrap config to node {self}")
-        ssh = SSHClient()
-        ssh.set_missing_host_key_policy(AutoAddPolicy())
-
-        data = {"gnmi_port": self.GNMI_PORT}
-
-        bootstrap_config = helpers.render_template("srlinux-bootstrap-config.j2", data)
-        fd, path = tempfile.mkstemp()
-
-        try:
-            with os.fdopen(fd, "w") as cfg:
-                cfg.write(bootstrap_config)
-                cfg.flush()
-                print(path)
-                ssh.connect(
-                    self.mgmt_ipv4,
-                    username=self.SRL_USERNAME,
-                    password=self.SRL_PASSWORD,
-                )
-                sftp = ssh.open_sftp()
-                logger.info("Copying rendered bootstrap-config to node")
-                sftp.put(path, "bootstrap-config.cfg")
-                logger.info("Sourcing the bootstrap-config file")
-                ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(
-                    "source bootstrap-config.cfg"
-                )
-                stderr_lines = ssh_stderr.readlines()
-                if len(stderr_lines) > 0:
-                    logger.error("=== STDERR ===")
-                    logger.error(ssh_stderr)
-                    raise Exception(
-                        "Something went wrong when pushing bootstrap config to the node, see error above"
-                    )
-        except (
-            BadHostKeyException,
-            AuthenticationException,
-            SSHException,
-            socket.error,
-        ) as e:
-            logger.critical(f"Could not connect to node {self}, exception: {e}")
-            raise e
-        finally:
-            os.remove(path)
 
     def get_toponode(self, topology):
         """
@@ -224,42 +171,9 @@ class SRLNode(Node):
             "platform": self.get_platform(),
             "sw_version": self.version,
             "mgmt_ip": self.mgmt_ipv4,
-            "system_interface": self.get_system_interface_name(topology),
         }
 
         return helpers.render_template("toponode.j2", data)
-
-    def get_system_interface_name(self, topology):
-        """
-        Returns the name of this node's system interface
-        """
-        return f"{self.get_node_name(topology)}-system0"
-
-    def get_system_interface(self, topology):
-        """
-        Creates a system interface for this node
-
-        Parameters
-        ----------
-        topology: the parsed Topology
-
-        Returns
-        -------
-        The rendered interface jinja template
-        """
-        logger.info(f"Creating system interface for {self}")
-
-        data = {
-            "interface_name": self.get_system_interface_name(topology),
-            "label_key": None,
-            "label_value": None,
-            "encap_type": "'null'",
-            "node_name": self.get_node_name(topology),
-            "interface": "system0",
-            "description": "system interface",
-        }
-
-        return helpers.render_template("interface.j2", data)
 
     def get_topolink_interface_name(self, topology, ifname):
         """

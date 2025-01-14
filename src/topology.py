@@ -91,12 +91,6 @@ class Topology:
 
         return safe_name
 
-    def get_mgmt_pool_name(self):
-        """
-        Returns an EDA-safe name for the IPInSubnetAllocationPool for mgmt
-        """
-        return f"{self.get_eda_safe_name()}-mgmt-pool"
-
     def get_node_profiles(self):
         """
         Creates node profiles for all nodes in the topology. One node profile per type/sw-version is created
@@ -113,13 +107,6 @@ class Topology:
 
         # only return the node profiles, not the keys
         return profiles.values()
-
-    def bootstrap_config(self):
-        """
-        Pushes the bootstrap configuration to the nodes
-        """
-        for node in self.nodes:
-            node.bootstrap_config()
 
     def get_toponodes(self):
         """

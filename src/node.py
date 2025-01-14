@@ -88,12 +88,6 @@ class Node:
         logger.info(f"Node profile is not supported for {self}")
         return None
 
-    def bootstrap_config(self):
-        """
-        Pushes the bootstrap configuration to the node. This method needs to be overwritten by nodes that support it
-        """
-        logger.info(f"Pushing bootstrap config to the node not supported for {self}")
-
     def get_toponode(self, topology):
         """
         Get as toponode. This method needs to be overwritten by nodes that support it
@@ -120,28 +114,6 @@ class Node:
         The name of the interface as accepted by the node
         """
         return ifname
-
-    def get_system_interface_name(self, topology):
-        """
-        Returns the name of this node's system interface, if supported
-        """
-        logger.info(f"Getting system interface name is not supported for {self}")
-        return None
-
-    def get_system_interface(self, topology):
-        """
-        Creates a system interface for this node. This method needs to be overwritten by nodes that support it
-
-        Parameters
-        ----------
-        topology: the parsed Topology
-
-        Returns
-        -------
-        The rendered interface jinja template
-        """
-        logger.info(f"System interface is not supported for {self}")
-        return None
 
     def get_topolink_interface_name(self, topology, ifname):
         """
