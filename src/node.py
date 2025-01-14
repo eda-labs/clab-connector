@@ -73,7 +73,7 @@ class Node:
 
     def get_platform(self):
         """
-        Platform name to be used in the bootstrap node resource
+        Platform name to be used in the toponode resource
         """
         return "UNKNOWN"
 
@@ -94,11 +94,11 @@ class Node:
         """
         logger.info(f"Pushing bootstrap config to the node not supported for {self}")
 
-    def get_bootstrap_node(self, topology):
+    def get_toponode(self, topology):
         """
-        Creates a bootstrap node for this node. This method needs to be overwritten by nodes that support it
+        Get as toponode. This method needs to be overwritten by nodes that support it
         """
-        logger.info(f"Bootstrap node is not supported for {self}")
+        logger.info(f"Toponode is not supported for {self}")
         return None
 
     def is_eda_supported(self):

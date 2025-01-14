@@ -111,11 +111,11 @@ class RemoveCommand(SubCommand):
                 version=self.eda.INTERFACE_VERSION,
             )
 
-    def remove_bootstrap_nodes(self):
+    def remove_toponodes(self):
         """
         Removes the toponodes for the topology
         """
-        logger.info("Removing bootstrapped nodes")
+        logger.info("Removing toponodes")
         for node in self.topology.nodes:
             logger.debug(node)
             self.eda.add_delete_to_transaction(

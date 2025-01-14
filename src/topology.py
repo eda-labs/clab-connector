@@ -121,19 +121,19 @@ class Topology:
         for node in self.nodes:
             node.bootstrap_config()
 
-    def get_bootstrap_nodes(self):
+    def get_toponodes(self):
         """
         Create nodes for the topology
         """
-        bootstrap_nodes = []
+        toponodes = []
         for node in self.nodes:
-            bootstrap_node = node.get_bootstrap_node(self)
-            if bootstrap_node is None:
+            toponode = node.get_toponode(self)
+            if toponode is None:
                 continue
 
-            bootstrap_nodes.append(bootstrap_node)
+            toponodes.append(toponode)
 
-        return bootstrap_nodes
+        return toponodes
 
     def get_topolinks(self):
         """

@@ -73,7 +73,7 @@ class IntegrateCommand(SubCommand):
             #self.bootstrap_config()
 
             print("== Onboarding nodes ==")
-            self.create_bootstrap_nodes()
+            self.create_toponodes()
             self.eda.commit_transaction("EDA Containerlab Connector: create nodes")
 
             # print("== Adding system interfaces ==")
@@ -299,19 +299,19 @@ class IntegrateCommand(SubCommand):
         logger.info("Pushing bootstrap config to the nodes")
         self.topology.bootstrap_config()
 
-    def create_bootstrap_nodes(self):
+    def create_toponodes(self):
         """
         Creates nodes for the topology
         """
         logger.info("Creating nodes")
-        bootstrap_nodes = self.topology.get_bootstrap_nodes()
-        for bootstrap_node in bootstrap_nodes:
-            logger.debug(bootstrap_node)
-            item = self.eda.add_replace_to_transaction(bootstrap_node)
+        toponodes = self.topology.get_toponodes()
+        for toponode in toponodes:
+            logger.debug(toponode)
+            item = self.eda.add_replace_to_transaction(toponode)
             logger.debug(item)
             if not self.eda.is_transaction_item_valid(item):
                 raise Exception(
-                    "Validation error when trying to create a bootstrap node, see warning above. Exiting..."
+                    "Validation error when trying to create a toponode, see warning above. Exiting..."
                 )
 
     def create_system_interfaces(self):

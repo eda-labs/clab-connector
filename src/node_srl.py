@@ -72,7 +72,7 @@ class SRLNode(Node):
 
     def get_platform(self):
         """
-        Platform name to be used in the bootstrap node resource
+        Platform name to be used in the toponode resource
         """
         t = self.node_type.replace("ixr", "")
         return f"7220 IXR-{t.upper()}"
@@ -190,15 +190,15 @@ class SRLNode(Node):
         finally:
             os.remove(path)
 
-    def get_bootstrap_node(self, topology):
+    def get_toponode(self, topology):
         """
         Creates a topo node for this node
 
         Returns
         -------
-        the rendered bootstrap-node jinja template
+        the rendered toponode jinja template
         """
-        logger.info(f"Creating bootstrap node for {self}")
+        logger.info(f"Creating toponode node for {self}")
 
         role_value = "leaf"
         if "leaf" in self.name:
@@ -227,7 +227,7 @@ class SRLNode(Node):
             "system_interface": self.get_system_interface_name(topology),
         }
 
-        return helpers.render_template("bootstrap-node.j2", data)
+        return helpers.render_template("toponode.j2", data)
 
     def get_system_interface_name(self, topology):
         """
