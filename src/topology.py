@@ -68,9 +68,28 @@ class Topology:
 
     def get_eda_safe_name(self):
         """
-        Returns an EDA-safe name for the name of the topology
+        Returns a Kubernetes-compliant name by:
+        - Converting to lowercase
+        - Replacing underscores and spaces with hyphens
+        - Removing any other invalid characters
+        - Ensuring it starts and ends with alphanumeric characters
         """
-        return self.name.replace("_", "-")
+        # Convert to lowercase and replace underscores/spaces with hyphens
+        safe_name = self.name.lower().replace("_", "-").replace(" ", "-")
+
+        # Remove any characters that aren't lowercase alphanumeric, dots or hyphens
+        safe_name = "".join(c for c in safe_name if c.isalnum() or c in ".-")
+
+        # Ensure it starts and ends with alphanumeric character
+        safe_name = safe_name.strip(".-")
+
+        # Handle empty string or invalid result
+        if not safe_name or not safe_name[0].isalnum():
+            safe_name = "x" + safe_name
+        if not safe_name[-1].isalnum():
+            safe_name = safe_name + "0"
+
+        return safe_name
 
     def get_mgmt_pool_name(self):
         """
