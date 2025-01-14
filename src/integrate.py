@@ -35,9 +35,6 @@ class IntegrateCommand(SubCommand):
         print("== Running pre-checks ==")
         self.prechecks()
 
-        # print("== Creating artifacts ==")
-        # self.create_artifacts()
-
         # print("== Creating allocation pool ==")
         # self.create_allocation_pool()
         # self.eda.commit_transaction(
@@ -50,6 +47,9 @@ class IntegrateCommand(SubCommand):
             transactionId = self.eda.commit_transaction("EDA Containerlab Connector: create namespace")
             # Store the first transaction ID
             self.initial_transaction_id = transactionId - 1
+
+            print("== Creating artifacts ==")
+            self.create_artifacts()
 
             print("== Creating init ==")
             self.create_init()
@@ -233,9 +233,18 @@ class IntegrateCommand(SubCommand):
 
         nsp = helpers.render_template("nodesecurityprofile.yaml.j2", data)
         logger.debug(nsp)
-        helpers.apply_manifest_via_kubectl(
-            yaml_str=nsp, namespace=f"clab-{self.topology.name}"
-        )
+
+        try:
+            helpers.apply_manifest_via_kubectl(
+                yaml_str=nsp, namespace=f"clab-{self.topology.name}"
+            )
+            logger.info("Node security profile has been created.")
+        except RuntimeError as ex:
+            if "AlreadyExists" in str(ex):
+                logger.info("Node security profile already exists, skipping.")
+            else:
+                logger.error(f"Error creating node security profile: {ex}")
+                raise
 
     def create_node_user_groups(self):
         """
