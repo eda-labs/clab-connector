@@ -331,3 +331,90 @@ class EDA:
 
         logger.info("Commit successful")
         self.transactions = []
+        return transactionId
+
+    def revert_transaction(self, transactionId):
+        """
+        Reverts a transaction in EDA
+
+        Parameters
+        ----------
+        transactionId: ID of the transaction to revert
+
+        Returns
+        -------
+        True if revert was successful, raises exception otherwise
+        """
+        logger.info(f"Reverting transaction with ID {transactionId}")
+
+        # First wait for the transaction details to ensure it's committed
+        self.get(
+            f"core/transaction/v1/details/{transactionId}?waitForComplete=true"
+        ).json()
+
+        response = self.post(f"core/transaction/v1/revert/{transactionId}", {})
+        result = response.json()
+
+        if "code" in result and result["code"] != 0:
+            message = f"{result['message']}"
+
+            if "details" in result:
+                message = f"{message} - {result['details']}"
+
+            errors = []
+            if "errors" in result:
+                errors = [
+                    f"{x['error']['message']} {x['error']['details']}"
+                    for x in result["errors"]
+                ]
+
+            logger.error(
+                f"Reverting transaction failed (error code {result['code']}). Error message: '{message} {errors}'"
+            )
+            raise Exception("Failed to revert transaction - see error above")
+
+        logger.info("Transaction revert successful")
+        return True
+
+
+    def restore_transaction(self, transactionId):
+        """
+        Restores to a specific transaction ID in EDA
+
+        Parameters
+        ----------
+        transactionId: ID of the transaction to restore to (will restore to transactionId - 1)
+
+        Returns
+        -------
+        True if restore was successful, raises exception otherwise
+        """
+        restore_point = int(transactionId)
+        logger.info(f"Restoring to transaction ID {restore_point}")
+
+        # First wait for the transaction details to ensure it's committed
+        self.get(f"core/transaction/v1/details/{transactionId}?waitForComplete=true").json()
+
+        response = self.post(f"core/transaction/v1/restore/{restore_point}", {})
+        result = response.json()
+
+        if "code" in result and result["code"] != 0:
+            message = f"{result['message']}"
+
+            if "details" in result:
+                message = f"{message} - {result['details']}"
+
+            errors = []
+            if "errors" in result:
+                errors = [
+                    f"{x['error']['message']} {x['error']['details']}"
+                    for x in result["errors"]
+                ]
+
+            logger.error(
+                f"Restoring to transaction failed (error code {result['code']}). Error message: '{message} {errors}'"
+            )
+            raise Exception("Failed to restore transaction - see error above")
+
+        logger.info("Transaction restore successful")
+        return True

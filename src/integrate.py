@@ -44,52 +44,62 @@ class IntegrateCommand(SubCommand):
         #     "EDA Containerlab Connector: create IP-mgmt allocation pool"
         # )
 
-        print("== Creating namespace ==")
-        self.create_namespace()
-        self.eda.commit_transaction("EDA Containerlab Connector: create namespace")
+        try:
+            print("== Creating namespace ==")
+            self.create_namespace()
+            transactionId = self.eda.commit_transaction("EDA Containerlab Connector: create namespace")
+            # Store the first transaction ID
+            self.initial_transaction_id = transactionId - 1
 
-        print("== Creating init ==")
-        self.create_init()
-        self.eda.commit_transaction(
+            print("== Creating init ==")
+            self.create_init()
+            self.eda.commit_transaction(
             "EDA Containerlab Connector: create init (bootstrap)"
-        )
+            )
 
-        print("== Creating node security profile ==")
-        self.create_node_security_profile()
+            print("== Creating node security profile ==")
+            self.create_node_security_profile()
 
-        print("== Creating node users ==")
-        self.create_node_user_groups()
-        self.create_node_users()
-        self.eda.commit_transaction(
+            print("== Creating node users ==")
+            self.create_node_user_groups()
+            self.create_node_users()
+            self.eda.commit_transaction(
             "EDA Containerlab Connector: create node users and groups"
-        )
+            )
 
-        print("== Creating node profiles ==")
-        self.create_node_profiles()
-        self.eda.commit_transaction("EDA Containerlab Connector: create node profiles")
-        # self.bootstrap_config()
+            print("== Creating node profiles ==")
+            self.create_node_profiles()
+            self.eda.commit_transaction("EDA Containerlab Connector: create node profiles")
+            #self.bootstrap_config()
 
-        print("== Onboarding nodes ==")
-        self.create_bootstrap_nodes()
-        self.eda.commit_transaction("EDA Containerlab Connector: create nodes")
+            print("== Onboarding nodes ==")
+            self.create_bootstrap_nodes()
+            self.eda.commit_transaction("EDA Containerlab Connector: create nodes")
 
-        # print("== Adding system interfaces ==")
-        # self.create_system_interfaces()
-        # self.eda.commit_transaction(
-        #     "EDA Containerlab Connector: create system interfaces"
-        # )
+            # print("== Adding system interfaces ==")
+            # self.create_system_interfaces()
+            # self.eda.commit_transaction(
+            #     "EDA Containerlab Connector: create system interfaces"
+            # )
 
-        print("== Adding topolink interfaces ==")
-        self.create_topolink_interfaces()
-        self.eda.commit_transaction(
+            print("== Adding topolink interfaces ==")
+            self.create_topolink_interfaces()
+            self.eda.commit_transaction(
             "EDA Containerlab Connector: create topolink interfaces"
-        )
+            )
 
-        print("== Creating topolinks ==")
-        self.create_topolinks()
-        self.eda.commit_transaction("EDA Containerlab Connector: create topolinks")
+            print("== Creating topolinks ==")
+            self.create_topolinks()
+            self.eda.commit_transaction("EDA Containerlab Connector: create topolinks")
 
-        print("Done!")
+            print("Done!")
+
+        except Exception as e:
+            if self.initial_transaction_id:
+                print("Error occurred during integration. Restore to initial state...")
+                self.eda.restore_transaction(self.initial_transaction_id)
+                print("Revert completed.")
+            raise e
 
     def prechecks(self):
         """
