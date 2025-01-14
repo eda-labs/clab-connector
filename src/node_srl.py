@@ -158,7 +158,7 @@ class SRLNode(Node):
         elif "dcgw" in self.name:
             role_value = "dcgw"
         else:
-            logger.warning(
+            logger.debug(
                 f"Could not determine role of node {self}, defaulting to eda.nokia.com/role=leaf"
             )
 
