@@ -14,6 +14,7 @@ class Topology:
         mgmt_ipv4_subnet,
         nodes,
         links,
+        clab_file_path="",
     ):
         """
         Initialize a new Topology instance
@@ -28,15 +29,14 @@ class Topology:
             List of Node objects in the topology
         links: list
             List of Link objects connecting the nodes
-        clab_file_path: list
-            List of Link objects connecting the nodes
+        clab_file_path: str
+            Path to the topology file a clab topology was spawned from
         """
         self.name = name
         self.mgmt_ipv4_subnet = mgmt_ipv4_subnet
         self.nodes = nodes
         self.links = links
-        # path to the topology file a clab topology was spawned from
-        self.clab_file_path = ""
+        self.clab_file_path = clab_file_path
 
     def __repr__(self):
         return f"Topology(name={self.name}, mgmt_ipv4_subnet={self.mgmt_ipv4_subnet}) with {len(self.nodes)} nodes"
@@ -250,6 +250,4 @@ class Topology:
                     f"Skipping link between {link_data['a']['node']} and {link_data['z']['node']} as one or both nodes are not supported"
                 )
 
-        topology = Topology(name, mgmt_ipv4_subnet, nodes, links)
-        topology.clab_file_path = clab_file_path
-        return topology
+        return Topology(name, mgmt_ipv4_subnet, nodes, links, clab_file_path)
