@@ -1,8 +1,6 @@
 import logging
-import os
 import re
 import socket
-import tempfile
 
 from paramiko import (
     AuthenticationException,
