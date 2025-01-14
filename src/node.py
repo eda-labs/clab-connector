@@ -172,7 +172,9 @@ class Node:
 # import specific nodes down here to avoid circular dependencies
 from src.node_srl import SRLNode  # noqa: E402
 
-KIND_MAPPING = {"nokia_srlinux": "srl", "srl": "srl"}
+KIND_MAPPING = {
+    "nokia_srlinux": "srl",
+}
 
 SUPPORTED_NODE_TYPES = {
     "srl": SRLNode,
@@ -202,7 +204,7 @@ def from_obj(name, python_object, kinds):
     # Translate kind if needed
     kind = KIND_MAPPING.get(original_kind)
     if not kind:
-        logger.warning(
+        logger.debug(
             f"Unsupported kind '{original_kind}' for node '{name}', skipping. Supported kinds: {list(KIND_MAPPING.keys())}"
         )
         return None
