@@ -77,16 +77,14 @@ def render_template(template_name, data):
 
 def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
     """
-    Creates the given resource via `kubectl create -f` in the specified namespace.
-    If the resource already exists, 'AlreadyExists' will appear in stderr,
-    and we raise RuntimeError so the caller can decide what to do.
+    Applies the given resource via `kubectl apply -f` in the specified namespace.
     """
     fd, tmp_path = tempfile.mkstemp(suffix=".yaml")
     try:
         with os.fdopen(fd, "w") as f:
             f.write(yaml_str)
 
-        cmd = ["kubectl", "create", "-n", namespace, "-f", tmp_path, "--save-config"]
+        cmd = ["kubectl", "apply", "-n", namespace, "-f", tmp_path]
         logger.debug(f"Running command: {cmd}")
 
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -96,7 +94,7 @@ def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
                 f"kubectl create failed:\nstdout={result.stdout}\nstderr={result.stderr}"
             )
         else:
-            logger.info(f"kubectl create succeeded:\n{result.stdout}")
+            logger.info(f"kubectl apply succeeded:\n{result.stdout}")
     finally:
         os.remove(tmp_path)
 
