@@ -6,39 +6,33 @@ mgmt:
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       image: ghcr.io/nokia/srlinux:24.10.1
   nodes:
     spine-1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3l
       mgmt-ipv4: 10.58.2.115
-      startup-config: srlinux.cfg
     spine-2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3l
       mgmt-ipv4: 10.58.2.116
-      startup-config: srlinux.cfg
     leaf-1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2l
       mgmt-ipv4: 10.58.2.117
-      startup-config: srlinux.cfg
     leaf-2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2l
       mgmt-ipv4: 10.58.2.118
-      startup-config: srlinux.cfg
     leaf-3:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2l
       mgmt-ipv4: 10.58.2.119
-      startup-config: srlinux.cfg
     leaf-4:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2l
       mgmt-ipv4: 10.58.2.120
-      startup-config: srlinux.cfg
   links:
     # spine - leaf
     - endpoints: ["spine-1:e1-3", "leaf-1:e1-31"]
