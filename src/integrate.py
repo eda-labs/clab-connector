@@ -20,7 +20,7 @@ class IntegrateCommand(SubCommand):
         args: input arguments returned by the argument parser
         """
         self.args = args
-        self.topology = helpers.parse_topology(self.args.topology_file)
+        self.topology = helpers.parse_topology(self.args.topology_data)
         self.topology.log_debug()
         self.eda = EDA(
             args.eda_url,
