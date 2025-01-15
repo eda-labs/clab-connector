@@ -204,7 +204,7 @@ class Topology:
                     node_name,
                     {
                         "kind": node_data["kind"],
-                        "type": node_data["labels"].get("clab-node-type", ""),
+                        "type": node_data["labels"].get("clab-node-type", "ixrd2"),
                         "mgmt-ipv4": node_data["mgmt-ipv4-address"],
                         "version": version,
                     },
