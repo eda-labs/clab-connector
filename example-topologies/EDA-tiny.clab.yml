@@ -7,7 +7,7 @@ mgmt:
 topology:
   kinds:
     nokia_srlinux:
-      image: ghcr.io/nokia/srlinux:24.7.1
+      image: ghcr.io/nokia/srlinux:24.10.1
   nodes:
     dut1:
       kind: nokia_srlinux
