@@ -1,6 +1,8 @@
 import logging
 import subprocess
 
+from src import helpers
+
 # set up logging
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,7 @@ class Node:
         """
         Returns an EDA-safe name for a node
         """
-        return f"{topology.get_eda_safe_name()}-{self.name}"
+        return helpers.normalize_name(self.name)
 
     def get_profile_name(self, topology):
         """

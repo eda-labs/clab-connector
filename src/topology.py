@@ -1,5 +1,6 @@
 import logging
 
+from src import helpers
 from src.link import from_obj as link_from_obj
 from src.node import from_obj as node_from_obj
 
@@ -74,22 +75,7 @@ class Topology:
         - Removing any other invalid characters
         - Ensuring it starts and ends with alphanumeric characters
         """
-        # Convert to lowercase and replace underscores/spaces with hyphens
-        safe_name = self.name.lower().replace("_", "-").replace(" ", "-")
-
-        # Remove any characters that aren't lowercase alphanumeric, dots or hyphens
-        safe_name = "".join(c for c in safe_name if c.isalnum() or c in ".-")
-
-        # Ensure it starts and ends with alphanumeric character
-        safe_name = safe_name.strip(".-")
-
-        # Handle empty string or invalid result
-        if not safe_name or not safe_name[0].isalnum():
-            safe_name = "x" + safe_name
-        if not safe_name[-1].isalnum():
-            safe_name = safe_name + "0"
-
-        return safe_name
+        return helpers.normalize_name(self.name)
 
     def get_node_profiles(self):
         """
