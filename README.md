@@ -81,7 +81,7 @@ If you’d rather use pip or can’t install uv:
 2. **Install Your Project** (which reads `pyproject.toml` for dependencies):
 
     ```
-    pip install -r requirements.txt
+    pip install .
     ```
 
 3. **Run the Connector**:
@@ -95,13 +95,13 @@ If you’d rather use pip or can’t install uv:
 With either uv or pip, you can now run:
 
 ```
-python eda_containerlab_connector.py <subcommand> [options]
-```
-
-Or, using uv:
-
-```
 uv run python eda_containerlab_connector.py <subcommand> [options]
+```
+
+Or, using non uv:
+
+```
+python eda_containerlab_connector.py <subcommand> [options]
 ```
 
 ## Usage
@@ -113,14 +113,14 @@ The tool offers two primary subcommands: `integrate` and `remove`.
 To integrate your Containerlab topology with EDA you need to get a path to the `topology-data.json` file created by Containerlab when it deploys the lab. This file is located in the Containerlab's Lab Directory as described in the [documentation](https://containerlab.dev/manual/conf-artifacts/). With the path to the topology data file is known, you can use the following command to integrate the Containerlab topology with EDA:
 
 ```
-python eda_containerlab_connector.py --verify integrate \
+python eda_containerlab_connector.py integrate \
 --topology-data path/to/topology-data.json \
 --eda-url https://eda.example.com \
 --eda-user admin \
 --eda-password yourpassword \
 ```
 
-> [!NOTE]  
+> [!NOTE]
 > In the coming Containerlab 0.62.0 version, the Lab Directory will be created always in the directory where the topology clab file is located.
 
 ### Remove Containerlab Integration from EDA
