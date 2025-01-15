@@ -24,7 +24,7 @@ class SRLNode(Node):
     NODE_TYPE = "srlinux"
     GNMI_PORT = "57410"
     VERSION_PATH = ".system.information.version"
-    YANG_PATH = "https://eda-asvr.eda-system.svc/eda-system/schemaprofiles/srlinux-ghcr-{version}/srlinux-{version}.zip"
+    YANG_PATH = "https://eda-asvr.eda-system.svc/eda-system/clab-schemaprofiles/{artifact_name}/{filename}"
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
@@ -113,12 +113,13 @@ class SRLNode(Node):
     def get_node_profile(self, topology):
         """
         Creates a node profile for this node kind & version
-
-        Returns
-        -------
-        the rendered node-profile jinja template
         """
         logger.info(f"Rendering node profile for {self}")
+
+        # Get artifact info first to construct the YANG path
+        artifact_name = self.get_artifact_name()
+        _, filename, _ = self.get_artifact_info()
+
         data = {
             "namespace": f"clab-{topology.name}",
             "profile_name": self.get_profile_name(topology),
@@ -128,7 +129,10 @@ class SRLNode(Node):
             "version_path": self.VERSION_PATH,
             # below evaluates to something like v24\.7\.1.*
             "version_match": "v{}.*".format(self.version.replace(".", "\.")),
-            "yang_path": self.YANG_PATH.format(version=self.version),
+            "yang_path": self.YANG_PATH.format(
+                artifact_name=artifact_name,
+                filename=filename
+            ),
             "node_user": "admin",
             "onboarding_password": self.SRL_PASSWORD,
             "onboarding_username": self.SRL_USERNAME,
@@ -219,19 +223,24 @@ class SRLNode(Node):
         """
         return True
 
+    def get_artifact_name(self):
+        """
+        Returns the standardized artifact name for this SR Linux version
+        """
+        return f"clab-srlinux-{self.version}"
+
     def get_artifact_info(self):
         """
         Gets SR Linux YANG models artifact information from GitHub
         """
-
         def srlinux_filter(name):
             return (
                 name.endswith(".zip")
                 and name.startswith("srlinux-")
                 and "Source code" not in name
-            )
+        )
 
-        artifact_name = f"srlinux-ghcr-{self.version}"
+        artifact_name = self.get_artifact_name()
         filename, download_url = helpers.get_artifact_from_github(
             owner="nokia",
             repo="srlinux-yang-models",
@@ -249,6 +258,6 @@ class SRLNode(Node):
             "artifact_name": artifact_name,
             "namespace": "eda-system",
             "artifact_filename": filename,
-            "artifact_url": download_url,
+            "artifact_url": download_url
         }
         return helpers.render_template("artifact.j2", data)

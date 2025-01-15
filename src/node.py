@@ -146,6 +146,17 @@ class Node:
         """
         return False
 
+    def get_artifact_name(self):
+        """
+        Returns the standardized artifact name for this node type and version.
+        Should be implemented by node types that return True for needs_artifact()
+        
+        Returns
+        -------
+        str containing the artifact name or None if not supported
+        """
+        return None
+
     def get_artifact_info(self):
         """
         Gets artifact information required for this node type.

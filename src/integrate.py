@@ -139,6 +139,7 @@ class IntegrateCommand(SubCommand):
                     f"Could not generate artifact YAML for {node}. Skipping."
                 )
                 continue
+            logger.debug(f"Artifact yaml: {artifact_yaml}.")
 
             try:
                 helpers.apply_manifest_via_kubectl(
