@@ -9,6 +9,8 @@ from src.remove import RemoveCommand
 
 urllib3.disable_warnings()
 
+SUPPORTED_KINDS = ["nokia_srlinux"]
+
 subcommands = [IntegrateCommand(), RemoveCommand()]
 
 parser = argparse.ArgumentParser(
@@ -24,20 +26,6 @@ parser.add_argument(
     default="WARNING",
     choices={"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"},
     help="log level for the application",
-)
-
-parser.add_argument(
-    "--http-proxy",
-    type=str,
-    default="",
-    help="HTTP proxy to be used to communicate with EDA",
-)
-
-parser.add_argument(
-    "--https-proxy",
-    type=str,
-    default="",
-    help="HTTPS proxy to be used to communicate with EDA",
 )
 
 parser.add_argument(
@@ -63,6 +51,27 @@ logging.basicConfig(
 )
 
 print(args)
+
+# set fancy logging colours
+logging.addLevelName(
+    logging.INFO, f"\x1b[1;32m{logging.getLevelName(logging.INFO)}\x1b[0m"
+)
+logging.addLevelName(
+    logging.WARN, f"\x1b[1;38;5;220m{logging.getLevelName(logging.WARN)}\x1b[0m"
+)
+logging.addLevelName(
+    logging.DEBUG, f"\x1b[1;94m{logging.getLevelName(logging.DEBUG)}\x1b[0m"
+)
+logging.addLevelName(
+    logging.ERROR, f"\x1b[1;91m{logging.getLevelName(logging.ERROR)}\x1b[0m"
+)
+logging.addLevelName(
+    logging.CRITICAL, f"\x1b[1;91m{logging.getLevelName(logging.CRITICAL)}\x1b[0m"
+)
+
+# set up logging
+logger = logging.getLogger(__name__)
+logger.warning(f"Supported containerlab kinds are: {SUPPORTED_KINDS}")
 
 # this will bite me in the ass someday
 os.environ["no_proxy"] = args.eda_url

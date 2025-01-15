@@ -6,19 +6,19 @@ mgmt:
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       image: ghcr.io/nokia/srlinux:24.10.1
   nodes:
     dut1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3l
       mgmt-ipv4: 10.58.2.130
     dut2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3l
       mgmt-ipv4: 10.58.2.131
     dut3:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd5
       mgmt-ipv4: 10.58.2.132
   links:

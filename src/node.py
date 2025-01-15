@@ -1,5 +1,7 @@
-import os
 import logging
+import subprocess
+
+from src import helpers
 
 # set up logging
 logger = logging.getLogger(__name__)
@@ -22,26 +24,64 @@ class Node:
 
     def ping(self):
         """
-        Pings the node
+        Pings the node from the EDA bootstrap server pod
 
-        Returns
-        -------
-        True if the ping was successful, False otherwise
+        Raises
+        ------
+        RuntimeError
+            If ping fails or if the eda-bsvr pod cannot be found
         """
         logger.debug(f"Pinging {self.kind} node '{self.name}' with IP {self.mgmt_ipv4}")
-        param = "-n" if os.sys.platform.lower() == "win32" else "-c"
-        response = os.system(f"ping {param} 1 {self.mgmt_ipv4} > /dev/null 2>&1")
 
-        if response == 0:
-            logger.info(
-                f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} successfull"
-            )
-        else:
-            logger.warning(
-                f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} not successfull"
-            )
+        # Get the eda-bsvr pod name
+        cmd = [
+            "kubectl",
+            "get",
+            "pods",
+            "-n",
+            "eda-system",
+            "-l",
+            "eda.nokia.com/app=bootstrapserver",
+            "-o",
+            "name",
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            bsvr_pod = result.stdout.strip().replace("pod/", "")
+            if not bsvr_pod:
+                raise RuntimeError("Could not find eda-bsvr pod")
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Failed to get eda-bsvr pod name: {e}")
 
-        return response == 0
+        # Execute ping from within the eda-bsvr pod
+        cmd = [
+            "kubectl",
+            "exec",
+            "-n",
+            "eda-system",
+            bsvr_pod,
+            "--",
+            "ping",
+            "-c",
+            "1",
+            self.mgmt_ipv4,
+        ]
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                logger.info(
+                    f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} successful from {bsvr_pod}"
+                )
+                return True
+            else:
+                error_msg = f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} failed from {bsvr_pod}"
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+        except subprocess.CalledProcessError as e:
+            error_msg = f"Failed to execute ping command: {e}"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
 
     def test_ssh(self):
         """
@@ -57,7 +97,7 @@ class Node:
         """
         Returns an EDA-safe name for a node
         """
-        return f"{topology.get_eda_safe_name()}-{self.name}"
+        return helpers.normalize_name(self.name)
 
     def get_profile_name(self, topology):
         """
@@ -73,9 +113,9 @@ class Node:
 
     def get_platform(self):
         """
-        Platform name to be used in the bootstrap node resource
+        Platform name to be used in the toponode resource
         """
-        return "UNKOWN"
+        return "UNKNOWN"
 
     def get_node_profile(self, topology):
         """
@@ -88,17 +128,11 @@ class Node:
         logger.info(f"Node profile is not supported for {self}")
         return None
 
-    def bootstrap_config(self):
+    def get_toponode(self, topology):
         """
-        Pushes the bootstrap configuration to the node. This method needs to be overwritten by nodes that support it
+        Get as toponode. This method needs to be overwritten by nodes that support it
         """
-        logger.info(f"Pushing bootstrap config to the node not supported for {self}")
-
-    def get_bootstrap_node(self, topology):
-        """
-        Creates a bootstrap node for this node. This method needs to be overwritten by nodes that support it
-        """
-        logger.info(f"Bootstrap node is not supported for {self}")
+        logger.info(f"Toponode is not supported for {self}")
         return None
 
     def is_eda_supported(self):
@@ -120,28 +154,6 @@ class Node:
         The name of the interface as accepted by the node
         """
         return ifname
-
-    def get_system_interface_name(self, topology):
-        """
-        Returns the name of this node's system interface, if supported
-        """
-        logger.info(f"Getting system interface name is not supported for {self}")
-        return None
-
-    def get_system_interface(self, topology):
-        """
-        Creates a system interface for this node. This method needs to be overwritten by nodes that support it
-
-        Parameters
-        ----------
-        topology: the parsed Topology
-
-        Returns
-        -------
-        The rendered interface jinja template
-        """
-        logger.info(f"System interface is not supported for {self}")
-        return None
 
     def get_topolink_interface_name(self, topology, ifname):
         """
@@ -174,6 +186,17 @@ class Node:
         """
         return False
 
+    def get_artifact_name(self):
+        """
+        Returns the standardized artifact name for this node type and version.
+        Should be implemented by node types that return True for needs_artifact()
+
+        Returns
+        -------
+        str containing the artifact name or None if not supported
+        """
+        return None
+
     def get_artifact_info(self):
         """
         Gets artifact information required for this node type.
@@ -200,6 +223,14 @@ class Node:
 # import specific nodes down here to avoid circular dependencies
 from src.node_srl import SRLNode  # noqa: E402
 
+KIND_MAPPING = {
+    "nokia_srlinux": "srl",
+}
+
+SUPPORTED_NODE_TYPES = {
+    "srl": SRLNode,
+}
+
 
 def from_obj(name, python_object, kinds):
     """
@@ -208,43 +239,35 @@ def from_obj(name, python_object, kinds):
     Parameters
     ----------
     name: the name of the node
-    python_obj: the python object for this node parsed from the yaml input file
-    kinds: the python object for the kinds in the topology yaml file
+    python_obj: the python object for this node parsed from the json input file
+    kinds: the python object for the kinds in the topology file (not used for topology-data.json)
 
     Returns
     -------
     The parsed Node entity
     """
     logger.info(f"Parsing node with name '{name}'")
-    kind = python_object["kind"]
-    node_type = python_object["type"] if "type" in python_object else None
+    original_kind = python_object.get("kind")
+    if not original_kind:
+        logger.warning(f"No kind specified for node '{name}', skipping")
+        return None
 
-    # support for legacy containerlab files
-    if "mgmt_ipv4" in python_object:
-        logger.warning(
-            "Property mgmt_ipv4 is deprecated, please use mgmt-ipv4 in your clab topology file"
+    # Translate kind if needed
+    kind = KIND_MAPPING.get(original_kind)
+    if not kind:
+        logger.debug(
+            f"Unsupported kind '{original_kind}' for node '{name}', skipping. Supported kinds: {list(KIND_MAPPING.keys())}"
         )
-        mgmt_ipv4 = python_object["mgmt_ipv4"]
-    else:
-        mgmt_ipv4 = python_object["mgmt-ipv4"]
+        return None
 
-    # check if the kind is in the kinds object
-    if kind not in kinds:
-        logger.warning(
-            f"Could not find kind '{kind}' for node '{name}' in the topology file"
-        )
-        kind = None
-        version = None
-    else:
-        image = kinds[kind]["image"]
-        parts = image.split(":")
-        if len(parts) != 2:
-            logger.warning(f"Could not parse version from node image '{image}'")
-            version = None
-        else:
-            version = parts[1]
+    node_type = python_object.get("type", None)
+    mgmt_ipv4 = python_object.get("mgmt-ipv4") or python_object.get("mgmt_ipv4")
+    version = python_object.get("version")  # Get version directly if provided
 
-    if kind == "srl" or kind == "nokia_srlinux":
-        return SRLNode(name, kind, node_type, version, mgmt_ipv4)
+    if not mgmt_ipv4:
+        logger.warning(f"No management IP found for node {name}")
+        return None
 
-    return Node(name, kind, node_type, version, mgmt_ipv4)
+    # Create the appropriate node type using the mapping
+    NodeClass = SUPPORTED_NODE_TYPES[kind]
+    return NodeClass(name, kind, node_type, version, mgmt_ipv4)

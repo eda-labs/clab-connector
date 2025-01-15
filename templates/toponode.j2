@@ -7,20 +7,13 @@ metadata:
     eda-connector.nokia.com/topology: {{ topology_name }}
     eda-connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
     eda.nokia.com/security-profile: managed
-  namespace: eda
+    containerlab: managed
+  namespace: {{ namespace }}
 spec:
-  macAddress: ''
-  serialNumber: ''
   nodeProfile: {{ node_profile }}
-  onBoarded: false
   operatingSystem: {{ kind }}
   platform: {{ platform }}
   version: {{ sw_version }}
-  productionAddress: 
+  productionAddress:
     ipv4: {{ mgmt_ip }}
     ipv6: ''
-  systemInterface: {{ system_interface }}
-  license: ''
-  component: []
-  npp:
-    mode: normal

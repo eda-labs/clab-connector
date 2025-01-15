@@ -2,8 +2,7 @@ apiVersion: core.eda.nokia.com/v1
 kind: NodeUser
 metadata:
   name: {{ node_user }}
-  labels: null
-  namespace: eda
+  namespace: {{ namespace }}
 spec:
   username: {{ username }}
   password: {{ password }}
@@ -11,8 +10,5 @@ spec:
     - groups:
         - sudo
       nodeSelector:
-        - eda.nokia.com/role=spine
-        - eda.nokia.com/role=borderleaf
-        - eda.nokia.com/role=leaf
-        - eda.nokia.com/role=UNKNOWN
+        - containerlab=managed
   sshPublicKeys: []

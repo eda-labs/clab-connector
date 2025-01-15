@@ -1,7 +1,8 @@
+import json
 import logging
+
 import requests
 import yaml
-import json
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ class EDA:
     INTERFACE_GROUP = "interfaces.eda.nokia.com"
     INTERFACE_VERSION = "v1alpha1"
 
-    def __init__(self, hostname, username, password, http_proxy, https_proxy, verify):
+    def __init__(self, hostname, username, password, verify):
         """
         Constructor
 
@@ -22,14 +23,11 @@ class EDA:
         hostname:       EDA hostname (IP or FQDN)
         username:       EDA user name
         password:       EDA user password
-        http_proxy:     HTTP proxy to be used for communication with EDA
-        https_proxy:    HTTPS proxy to be used for communication with EDA
         verify:         Whether to verify the certificate when communicating with EDA
         """
         self.url = f"{hostname}"
         self.username = username
         self.password = password
-        self.proxies = {"http": http_proxy, "https": https_proxy}
         self.verify = verify
         self.access_token = None
         self.refresh_token = None
@@ -92,7 +90,6 @@ class EDA:
 
         return requests.get(
             url,
-            proxies=self.proxies,
             verify=self.verify,
             headers=self.get_headers(requires_auth),
         )
@@ -115,7 +112,6 @@ class EDA:
         logger.info(f"Performing POST request to '{url}'")
         return requests.post(
             url,
-            proxies=self.proxies,
             verify=self.verify,
             json=payload,
             headers=self.get_headers(requires_auth),
@@ -170,7 +166,7 @@ class EDA:
 
         Parameters
         ----------
-        type:       action type, possible values: ['create', 'delete']
+        type:       action type, possible values: ['create', 'delete', 'replace', 'modify']
         payload:    the operation's payload
 
         Returns
@@ -199,15 +195,32 @@ class EDA:
         """
         return self.add_to_transaction("create", {"value": yaml.safe_load(resource)})
 
+    def add_replace_to_transaction(self, resource):
+        """
+        Adds a 'replace' operation to the transaction
+
+        Parameters
+        ----------
+        resource: the resource to be replaced
+
+        Returns
+        -------
+        The replaced item
+        """
+        return self.add_to_transaction("replace", {"value": yaml.safe_load(resource)})
+
     def add_delete_to_transaction(
-        self, kind, name, group=CORE_GROUP, version=CORE_VERSION
+        self, namespace, kind, name, group=CORE_GROUP, version=CORE_VERSION
     ):
         """
         Adds a 'delete' operation to the transaction
 
         Parameters
         ----------
-        resource: the resource to be removed
+        namespace: the namespace of the resource to be deleted
+        kind:      the kind of the resource to be deleted
+        group:     the group of the resource to be deleted
+        version:   the version of the resource to be deleted
 
         Returns
         -------
@@ -222,7 +235,7 @@ class EDA:
                     "kind": kind,
                 },
                 "name": name,
-                "namespace": "eda"
+                "namespace": namespace,
             },
         )
 
@@ -313,3 +326,91 @@ class EDA:
 
         logger.info("Commit successful")
         self.transactions = []
+        return transactionId
+
+    def revert_transaction(self, transactionId):
+        """
+        Reverts a transaction in EDA
+
+        Parameters
+        ----------
+        transactionId: ID of the transaction to revert
+
+        Returns
+        -------
+        True if revert was successful, raises exception otherwise
+        """
+        logger.info(f"Reverting transaction with ID {transactionId}")
+
+        # First wait for the transaction details to ensure it's committed
+        self.get(
+            f"core/transaction/v1/details/{transactionId}?waitForComplete=true"
+        ).json()
+
+        response = self.post(f"core/transaction/v1/revert/{transactionId}", {})
+        result = response.json()
+
+        if "code" in result and result["code"] != 0:
+            message = f"{result['message']}"
+
+            if "details" in result:
+                message = f"{message} - {result['details']}"
+
+            errors = []
+            if "errors" in result:
+                errors = [
+                    f"{x['error']['message']} {x['error']['details']}"
+                    for x in result["errors"]
+                ]
+
+            logger.error(
+                f"Reverting transaction failed (error code {result['code']}). Error message: '{message} {errors}'"
+            )
+            raise Exception("Failed to revert transaction - see error above")
+
+        logger.info("Transaction revert successful")
+        return True
+
+    def restore_transaction(self, transactionId):
+        """
+        Restores to a specific transaction ID in EDA
+
+        Parameters
+        ----------
+        transactionId: ID of the transaction to restore to (will restore to transactionId - 1)
+
+        Returns
+        -------
+        True if restore was successful, raises exception otherwise
+        """
+        restore_point = int(transactionId)
+        logger.info(f"Restoring to transaction ID {restore_point}")
+
+        # First wait for the transaction details to ensure it's committed
+        self.get(
+            f"core/transaction/v1/details/{transactionId}?waitForComplete=true"
+        ).json()
+
+        response = self.post(f"core/transaction/v1/restore/{restore_point}", {})
+        result = response.json()
+
+        if "code" in result and result["code"] != 0:
+            message = f"{result['message']}"
+
+            if "details" in result:
+                message = f"{message} - {result['details']}"
+
+            errors = []
+            if "errors" in result:
+                errors = [
+                    f"{x['error']['message']} {x['error']['details']}"
+                    for x in result["errors"]
+                ]
+
+            logger.error(
+                f"Restoring to transaction failed (error code {result['code']}). Error message: '{message} {errors}'"
+            )
+            raise Exception("Failed to restore transaction - see error above")
+
+        logger.info("Transaction restore successful")
+        return True

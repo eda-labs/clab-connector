@@ -28,7 +28,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 - **Network Connectivity:**
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab:**
-  - You need at latest containerlab version `v0.61.0`
+  - Minimum required version - `v0.61.0`
 - **kubectl:**
   - You must have `kubectl` installed and configured to connect to the same Kubernetes cluster that is running EDA. The connector will use `kubectl apply` in the background to create the necessary `Artifact` resources.
 
@@ -44,7 +44,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 > ```
 
 > [!NOTE]
-> **Proxy Settings:** This tool does not utilize the system's proxy (`$http_proxy`) variables. Instead, it provides optional arguments to specify HTTP and HTTPS proxies for communicating with EDA.
+> **Proxy Settings:** This tool does utilize the system's proxy (`$HTTP_PROXY` and `$HTTPS_PROXY` ) variables.
 
 ## Installation
 
@@ -55,51 +55,51 @@ Follow these steps to set up the Containerlab EDA Connector tool:
 > [uv](https://docs.astral.sh/uv) is a single, ultra-fast tool that can replace `pip`, `pipx`, `virtualenv`, `pip-tools`, `poetry`, and more. It automatically manages Python versions, handles ephemeral or persistent virtual environments (`uv venv`), lockfiles, and often runs **10–100× faster** than pip installs.
 
 1. **Install uv** (no Python or Rust needed):
+
     ```
     # On macOS and Linux
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-2. **(Optional) Create a Persistent Virtual Environment with uv**:
-    ```
-    uv venv
-    ```
-    This pins a Python version (if you haven't installed one yet) and creates a `.venv/` folder.
+2. **Run the Connector** (uv automatically installs dependencies in a venv from `pyproject.toml`):
 
-
-3. **Run the Connector** (uv automatically installs dependencies in a venv from `pyproject.toml`):
     ```
     uv run python eda_containerlab_connector.py --help
     ```
+
 ## Alternative: Using pip
 
 If you’d rather use pip or can’t install uv:
 
 1. **(Optional) Create & Activate a Virtual Environment**:
+
     ```
     python -m venv venv
     source venv/bin/activate
     ```
 
-
 2. **Install Your Project** (which reads `pyproject.toml` for dependencies):
+
     ```
-    python -m pip install --upgrade pip
-    pip install .
+    pip install -r requirements.txt
     ```
 
 3. **Run the Connector**:
+
     ```
     python eda_containerlab_connector.py --help
     ```
 
-### Quick try 
+### Quick try
 
 With either uv or pip, you can now run:
+
 ```
 python eda_containerlab_connector.py <subcommand> [options]
 ```
+
 Or, using uv:
+
 ```
 uv run python eda_containerlab_connector.py <subcommand> [options]
 ```
@@ -110,17 +110,18 @@ The tool offers two primary subcommands: `integrate` and `remove`.
 
 ### Integrate Containerlab with EDA
 
-Integrate your Containerlab topology into EDA:
+To integrate your Containerlab topology with EDA you need to get a path to the `topology-data.json` file created by Containerlab when it deploys the lab. This file is located in the Containerlab's Lab Directory as described in the [documentation](https://containerlab.dev/manual/conf-artifacts/). With the path to the topology data file is known, you can use the following command to integrate the Containerlab topology with EDA:
 
 ```
-python eda_containerlab_connector.py integrate \
---topology-file path/to/topology.yaml \
+python eda_containerlab_connector.py --verify integrate \
+--topology-data path/to/topology-data.json \
 --eda-url https://eda.example.com \
 --eda-user admin \
 --eda-password yourpassword \
---http-proxy http://proxy.example.com:8080 \
---https-proxy https://proxy.example.com:8443
 ```
+
+> [!NOTE]  
+> In the coming Containerlab 0.62.0 version, the Lab Directory will be created always in the directory where the topology clab file is located.
 
 ### Remove Containerlab Integration from EDA
 
@@ -128,7 +129,7 @@ Remove the previously integrated Containerlab topology from EDA:
 
 ```
 python eda_containerlab_connector.py remove \
-    --topology-file path/to/topology.yaml \
+    --topology-data path/to/topology-data.json \
     --eda-url https://eda.example.com \
     --eda-user admin \
     --eda-password yourpassword
@@ -140,18 +141,12 @@ python eda_containerlab_connector.py remove \
 ### Example Command
 
 ```
-python eda_containerlab_connector.py -l INFO integrate -t example-topology.yaml -e https://eda.example.com 
+python eda_containerlab_connector.py -l INFO integrate -t topology-data.json -e https://eda.example.com 
 ```
 
 ## Example Topologies
 
 Explore the [example-topologies](./example-topologies/) directory for sample Containerlab topology files to get started quickly.
-
-## Instruction video
-
-The video below shows off how the tool can be run:
-
-<a href="./assets/demo.mp4">View demo video</a>
 
 ## Requesting Support
 

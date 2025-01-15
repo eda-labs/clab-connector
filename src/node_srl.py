@@ -1,18 +1,16 @@
 import logging
-import socket
-import os
 import re
-import tempfile
-import src.helpers as helpers
+import socket
 
 from paramiko import (
-    SSHClient,
-    BadHostKeyException,
     AuthenticationException,
-    SSHException,
     AutoAddPolicy,
+    BadHostKeyException,
+    SSHClient,
+    SSHException,
 )
 
+import src.helpers as helpers
 from src.node import Node
 
 # set up logging
@@ -26,9 +24,7 @@ class SRLNode(Node):
     NODE_TYPE = "srlinux"
     GNMI_PORT = "57410"
     VERSION_PATH = ".system.information.version"
-    YANG_PATH = (
-        "https://eda-asvr/eda-system/schemaprofiles/srlinux-ghcr-{version}/srlinux-{version}.zip"
-    )
+    YANG_PATH = "https://eda-asvr.eda-system.svc/eda-system/clab-schemaprofiles/{artifact_name}/{filename}"
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
@@ -51,7 +47,10 @@ class SRLNode(Node):
 
         try:
             ssh.connect(
-                self.mgmt_ipv4, username=self.SRL_USERNAME, password=self.SRL_PASSWORD
+                self.mgmt_ipv4,
+                username=self.SRL_USERNAME,
+                password=self.SRL_PASSWORD,
+                allow_agent=False,
             )
             logger.info(
                 f"SSH test to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} was successful"
@@ -74,7 +73,7 @@ class SRLNode(Node):
 
     def get_platform(self):
         """
-        Platform name to be used in the bootstrap node resource
+        Platform name to be used in the toponode resource
         """
         t = self.node_type.replace("ixr", "")
         return f"7220 IXR-{t.upper()}"
@@ -114,13 +113,15 @@ class SRLNode(Node):
     def get_node_profile(self, topology):
         """
         Creates a node profile for this node kind & version
-
-        Returns
-        -------
-        the rendered node-profile jinja template
         """
         logger.info(f"Rendering node profile for {self}")
+
+        # Get artifact info first to construct the YANG path
+        artifact_name = self.get_artifact_name()
+        _, filename, _ = self.get_artifact_info()
+
         data = {
+            "namespace": f"clab-{topology.name}",
             "profile_name": self.get_profile_name(topology),
             "sw_version": self.version,
             "gnmi_port": self.GNMI_PORT,
@@ -128,78 +129,28 @@ class SRLNode(Node):
             "version_path": self.VERSION_PATH,
             # below evaluates to something like v24\.7\.1.*
             "version_match": "v{}.*".format(self.version.replace(".", "\.")),
-            "yang_path": self.YANG_PATH.format(version=self.version),
+            "yang_path": self.YANG_PATH.format(
+                artifact_name=artifact_name,
+                filename=filename
+            ),
             "node_user": "admin",
             "onboarding_password": self.SRL_PASSWORD,
             "onboarding_username": self.SRL_USERNAME,
-            "pool_name": topology.get_mgmt_pool_name(),
             "sw_image": self.SRL_IMAGE.format(version=self.version),
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),
         }
 
         return helpers.render_template("node-profile.j2", data)
 
-    def bootstrap_config(self):
+    def get_toponode(self, topology):
         """
-        Pushes the bootstrap configuration to the node
+        Creates a topo node for this node
 
         Returns
         -------
-        the rendered bootstrap config
+        the rendered toponode jinja template
         """
-        logger.info(f"Pushing bootstrap config to node {self}")
-        ssh = SSHClient()
-        ssh.set_missing_host_key_policy(AutoAddPolicy())
-
-        data = {"gnmi_port": self.GNMI_PORT}
-
-        bootstrap_config = helpers.render_template("srlinux-bootstrap-config.j2", data)
-        fd, path = tempfile.mkstemp()
-
-        try:
-            with os.fdopen(fd, "w") as cfg:
-                cfg.write(bootstrap_config)
-                cfg.flush()
-                print(path)
-                ssh.connect(
-                    self.mgmt_ipv4,
-                    username=self.SRL_USERNAME,
-                    password=self.SRL_PASSWORD,
-                )
-                sftp = ssh.open_sftp()
-                logger.info("Copying rendered bootstrap-config to node")
-                sftp.put(path, "bootstrap-config.cfg")
-                logger.info("Sourcing the bootstrap-config file")
-                ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(
-                    "source bootstrap-config.cfg"
-                )
-                stderr_lines = ssh_stderr.readlines()
-                if len(stderr_lines) > 0:
-                    logger.error("=== STDERR ===")
-                    logger.error(ssh_stderr)
-                    raise Exception(
-                        "Something went wrong when pushing bootstrap config to the node, see error above"
-                    )
-        except (
-            BadHostKeyException,
-            AuthenticationException,
-            SSHException,
-            socket.error,
-        ) as e:
-            logger.critical(f"Could not connect to node {self}, exception: {e}")
-            raise e
-        finally:
-            os.remove(path)
-
-    def get_bootstrap_node(self, topology):
-        """
-        Creates a bootstrap node for this node
-
-        Returns
-        -------
-        the rendered bootstrap-node jinja template
-        """
-        logger.info(f"Creating bootstrap node for {self}")
+        logger.info(f"Creating toponode node for {self}")
 
         role_value = "leaf"
         if "leaf" in self.name:
@@ -211,9 +162,12 @@ class SRLNode(Node):
         elif "dcgw" in self.name:
             role_value = "dcgw"
         else:
-            logger.warning(f"Could not determine role of node {self}, defaulting to eda.nokia.com/role=leaf")
+            logger.debug(
+                f"Could not determine role of node {self}, defaulting to eda.nokia.com/role=leaf"
+            )
 
         data = {
+            "namespace": f"clab-{topology.name}",
             "node_name": self.get_node_name(topology),
             "topology_name": topology.get_eda_safe_name(),
             "role_value": role_value,
@@ -222,42 +176,9 @@ class SRLNode(Node):
             "platform": self.get_platform(),
             "sw_version": self.version,
             "mgmt_ip": self.mgmt_ipv4,
-            "system_interface": self.get_system_interface_name(topology),
         }
 
-        return helpers.render_template("bootstrap-node.j2", data)
-
-    def get_system_interface_name(self, topology):
-        """
-        Returns the name of this node's system interface
-        """
-        return f"{self.get_node_name(topology)}-system0"
-
-    def get_system_interface(self, topology):
-        """
-        Creates a system interface for this node
-
-        Parameters
-        ----------
-        topology: the parsed Topology
-
-        Returns
-        -------
-        The rendered interface jinja template
-        """
-        logger.info(f"Creating system interface for {self}")
-
-        data = {
-            "interface_name": self.get_system_interface_name(topology),
-            "label_key": None,
-            "label_value": None,
-            "encap_type": "'null'",
-            "node_name": self.get_node_name(topology),
-            "interface": "system0",
-            "description": "system interface",
-        }
-
-        return helpers.render_template("interface.j2", data)
+        return helpers.render_template("toponode.j2", data)
 
     def get_topolink_interface_name(self, topology, ifname):
         """
@@ -284,6 +205,7 @@ class SRLNode(Node):
         logger.info(f"Creating topolink interface for {self}")
 
         data = {
+            "namespace": f"clab-{topology.name}",
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
             "label_value": "interSwitch",
@@ -301,21 +223,29 @@ class SRLNode(Node):
         """
         return True
 
+    def get_artifact_name(self):
+        """
+        Returns the standardized artifact name for this SR Linux version
+        """
+        return f"clab-srlinux-{self.version}"
+
     def get_artifact_info(self):
         """
         Gets SR Linux YANG models artifact information from GitHub
         """
         def srlinux_filter(name):
-            return (name.endswith(".zip") and 
-                    name.startswith("srlinux-") and 
-                    "Source code" not in name)
+            return (
+                name.endswith(".zip")
+                and name.startswith("srlinux-")
+                and "Source code" not in name
+        )
 
-        artifact_name = f"srlinux-ghcr-{self.version}"
+        artifact_name = self.get_artifact_name()
         filename, download_url = helpers.get_artifact_from_github(
             owner="nokia",
             repo="srlinux-yang-models",
             version=self.version,
-            asset_filter=srlinux_filter
+            asset_filter=srlinux_filter,
         )
 
         return artifact_name, filename, download_url
@@ -327,7 +257,7 @@ class SRLNode(Node):
         data = {
             "artifact_name": artifact_name,
             "namespace": "eda-system",
-            "artifact_filename": filename, 
+            "artifact_filename": filename,
             "artifact_url": download_url
         }
         return helpers.render_template("artifact.j2", data)

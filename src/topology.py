@@ -1,18 +1,43 @@
 import logging
 
-from src.node import from_obj as node_from_obj
+from src import helpers
 from src.link import from_obj as link_from_obj
+from src.node import from_obj as node_from_obj
 
 # set up logging
 logger = logging.getLogger(__name__)
 
 
 class Topology:
-    def __init__(self, name, mgmt_ipv4_subnet, nodes, links):
+    def __init__(
+        self,
+        name,
+        mgmt_ipv4_subnet,
+        nodes,
+        links,
+        clab_file_path="",
+    ):
+        """
+        Initialize a new Topology instance
+
+        Parameters
+        ----------
+        name: str
+            Name of the topology
+        mgmt_ipv4_subnet: str
+            Management IPv4 subnet for the topology
+        nodes: list
+            List of Node objects in the topology
+        links: list
+            List of Link objects connecting the nodes
+        clab_file_path: str
+            Path to the topology file a clab topology was spawned from
+        """
         self.name = name
         self.mgmt_ipv4_subnet = mgmt_ipv4_subnet
         self.nodes = nodes
         self.links = links
+        self.clab_file_path = clab_file_path
 
     def __repr__(self):
         return f"Topology(name={self.name}, mgmt_ipv4_subnet={self.mgmt_ipv4_subnet}) with {len(self.nodes)} nodes"
@@ -44,15 +69,13 @@ class Topology:
 
     def get_eda_safe_name(self):
         """
-        Returns an EDA-safe name for the name of the topology
+        Returns a Kubernetes-compliant name by:
+        - Converting to lowercase
+        - Replacing underscores and spaces with hyphens
+        - Removing any other invalid characters
+        - Ensuring it starts and ends with alphanumeric characters
         """
-        return self.name.replace("_", "-")
-
-    def get_mgmt_pool_name(self):
-        """
-        Returns an EDA-safe name for the IPInSubnetAllocationPool for mgmt
-        """
-        return f"{self.get_eda_safe_name()}-mgmt-pool"
+        return helpers.normalize_name(self.name)
 
     def get_node_profiles(self):
         """
@@ -71,26 +94,19 @@ class Topology:
         # only return the node profiles, not the keys
         return profiles.values()
 
-    def bootstrap_config(self):
-        """
-        Pushes the bootstrap configuration to the nodes
-        """
-        for node in self.nodes:
-            node.bootstrap_config()
-
-    def get_bootstrap_nodes(self):
+    def get_toponodes(self):
         """
         Create nodes for the topology
         """
-        bootstrap_nodes = []
+        toponodes = []
         for node in self.nodes:
-            bootstrap_node = node.get_bootstrap_node(self)
-            if bootstrap_node is None:
+            toponode = node.get_toponode(self)
+            if toponode is None:
                 continue
 
-            bootstrap_nodes.append(bootstrap_node)
+            toponodes.append(toponode)
 
-        return bootstrap_nodes
+        return toponodes
 
     def get_topolinks(self):
         """
@@ -138,37 +154,73 @@ class Topology:
 
         return interfaces
 
+    def from_topology_data(self, json_obj):
+        """
+        Parses a topology from a topology-data.json file
 
-def from_obj(python_obj):
-    """
-    Parsers a topology from a Python object
+        Parameters
+        ----------
+        json_obj: the python object parsed from the topology-data.json file
 
-    Parameters
-    ----------
-    python_obj: the python object parsed from the yaml input file
-
-    Returns
-    -------
-    The parsed Topology entity
-    """
-    logger.info(
-        f"Parsing topology with name '{python_obj['name']}' which contains {len(python_obj['topology']['nodes'])} nodes"
-    )
-
-    name = python_obj["name"]
-    mgmt_ipv4_subnet = python_obj["mgmt"]["ipv4-subnet"]
-    nodes = []
-    for node in python_obj["topology"]["nodes"]:
-        nodes.append(
-            node_from_obj(
-                node,
-                python_obj["topology"]["nodes"][node],
-                python_obj["topology"]["kinds"],
-            )
+        Returns
+        -------
+        The parsed Topology entity
+        """
+        logger.info(
+            f"Parsing topology data with name '{json_obj['name']}' which contains {len(json_obj['nodes'])} nodes"
         )
 
-    links = []
-    for link in python_obj["topology"]["links"]:
-        links.append(link_from_obj(link, nodes))
+        name = json_obj["name"]
+        mgmt_ipv4_subnet = json_obj["clab"]["config"]["mgmt"]["ipv4-subnet"]
 
-    return Topology(name, mgmt_ipv4_subnet, nodes, links)
+        clab_file_path = ""
+        for node_name, node_data in json_obj["nodes"].items():
+            if clab_file_path == "":
+                clab_file_path = node_data["labels"].get("clab-topo-file", "")
+                break
+        # Create nodes
+        nodes = []
+        for node_name, node_data in json_obj["nodes"].items():
+            try:
+                # Get version from image tag
+                image = node_data["image"]
+                version = image.split(":")[-1] if ":" in image else None
+
+                node = node_from_obj(
+                    node_name,
+                    {
+                        "kind": node_data["kind"],
+                        "type": node_data["labels"].get("clab-node-type", "ixrd2"),
+                        "mgmt-ipv4": node_data["mgmt-ipv4-address"],
+                        "version": version,
+                    },
+                    None,
+                )
+                if node is not None:  # Only add supported nodes
+                    nodes.append(node)
+            except Exception as e:
+                logger.warning(f"Failed to parse node {node_name}: {str(e)}")
+                continue
+
+        # Create links but only for supported nodes
+        supported_node_names = [node.name for node in nodes]
+        links = []
+        for link_data in json_obj["links"]:
+            # Only create links between supported nodes
+            if (
+                link_data["a"]["node"] in supported_node_names
+                and link_data["z"]["node"] in supported_node_names
+            ):
+                link_obj = {
+                    "endpoints": [
+                        f"{link_data['a']['node']}:{link_data['a']['interface']}",
+                        f"{link_data['z']['node']}:{link_data['z']['interface']}",
+                    ]
+                }
+                links.append(link_from_obj(link_obj, nodes))
+            else:
+                logger.debug(
+                    f"Skipping link between {link_data['a']['node']} and {link_data['z']['node']} as one or both nodes are not supported"
+                )
+
+        return Topology(name, mgmt_ipv4_subnet, nodes, links, clab_file_path)

@@ -1,0 +1,8 @@
+apiVersion: core.eda.nokia.com/v1
+kind: Namespace
+metadata:
+  name: {{ namespace }}
+  labels:
+    eda.nokia.com/bootstrap: "true"
+spec:
+  description: "{{ namespace_description }}"

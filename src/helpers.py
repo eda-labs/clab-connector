@@ -1,13 +1,14 @@
-import os.path
+import json
 import logging
-import yaml
-import requests
+import os.path
 import subprocess
+import sys
 import tempfile
 
-import src.topology as topology
-
+import requests
 from jinja2 import Environment, FileSystemLoader
+
+import src.topology as topology
 
 # set up jinja2 templating engine
 template_loader = FileSystemLoader(searchpath="templates")
@@ -17,30 +18,44 @@ template_environment = Environment(loader=template_loader)
 logger = logging.getLogger(__name__)
 
 
-def parse_topology(topology_file):
+def parse_topology(topology_file) -> topology.Topology:
     """
-    Parses a topology yml file
+    Parses a topology file from JSON
 
     Parameters
     ----------
-    topology_file: containerlab topology file (yaml format)
+    topology_file: topology-data file (json format)
 
     Returns
     -------
-    A parsed Topology file
+    A parsed Topology object
     """
     logger.info(f"Parsing topology file '{topology_file}'")
     if not os.path.isfile(topology_file):
-        raise Exception(f"Topology file '{topology_file}' does not exist!")
+        logger.critical(f"Topology file '{topology_file}' does not exist!")
+        sys.exit(1)
 
-    with open(topology_file, "r") as f:
-        try:
-            obj = yaml.safe_load(f)
-        except yaml.YAMLError as exc:
-            logger.critical(f"Failed to parse yaml file '{topology_file}'")
-            raise exc
-
-    return topology.from_obj(obj)
+    try:
+        with open(topology_file, "r") as f:
+            data = json.load(f)
+            # Check if this is a topology-data.json file
+            if "type" in data and data["type"] == "clab":
+                topo = topology.Topology(data["name"], "", [], [])
+                topo = topo.from_topology_data(data)
+                # Sanitize the topology name after parsing
+                original_name = topo.name
+                topo.name = topo.get_eda_safe_name()
+                logger.info(
+                    f"Sanitized topology name from '{original_name}' to '{topo.name}'"
+                )
+                return topo
+            # If not a topology-data.json file, error our
+            raise Exception("Not a valid topology data file provided")
+    except json.JSONDecodeError:
+        logger.critical(
+            f"File '{topology_file}' is not supported. Please provide a valid JSON topology file."
+        )
+        sys.exit(1)
 
 
 def render_template(template_name, data):
@@ -59,18 +74,17 @@ def render_template(template_name, data):
     template = template_environment.get_template(template_name)
     return template.render(data)
 
+
 def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
     """
-    Creates the given resource via `kubectl create -f` in the specified namespace.
-    If the resource already exists, 'AlreadyExists' will appear in stderr,
-    and we raise RuntimeError so the caller can decide what to do.
+    Applies the given resource via `kubectl apply -f` in the specified namespace.
     """
     fd, tmp_path = tempfile.mkstemp(suffix=".yaml")
     try:
         with os.fdopen(fd, "w") as f:
             f.write(yaml_str)
 
-        cmd = ["kubectl", "create", "-n", namespace, "-f", tmp_path, "--save-config"]
+        cmd = ["kubectl", "apply", "-n", namespace, "-f", tmp_path]
         logger.debug(f"Running command: {cmd}")
 
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -80,9 +94,10 @@ def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
                 f"kubectl create failed:\nstdout={result.stdout}\nstderr={result.stderr}"
             )
         else:
-            logger.info(f"kubectl create succeeded:\n{result.stdout}")
+            logger.info(f"kubectl apply succeeded:\n{result.stdout}")
     finally:
         os.remove(tmp_path)
+
 
 def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=None):
     """
@@ -119,3 +134,29 @@ def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=N
 
     # No matching asset found
     return None, None
+
+
+def normalize_name(name: str) -> str:
+    """
+    Returns a Kubernetes-compliant name by:
+        - Converting to lowercase
+        - Replacing underscores and spaces with hyphens
+        - Removing any other invalid characters
+        - Ensuring it starts and ends with alphanumeric characters
+    """
+    # Convert to lowercase and replace underscores/spaces with hyphens
+    safe_name = name.lower().replace("_", "-").replace(" ", "-")
+
+    # Remove any characters that aren't lowercase alphanumeric, dots or hyphens
+    safe_name = "".join(c for c in safe_name if c.isalnum() or c in ".-")
+
+    # Ensure it starts and ends with alphanumeric character
+    safe_name = safe_name.strip(".-")
+
+    # Handle empty string or invalid result
+    if not safe_name or not safe_name[0].isalnum():
+        safe_name = "x" + safe_name
+    if not safe_name[-1].isalnum():
+        safe_name = safe_name + "0"
+
+    return safe_name
