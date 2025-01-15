@@ -328,11 +328,11 @@ class IntegrateCommand(SubCommand):
         )
 
         parser.add_argument(
-            "--topology-file",
+            "--topology-data",
             "-t",
             type=str,
             required=True,
-            help="the containerlab topology file",
+            help="the containerlab topology data JSON file",
         )
 
         parser.add_argument(

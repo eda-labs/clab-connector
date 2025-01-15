@@ -61,15 +61,7 @@ Follow these steps to set up the Containerlab EDA Connector tool:
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-2. **(Optional) Create a Persistent Virtual Environment with uv**:
-
-    ```
-    uv venv
-    ```
-
-    This pins a Python version (if you haven't installed one yet) and creates a `.venv/` folder.
-
-3. **Run the Connector** (uv automatically installs dependencies in a venv from `pyproject.toml`):
+2. **Run the Connector** (uv automatically installs dependencies in a venv from `pyproject.toml`):
 
     ```
     uv run python eda_containerlab_connector.py --help
@@ -118,15 +110,18 @@ The tool offers two primary subcommands: `integrate` and `remove`.
 
 ### Integrate Containerlab with EDA
 
-Integrate your Containerlab topology into EDA:
+To integrate your Containerlab topology with EDA you need to get a path to the `topology-data.json` file created by Containerlab when it deploys the lab. This file is located in the Containerlab's Lab Directory as described in the [documentation](https://containerlab.dev/manual/conf-artifacts/). With the path to the topology data file is known, you can use the following command to integrate the Containerlab topology with EDA:
 
 ```
 python eda_containerlab_connector.py --verify integrate \
---topology-file path/to/topology-data.json \
+--topology-data path/to/topology-data.json \
 --eda-url https://eda.example.com \
 --eda-user admin \
 --eda-password yourpassword \
 ```
+
+> [!NOTE]  
+> In the coming Containerlab 0.62.0 version, the Lab Directory will be created always in the directory where the topology clab file is located.
 
 ### Remove Containerlab Integration from EDA
 
@@ -134,7 +129,7 @@ Remove the previously integrated Containerlab topology from EDA:
 
 ```
 python eda_containerlab_connector.py remove \
-    --topology-file path/to/topology-data.json \
+    --topology-data path/to/topology-data.json \
     --eda-url https://eda.example.com \
     --eda-user admin \
     --eda-password yourpassword
@@ -152,12 +147,6 @@ python eda_containerlab_connector.py -l INFO integrate -t topology-data.json -e 
 ## Example Topologies
 
 Explore the [example-topologies](./example-topologies/) directory for sample Containerlab topology files to get started quickly.
-
-## Instruction video
-
-The video below shows off how the tool can be run:
-
-<a href="./assets/demo.mp4">View demo video</a>
 
 ## Requesting Support
 
