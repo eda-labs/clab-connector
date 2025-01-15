@@ -14,7 +14,7 @@ class EDA:
     INTERFACE_GROUP = "interfaces.eda.nokia.com"
     INTERFACE_VERSION = "v1alpha1"
 
-    def __init__(self, hostname, username, password, http_proxy, https_proxy, verify):
+    def __init__(self, hostname, username, password, verify):
         """
         Constructor
 
@@ -23,14 +23,11 @@ class EDA:
         hostname:       EDA hostname (IP or FQDN)
         username:       EDA user name
         password:       EDA user password
-        http_proxy:     HTTP proxy to be used for communication with EDA
-        https_proxy:    HTTPS proxy to be used for communication with EDA
         verify:         Whether to verify the certificate when communicating with EDA
         """
         self.url = f"{hostname}"
         self.username = username
         self.password = password
-        self.proxies = {"http": http_proxy, "https": https_proxy}
         self.verify = verify
         self.access_token = None
         self.refresh_token = None
@@ -93,7 +90,6 @@ class EDA:
 
         return requests.get(
             url,
-            proxies=self.proxies,
             verify=self.verify,
             headers=self.get_headers(requires_auth),
         )
@@ -116,7 +112,6 @@ class EDA:
         logger.info(f"Performing POST request to '{url}'")
         return requests.post(
             url,
-            proxies=self.proxies,
             verify=self.verify,
             json=payload,
             headers=self.get_headers(requires_auth),

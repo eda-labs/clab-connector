@@ -26,8 +26,6 @@ class IntegrateCommand(SubCommand):
             args.eda_url,
             args.eda_user,
             args.eda_password,
-            args.http_proxy,
-            args.https_proxy,
             args.verify,
         )
 

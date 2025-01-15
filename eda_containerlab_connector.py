@@ -29,20 +29,6 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--http-proxy",
-    type=str,
-    default="",
-    help="HTTP proxy to be used to communicate with EDA",
-)
-
-parser.add_argument(
-    "--https-proxy",
-    type=str,
-    default="",
-    help="HTTPS proxy to be used to communicate with EDA",
-)
-
-parser.add_argument(
     "--verify", action="store_true", help="Enables certificate verification for EDA"
 )
 

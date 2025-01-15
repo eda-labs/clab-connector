@@ -44,7 +44,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 > ```
 
 > [!NOTE]
-> **Proxy Settings:** This tool does not utilize the system's proxy (`$http_proxy`) variables. Instead, it provides optional arguments to specify HTTP and HTTPS proxies for communicating with EDA.
+> **Proxy Settings:** This tool does utilize the system's proxy (`$HTTP_PROXY` and `$HTTPS_PROXY` ) variables.
 
 ## Installation
 
@@ -125,9 +125,7 @@ python eda_containerlab_connector.py --verify integrate \
 --topology-file path/to/topology-data.json \
 --eda-url https://eda.example.com \
 --eda-user admin \
---eda-password yourpassword \ 
---http-proxy http://proxy.example.com:8080 \
---https-proxy https://proxy.example.com:8443
+--eda-password yourpassword \
 ```
 
 ### Remove Containerlab Integration from EDA
