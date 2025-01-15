@@ -1,5 +1,5 @@
 import logging
-import os
+import subprocess
 
 # set up logging
 logger = logging.getLogger(__name__)
@@ -22,26 +22,64 @@ class Node:
 
     def ping(self):
         """
-        Pings the node
+        Pings the node from the EDA bootstrap server pod
 
-        Returns
-        -------
-        True if the ping was successful, False otherwise
+        Raises
+        ------
+        RuntimeError
+            If ping fails or if the eda-bsvr pod cannot be found
         """
         logger.debug(f"Pinging {self.kind} node '{self.name}' with IP {self.mgmt_ipv4}")
-        param = "-n" if os.sys.platform.lower() == "win32" else "-c"
-        response = os.system(f"ping {param} 1 {self.mgmt_ipv4} > /dev/null 2>&1")
 
-        if response == 0:
-            logger.info(
-                f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} successfull"
-            )
-        else:
-            logger.warning(
-                f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} not successfull"
-            )
+        # Get the eda-bsvr pod name
+        cmd = [
+            "kubectl",
+            "get",
+            "pods",
+            "-n",
+            "eda-system",
+            "-l",
+            "eda.nokia.com/app=bootstrapserver",
+            "-o",
+            "name",
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            bsvr_pod = result.stdout.strip().replace("pod/", "")
+            if not bsvr_pod:
+                raise RuntimeError("Could not find eda-bsvr pod")
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Failed to get eda-bsvr pod name: {e}")
 
-        return response == 0
+        # Execute ping from within the eda-bsvr pod
+        cmd = [
+            "kubectl",
+            "exec",
+            "-n",
+            "eda-system",
+            bsvr_pod,
+            "--",
+            "ping",
+            "-c",
+            "1",
+            self.mgmt_ipv4,
+        ]
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                logger.info(
+                    f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} successful from {bsvr_pod}"
+                )
+                return True
+            else:
+                error_msg = f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} failed from {bsvr_pod}"
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+        except subprocess.CalledProcessError as e:
+            error_msg = f"Failed to execute ping command: {e}"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
 
     def test_ssh(self):
         """
@@ -150,7 +188,7 @@ class Node:
         """
         Returns the standardized artifact name for this node type and version.
         Should be implemented by node types that return True for needs_artifact()
-        
+
         Returns
         -------
         str containing the artifact name or None if not supported
