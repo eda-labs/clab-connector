@@ -4,8 +4,8 @@ metadata:
   name: {{ node_name }}
   labels:
     eda.nokia.com/role: {{ role_value }}
-    eda.connector.nokia.com/topology: {{ topology_name }}
-    eda.connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
+    eda-connector.nokia.com/topology: {{ topology_name }}
+    eda-connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
     eda.nokia.com/security-profile: managed
     containerlab: managed
   namespace: {{ namespace }}
