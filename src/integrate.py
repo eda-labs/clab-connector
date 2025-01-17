@@ -3,6 +3,12 @@ import logging
 import src.helpers as helpers
 from src.eda import EDA
 from src.subcommand import SubCommand
+from src.k8s_utils import (
+    apply_manifest,
+    edactl_namespace_bootstrap,
+    wait_for_namespace,
+    update_namespace_description,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +41,6 @@ class IntegrateCommand(SubCommand):
         try:
             print("== Creating namespace ==")
             self.create_namespace()
-            transactionId = self.eda.commit_transaction(
-                "EDA Containerlab Connector: create namespace"
-            )
-            # Store the first transaction ID
-            self.initial_transaction_id = transactionId - 1
 
             print("== Creating artifacts ==")
             self.create_artifacts()
@@ -83,10 +84,10 @@ class IntegrateCommand(SubCommand):
             print("Done!")
 
         except Exception as e:
-            if self.initial_transaction_id:
-                print("Error occurred during integration. Restore to initial state...")
-                self.eda.restore_transaction(self.initial_transaction_id)
-                print("Revert completed.")
+            print(f"Error occurred: {e}")
+            print("Rolling back changes...")
+            self.remove_namespace()
+            self.eda.commit_transaction("EDA Containerlab Connector: remove namespace")
             raise e
 
     def prechecks(self):
@@ -152,9 +153,7 @@ class IntegrateCommand(SubCommand):
                 continue
 
             try:
-                helpers.apply_manifest_via_kubectl(
-                    artifact_yaml, namespace="eda-system"
-                )
+                apply_manifest(artifact_yaml, namespace="eda-system")
                 logger.info(f"Artifact '{artifact_name}' has been created.")
                 # Log about other nodes using this artifact
                 other_nodes = info["nodes"][1:]
@@ -172,21 +171,20 @@ class IntegrateCommand(SubCommand):
 
     def create_namespace(self):
         """
-        Creates EDA namespace named after clab-<lab_name>.
+        Creates EDA namespace named after clab-<lab_name> using edactl namespace bootstrap command.
         """
-        logger.info("Creating namespace")
-        data = {
-            "namespace": f"clab-{self.topology.name}",
-            "namespace_description": f"Containerlab topology. Name: {self.topology.name}, Topology file: {self.topology.clab_file_path}, IPv4 subnet: {self.topology.mgmt_ipv4_subnet}",
-        }
+        namespace = f"clab-{self.topology.name}"
+        logger.info(f"Creating namespace {namespace}")
 
-        ns = helpers.render_template("namespace.j2", data)
-        logger.debug(ns)
-        item = self.eda.add_replace_to_transaction(ns)
-        if not self.eda.is_transaction_item_valid(item):
-            raise Exception(
-                "Validation error when trying to create a namespace, see warning above. Exiting..."
-            )
+        # Create namespace using edactl
+        edactl_namespace_bootstrap(namespace)
+
+        # Wait for namespace to be available
+        wait_for_namespace(namespace)
+
+        # Update namespace description
+        description = f"Containerlab topology. Name: {self.topology.name}, Topology file: {self.topology.clab_file_path}, IPv4 subnet: {self.topology.mgmt_ipv4_subnet}"
+        update_namespace_description(namespace, description)
 
     def create_init(self):
         """
@@ -218,15 +216,12 @@ class IntegrateCommand(SubCommand):
         logger.debug(nsp)
 
         try:
-            helpers.apply_manifest_via_kubectl(
-                yaml_str=nsp, namespace=f"clab-{self.topology.name}"
-            )
+            apply_manifest(nsp, namespace=f"clab-{self.topology.name}")
             logger.info("Node security profile has been created.")
         except RuntimeError as ex:
             if "AlreadyExists" in str(ex):
                 logger.info("Node security profile already exists, skipping.")
             else:
-                logger.error(f"Error creating node security profile: {ex}")
                 raise
 
     def create_node_user_groups(self):
@@ -373,3 +368,14 @@ class IntegrateCommand(SubCommand):
         )
 
         return parser
+
+    def remove_namespace(self):
+        """
+        Removes the namespace for the topology
+        """
+        logger.info("Removing namespace")
+        self.eda.add_delete_to_transaction(
+            "",
+            "Namespace",
+            f"clab-{self.topology.name}",
+        )

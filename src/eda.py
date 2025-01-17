@@ -1,6 +1,5 @@
 import json
 import logging
-
 import yaml
 
 from src.http_client import create_pool_manager

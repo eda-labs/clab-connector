@@ -1,7 +1,7 @@
 import logging
-import subprocess
 
 from src import helpers
+from src.k8s_utils import ping_from_bsvr
 
 # set up logging
 logger = logging.getLogger(__name__)
@@ -32,54 +32,13 @@ class Node:
             If ping fails or if the eda-bsvr pod cannot be found
         """
         logger.debug(f"Pinging {self.kind} node '{self.name}' with IP {self.mgmt_ipv4}")
-
-        # Get the eda-bsvr pod name
-        cmd = [
-            "kubectl",
-            "get",
-            "pods",
-            "-n",
-            "eda-system",
-            "-l",
-            "eda.nokia.com/app=bootstrapserver",
-            "-o",
-            "name",
-        ]
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            bsvr_pod = result.stdout.strip().replace("pod/", "")
-            if not bsvr_pod:
-                raise RuntimeError("Could not find eda-bsvr pod")
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Failed to get eda-bsvr pod name: {e}")
-
-        # Execute ping from within the eda-bsvr pod
-        cmd = [
-            "kubectl",
-            "exec",
-            "-n",
-            "eda-system",
-            bsvr_pod,
-            "--",
-            "ping",
-            "-c",
-            "1",
-            self.mgmt_ipv4,
-        ]
-
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode == 0:
-                logger.info(
-                    f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} successful from {bsvr_pod}"
-                )
-                return True
-            else:
-                error_msg = f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} failed from {bsvr_pod}"
-                logger.error(error_msg)
-                raise RuntimeError(error_msg)
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Failed to execute ping command: {e}"
+        if ping_from_bsvr(self.mgmt_ipv4):
+            logger.info(
+                f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} successful"
+            )
+            return True
+        else:
+            error_msg = f"Ping to {self.kind} node '{self.name}' with IP {self.mgmt_ipv4} failed"
             logger.error(error_msg)
             raise RuntimeError(error_msg)
 
