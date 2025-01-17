@@ -100,6 +100,46 @@ def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
         os.remove(tmp_path)
 
 
+def get_github_token():
+    """
+    Get GitHub token from environment or GitHub CLI in priority order:
+    1. GITHUB_TOKEN environment variable
+    2. GH_TOKEN environment variable (GitHub CLI default)
+    3. GitHub CLI authentication
+
+    Returns
+    -------
+    str or None
+        GitHub authentication token if found, None otherwise
+    """
+
+    # Check environment variables
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        logger.debug("Found GitHub token in environment variables")
+        return token
+
+    # Try to get token from GitHub CLI
+    try:
+        # Check if gh is installed
+        result = subprocess.run(["gh", "--version"], capture_output=True, text=True)
+        if result.returncode == 0:
+            # Get auth token from gh
+            result = subprocess.run(
+                ["gh", "auth", "token"], capture_output=True, text=True
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                logger.debug("Found GitHub token from GitHub CLI")
+                return result.stdout.strip()
+    except FileNotFoundError:
+        logger.debug("GitHub CLI (gh) not found")
+    except Exception as e:
+        logger.debug(f"Error getting GitHub CLI token: {e}")
+
+    logger.debug("No GitHub token found")
+    return None
+
+
 def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=None):
     """
     Queries GitHub for a specific release artifact using urllib3.
@@ -110,7 +150,8 @@ def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=N
     repo:           GitHub repository name
     version:        Version tag to search for (without 'v' prefix)
     asset_filter:   Optional function(asset_name) -> bool to filter assets
-
+    token:          Optional GitHub token. If None, will attempt to get from
+                    environment or GitHub CLI
     Returns
     -------
     Tuple of (filename, download_url) or (None, None) if not found
@@ -119,6 +160,21 @@ def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=N
 
     tag = f"v{version}"  # Assume GitHub tags are prefixed with 'v'
     url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
+
+    token = get_github_token()
+
+    # Set up headers with authentication if token is available
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "container-lab/node-download"  # Replace with your tool name
+    }
+
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+        logger.debug("Using authenticated GitHub API request")
+    else:
+        logger.warning("No GitHub token found - using unauthenticated request (rate limit: 60 requests/hour)")
 
     http = create_pool_manager(url=url, verify=True)
 
@@ -129,7 +185,7 @@ def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=N
     logger.debug(f"Using pool manager type: {type(http).__name__}")
 
     try:
-        response = http.request("GET", url)
+        response = http.request("GET", url, headers=headers)
         logger.debug(f"Response status: {response.status}")
         logger.debug(f"Response headers: {response.headers}")
 
