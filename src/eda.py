@@ -1,8 +1,9 @@
 import json
 import logging
 
-import urllib3
 import yaml
+
+from src.http_client import create_pool_manager
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -34,11 +35,7 @@ class EDA:
         self.version = None
         self.transactions = []
 
-        # Create urllib3 connection pool
-        self.http = urllib3.PoolManager(
-            cert_reqs='CERT_REQUIRED' if verify else 'CERT_NONE',
-            retries=urllib3.Retry(3)
-        )
+        self.http = create_pool_manager(url=self.url, verify=self.verify)
 
     def login(self):
         """

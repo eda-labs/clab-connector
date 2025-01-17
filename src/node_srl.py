@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 class SRLNode(Node):
-    # this can be made part of the command line arguments, but this is not done (yet)
     SRL_USERNAME = "admin"
     SRL_PASSWORD = "NokiaSrl1!"
     NODE_TYPE = "srlinux"
@@ -30,6 +29,8 @@ class SRLNode(Node):
 
     def __init__(self, name, kind, node_type, version, mgmt_ipv4):
         super().__init__(name, kind, node_type, version, mgmt_ipv4)
+        # Add cache for artifact info
+        self._artifact_info = None
 
     def test_ssh(self):
         """
@@ -116,9 +117,7 @@ class SRLNode(Node):
         """
         logger.info(f"Rendering node profile for {self}")
 
-        # Get artifact info first to construct the YANG path
-        artifact_name = self.get_artifact_name()
-        _, filename, _ = self.get_artifact_info()
+        artifact_name, filename = self.get_artifact_metadata()
 
         data = {
             "namespace": f"clab-{topology.name}",
@@ -130,8 +129,7 @@ class SRLNode(Node):
             # below evaluates to something like v24\.7\.1.*
             "version_match": "v{}.*".format(self.version.replace(".", "\.")),
             "yang_path": self.YANG_PATH.format(
-                artifact_name=artifact_name,
-                filename=filename
+                artifact_name=artifact_name, filename=filename
             ),
             "node_user": "admin",
             "onboarding_password": self.SRL_PASSWORD,
@@ -231,14 +229,18 @@ class SRLNode(Node):
 
     def get_artifact_info(self):
         """
-        Gets SR Linux YANG models artifact information from GitHub
+        Gets SR Linux YANG models artifact information from GitHub.
         """
+        # Return cached info if available
+        if self._artifact_info is not None:
+            return self._artifact_info
+
         def srlinux_filter(name):
             return (
                 name.endswith(".zip")
                 and name.startswith("srlinux-")
                 and "Source code" not in name
-        )
+            )
 
         artifact_name = self.get_artifact_name()
         filename, download_url = helpers.get_artifact_from_github(
@@ -248,7 +250,24 @@ class SRLNode(Node):
             asset_filter=srlinux_filter,
         )
 
-        return artifact_name, filename, download_url
+        # Cache the result
+        self._artifact_info = (artifact_name, filename, download_url)
+        return self._artifact_info
+
+    def get_artifact_metadata(self):
+        """
+        Returns just the artifact name and filename without making API calls.
+        Used when we don't need the download URL.
+        """
+        if self._artifact_info is not None:
+            # Return cached info if available
+            artifact_name, filename, _ = self._artifact_info
+            return artifact_name, filename
+
+        # If not cached, return basic info without API call
+        artifact_name = self.get_artifact_name()
+        filename = f"srlinux-{self.version}.zip"  # Assume standard naming
+        return artifact_name, filename
 
     def get_artifact_yaml(self, artifact_name, filename, download_url):
         """
@@ -258,6 +277,6 @@ class SRLNode(Node):
             "artifact_name": artifact_name,
             "namespace": "eda-system",
             "artifact_filename": filename,
-            "artifact_url": download_url
+            "artifact_url": download_url,
         }
         return helpers.render_template("artifact.j2", data)

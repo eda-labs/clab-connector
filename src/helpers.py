@@ -6,6 +6,7 @@ import sys
 import tempfile
 
 import urllib3
+
 from jinja2 import Environment, FileSystemLoader
 
 import src.topology as topology
@@ -17,10 +18,6 @@ template_environment = Environment(loader=template_loader)
 # set up logging
 logger = logging.getLogger(__name__)
 
-# Create a global urllib3 pool manager
-http = urllib3.PoolManager(
-    retries=urllib3.Retry(3)
-)
 
 def parse_topology(topology_file) -> topology.Topology:
     """
@@ -118,55 +115,67 @@ def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=N
     -------
     Tuple of (filename, download_url) or (None, None) if not found
     """
+    from src.http_client import create_pool_manager
+
     tag = f"v{version}"  # Assume GitHub tags are prefixed with 'v'
     url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
 
-    # Log proxy environment
-    logger.info(f"HTTP_PROXY: {os.environ.get('HTTP_PROXY', 'not set')}")
-    logger.info(f"HTTPS_PROXY: {os.environ.get('HTTPS_PROXY', 'not set')}")
-    logger.info(f"NO_PROXY: {os.environ.get('NO_PROXY', 'not set')}")
-    
-    # Log request details
-    logger.info(f"Making request to: {url}")
-    logger.info(f"Using pool manager type: {type(http).__name__}")
-    
+    http = create_pool_manager(url=url, verify=True)
+
+    # Log proxy environment at debug level
+    logger.debug(f"HTTP_PROXY: {os.environ.get('HTTP_PROXY', 'not set')}")
+    logger.debug(f"HTTPS_PROXY: {os.environ.get('HTTPS_PROXY', 'not set')}")
+    logger.debug(f"NO_PROXY: {os.environ.get('NO_PROXY', 'not set')}")
+    logger.debug(f"Using pool manager type: {type(http).__name__}")
+
     try:
-        response = http.request('GET', url)
-        logger.info(f"Response status: {response.status}")
-        logger.info(f"Response headers: {response.headers}")
-        
+        response = http.request("GET", url)
+        logger.debug(f"Response status: {response.status}")
+        logger.debug(f"Response headers: {response.headers}")
+
+        if response.status == 403:
+            response_data = json.loads(response.data.decode('utf-8'))
+            if "rate limit exceeded" in response_data.get("message", "").lower():
+                logger.warning(f"GitHub API rate limit exceeded. {response_data.get('message')}")
+                if response_data.get("documentation_url"):
+                    logger.warning(f"See: {response_data['documentation_url']}")
+                return None, None
+            else:
+                logger.error(f"Access forbidden: {response_data.get('message', 'No message provided')}")
+                return None, None
+                
         if response.status != 200:
-            logger.info(f"Failed to fetch release for {tag}, status={response.status}")
-            logger.info(f"Response data: {response.data.decode('utf-8')}")
+            logger.error(f"Failed to fetch release {tag} (status={response.status})")
+            logger.debug(f"Response data: {response.data.decode('utf-8')}")
             return None, None
 
-        data = json.loads(response.data.decode('utf-8'))
+        data = json.loads(response.data.decode("utf-8"))
         assets = data.get("assets", [])
-        logger.info(f"Found {len(assets)} assets in release")
+        logger.debug(f"Found {len(assets)} assets in release")
 
         for asset in assets:
             name = asset.get("name", "")
-            logger.info(f"Checking asset: {name}")
+            logger.debug(f"Checking asset: {name}")
             if asset_filter is None or asset_filter(name):
                 download_url = asset.get("browser_download_url")
-                logger.info(f"Found matching asset: {name} with URL: {download_url}")
+                logger.info(f"Found matching asset: {name}")
+                logger.debug(f"Download URL: {download_url}")
                 return name, download_url
             else:
-                logger.info(f"Asset {name} did not match filter")
+                logger.debug(f"Asset {name} did not match filter")
 
     except urllib3.exceptions.HTTPError as e:
-        logger.info(f"HTTP error occurred: {e}")
-        logger.info(f"Error details: {str(e)}")
+        logger.error(f"HTTP error occurred while fetching {tag}: {e}")
+        logger.debug(f"Error details: {str(e)}")
     except json.JSONDecodeError as e:
-        logger.info(f"JSON decode error: {e}")
-        logger.info(f"Raw response: {response.data.decode('utf-8')}")
+        logger.error(f"Invalid JSON response for {tag}: {e}")
+        logger.debug(f"Raw response: {response.data.decode('utf-8')}")
     except Exception as e:
-        logger.info(f"Unexpected error: {e}")
-        logger.info(f"Error type: {type(e).__name__}")
-        logger.info(f"Error details: {str(e)}")
+        logger.error(f"Unexpected error while fetching {tag}: {type(e).__name__}")
+        logger.debug(f"Error details: {str(e)}")
 
     # No matching asset found
-    logger.info("No matching asset found")
+    logger.warning("No matching asset found")
     return None, None
 
 
