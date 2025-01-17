@@ -27,6 +27,10 @@ class SRLNode(Node):
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
+    SUPPORTED_SCHEMA_PROFILES = {
+        "24.10.1": "https://github.com/nokia/srlinux-yang-models/releases/download/v24.10.1/srlinux-24.10.1-492.zip"
+    }
+
     def __init__(self, name, kind, node_type, version, mgmt_ipv4):
         super().__init__(name, kind, node_type, version, mgmt_ipv4)
         # Add cache for artifact info
@@ -117,7 +121,8 @@ class SRLNode(Node):
         """
         logger.info(f"Rendering node profile for {self}")
 
-        artifact_name, filename = self.get_artifact_metadata()
+        artifact_name = self.get_artifact_name()
+        filename = f"srlinux-{self.version}.zip"
 
         data = {
             "namespace": f"clab-{topology.name}",
@@ -228,46 +233,16 @@ class SRLNode(Node):
         return f"clab-srlinux-{self.version}"
 
     def get_artifact_info(self):
-        """
-        Gets SR Linux YANG models artifact information from GitHub.
-        """
-        # Return cached info if available
-        if self._artifact_info is not None:
-            return self._artifact_info
-
-        def srlinux_filter(name):
-            return (
-                name.endswith(".zip")
-                and name.startswith("srlinux-")
-                and "Source code" not in name
-            )
+        """Gets artifact information for this SR Linux version"""
+        if self.version not in self.SUPPORTED_SCHEMA_PROFILES:
+            logger.warning(f"No schema profile URL defined for version {self.version}")
+            return None, None, None
 
         artifact_name = self.get_artifact_name()
-        filename, download_url = helpers.get_artifact_from_github(
-            owner="nokia",
-            repo="srlinux-yang-models",
-            version=self.version,
-            asset_filter=srlinux_filter,
-        )
+        filename = f"srlinux-{self.version}.zip"
+        download_url = self.SUPPORTED_SCHEMA_PROFILES[self.version]
 
-        # Cache the result
-        self._artifact_info = (artifact_name, filename, download_url)
-        return self._artifact_info
-
-    def get_artifact_metadata(self):
-        """
-        Returns just the artifact name and filename without making API calls.
-        Used when we don't need the download URL.
-        """
-        if self._artifact_info is not None:
-            # Return cached info if available
-            artifact_name, filename, _ = self._artifact_info
-            return artifact_name, filename
-
-        # If not cached, return basic info without API call
-        artifact_name = self.get_artifact_name()
-        filename = f"srlinux-{self.version}.zip"  # Assume standard naming
-        return artifact_name, filename
+        return artifact_name, filename, download_url
 
     def get_artifact_yaml(self, artifact_name, filename, download_url):
         """
