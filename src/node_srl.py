@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 class SRLNode(Node):
-    # this can be made part of the command line arguments, but this is not done (yet)
     SRL_USERNAME = "admin"
     SRL_PASSWORD = "NokiaSrl1!"
     NODE_TYPE = "srlinux"
@@ -28,8 +27,14 @@ class SRLNode(Node):
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
+    SUPPORTED_SCHEMA_PROFILES = {
+        "24.10.1": "https://github.com/nokia/srlinux-yang-models/releases/download/v24.10.1/srlinux-24.10.1-492.zip"
+    }
+
     def __init__(self, name, kind, node_type, version, mgmt_ipv4):
         super().__init__(name, kind, node_type, version, mgmt_ipv4)
+        # Add cache for artifact info
+        self._artifact_info = None
 
     def test_ssh(self):
         """
@@ -116,9 +121,8 @@ class SRLNode(Node):
         """
         logger.info(f"Rendering node profile for {self}")
 
-        # Get artifact info first to construct the YANG path
         artifact_name = self.get_artifact_name()
-        _, filename, _ = self.get_artifact_info()
+        filename = f"srlinux-{self.version}.zip"
 
         data = {
             "namespace": f"clab-{topology.name}",
@@ -130,8 +134,7 @@ class SRLNode(Node):
             # below evaluates to something like v24\.7\.1.*
             "version_match": "v{}.*".format(self.version.replace(".", "\.")),
             "yang_path": self.YANG_PATH.format(
-                artifact_name=artifact_name,
-                filename=filename
+                artifact_name=artifact_name, filename=filename
             ),
             "node_user": "admin",
             "onboarding_password": self.SRL_PASSWORD,
@@ -230,23 +233,14 @@ class SRLNode(Node):
         return f"clab-srlinux-{self.version}"
 
     def get_artifact_info(self):
-        """
-        Gets SR Linux YANG models artifact information from GitHub
-        """
-        def srlinux_filter(name):
-            return (
-                name.endswith(".zip")
-                and name.startswith("srlinux-")
-                and "Source code" not in name
-        )
+        """Gets artifact information for this SR Linux version"""
+        if self.version not in self.SUPPORTED_SCHEMA_PROFILES:
+            logger.warning(f"No schema profile URL defined for version {self.version}")
+            return None, None, None
 
         artifact_name = self.get_artifact_name()
-        filename, download_url = helpers.get_artifact_from_github(
-            owner="nokia",
-            repo="srlinux-yang-models",
-            version=self.version,
-            asset_filter=srlinux_filter,
-        )
+        filename = f"srlinux-{self.version}.zip"
+        download_url = self.SUPPORTED_SCHEMA_PROFILES[self.version]
 
         return artifact_name, filename, download_url
 
@@ -258,6 +252,6 @@ class SRLNode(Node):
             "artifact_name": artifact_name,
             "namespace": "eda-system",
             "artifact_filename": filename,
-            "artifact_url": download_url
+            "artifact_url": download_url,
         }
         return helpers.render_template("artifact.j2", data)

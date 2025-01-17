@@ -1,8 +1,9 @@
 import json
 import logging
 
-import requests
 import yaml
+
+from src.http_client import create_pool_manager
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -34,21 +35,24 @@ class EDA:
         self.version = None
         self.transactions = []
 
+        self.http = create_pool_manager(url=self.url, verify=self.verify)
+
     def login(self):
         """
         Retrieves an access_token and refresh_token from the EDA API
         """
         payload = {"username": self.username, "password": self.password}
 
-        response = self.post("auth/login", payload, False).json()
+        response = self.post("auth/login", payload, False)
+        response_data = json.loads(response.data.decode("utf-8"))
 
-        if "code" in response and response["code"] != 200:
+        if "code" in response_data and response_data["code"] != 200:
             raise Exception(
-                f"Could not authenticate with EDA, error message: '{response['message']} {response['details']}'"
+                f"Could not authenticate with EDA, error message: '{response_data['message']} {response_data['details']}'"
             )
 
-        self.access_token = response["access_token"]
-        self.refresh_token = response["refresh_token"]
+        self.access_token = response_data["access_token"]
+        self.refresh_token = response_data["refresh_token"]
 
     def get_headers(self, requires_auth):
         """
@@ -88,11 +92,7 @@ class EDA:
         url = f"{self.url}/{api_path}"
         logger.info(f"Performing GET request to '{url}'")
 
-        return requests.get(
-            url,
-            verify=self.verify,
-            headers=self.get_headers(requires_auth),
-        )
+        return self.http.request("GET", url, headers=self.get_headers(requires_auth))
 
     def post(self, api_path, payload, requires_auth=True):
         """
@@ -110,11 +110,11 @@ class EDA:
         """
         url = f"{self.url}/{api_path}"
         logger.info(f"Performing POST request to '{url}'")
-        return requests.post(
+        return self.http.request(
+            "POST",
             url,
-            verify=self.verify,
-            json=payload,
             headers=self.get_headers(requires_auth),
+            body=json.dumps(payload).encode("utf-8"),
         )
 
     def is_up(self):
@@ -127,8 +127,9 @@ class EDA:
         """
         logger.info("Checking whether EDA is up")
         health = self.get("core/about/health", requires_auth=False)
-        logger.debug(health.json())
-        return health.json()["status"] == "UP"
+        health_data = json.loads(health.data.decode("utf-8"))
+        logger.debug(health_data)
+        return health_data["status"] == "UP"
 
     def get_version(self):
         """
@@ -140,7 +141,9 @@ class EDA:
             return self.version
 
         logger.info("Getting EDA version")
-        version = self.get("core/about/version").json()["eda"]["version"].split("-")[0]
+        version_response = self.get("core/about/version")
+        version_data = json.loads(version_response.data.decode("utf-8"))
+        version = version_data["eda"]["version"].split("-")[0]
         logger.info(f"EDA version is {version}")
 
         # storing this to make the tool backwards compatible
@@ -254,18 +257,20 @@ class EDA:
         logger.info("Validating transaction item")
 
         response = self.post("core/transaction/v1/validate", item)
-        if response.status_code == 204:
+        if response.status == 204:
             logger.info("Validation successful")
             return True
 
-        response = response.json()
+        response_data = json.loads(
+            response.data.decode("utf-8")
+        )  # Need to decode response data
 
-        if "code" in response:
-            message = f"{response['message']}"
-            if "details" in response:
-                message = f"{message} - {response['details']}"
+        if "code" in response_data:
+            message = f"{response_data['message']}"
+            if "details" in response_data:
+                message = f"{message} - {response_data['details']}"
             logger.warning(
-                f"While validating a transaction item, the following validation error was returned (code {response['code']}): '{message}'"
+                f"While validating a transaction item, the following validation error was returned (code {response_data['code']}): '{message}'"
             )
 
         return False
@@ -295,16 +300,21 @@ class EDA:
         logger.info(f"Committing transaction with {len(self.transactions)} item(s)")
         logger.debug(json.dumps(payload, indent=4))
 
-        response = self.post("core/transaction/v1", payload).json()
-        if "id" not in response:
-            raise Exception(f"Could not find transaction ID in response {response}")
+        response = self.post("core/transaction/v1", payload)
+        response_data = json.loads(response.data.decode("utf-8"))
+        if "id" not in response_data:
+            raise Exception(
+                f"Could not find transaction ID in response {response_data}"
+            )
 
-        transactionId = response["id"]
+        transactionId = response_data["id"]
 
         logger.info(f"Waiting for transaction with ID {transactionId} to complete")
-        result = self.get(
-            f"core/transaction/v1/details/{transactionId}?waitForComplete=true&failOnErrors=true"
-        ).json()
+        result = json.loads(
+            self.get(
+                f"core/transaction/v1/details/{transactionId}?waitForComplete=true&failOnErrors=true"
+            ).data.decode("utf-8")
+        )
 
         if "code" in result:
             message = f"{result['message']}"
@@ -348,7 +358,7 @@ class EDA:
         ).json()
 
         response = self.post(f"core/transaction/v1/revert/{transactionId}", {})
-        result = response.json()
+        result = json.loads(response.data.decode("utf-8"))
 
         if "code" in result and result["code"] != 0:
             message = f"{result['message']}"
@@ -392,7 +402,7 @@ class EDA:
         ).json()
 
         response = self.post(f"core/transaction/v1/restore/{restore_point}", {})
-        result = response.json()
+        result = json.loads(response.data.decode("utf-8"))
 
         if "code" in result and result["code"] != 0:
             message = f"{result['message']}"

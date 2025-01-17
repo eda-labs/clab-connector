@@ -107,13 +107,12 @@ class IntegrateCommand(SubCommand):
             )
 
     def create_artifacts(self):
-        """
-        Creates artifacts needed by nodes in the topology
-        """
+        """Creates artifacts needed by nodes that need them"""
         logger.info("Creating artifacts for nodes that need them")
 
-        processed = set()  # Track which artifacts we've already created
+        nodes_by_artifact = {}  # Track which nodes use which artifacts
 
+        # First pass: collect all nodes and their artifacts
         for node in self.topology.nodes:
             if not node.needs_artifact():
                 continue
@@ -125,30 +124,49 @@ class IntegrateCommand(SubCommand):
                 logger.warning(f"Could not get artifact details for {node}. Skipping.")
                 continue
 
-            # Skip if we already processed this artifact
-            if artifact_name in processed:
-                continue
-            processed.add(artifact_name)
+            if artifact_name not in nodes_by_artifact:
+                nodes_by_artifact[artifact_name] = {
+                    "nodes": [],
+                    "filename": filename,
+                    "download_url": download_url,
+                    "version": node.version,
+                }
+            nodes_by_artifact[artifact_name]["nodes"].append(node.name)
+
+        # Second pass: create artifacts
+        for artifact_name, info in nodes_by_artifact.items():
+            first_node = info["nodes"][0]
+            logger.info(
+                f"Creating YANG artifact for node: {first_node} (version {info['version']})"
+            )
 
             # Get the YAML and create the artifact
-            artifact_yaml = node.get_artifact_yaml(
-                artifact_name, filename, download_url
+            artifact_yaml = self.topology.nodes[0].get_artifact_yaml(
+                artifact_name, info["filename"], info["download_url"]
             )
+
             if not artifact_yaml:
                 logger.warning(
-                    f"Could not generate artifact YAML for {node}. Skipping."
+                    f"Could not generate artifact YAML for {first_node}. Skipping."
                 )
                 continue
-            logger.debug(f"Artifact yaml: {artifact_yaml}.")
 
             try:
                 helpers.apply_manifest_via_kubectl(
                     artifact_yaml, namespace="eda-system"
                 )
                 logger.info(f"Artifact '{artifact_name}' has been created.")
+                # Log about other nodes using this artifact
+                other_nodes = info["nodes"][1:]
+                if other_nodes:
+                    logger.info(
+                        f"Using same artifact for nodes: {', '.join(other_nodes)}"
+                    )
             except RuntimeError as ex:
                 if "AlreadyExists" in str(ex):
-                    logger.info(f"Artifact '{artifact_name}' already exists, skipping.")
+                    logger.info(
+                        f"Artifact '{artifact_name}' already exists for nodes: {', '.join(info['nodes'])}"
+                    )
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 

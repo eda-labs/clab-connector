@@ -5,7 +5,6 @@ import subprocess
 import sys
 import tempfile
 
-import requests
 from jinja2 import Environment, FileSystemLoader
 
 import src.topology as topology
@@ -97,44 +96,6 @@ def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
             logger.info(f"kubectl apply succeeded:\n{result.stdout}")
     finally:
         os.remove(tmp_path)
-
-
-def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=None):
-    """
-    Queries GitHub for a specific release artifact.
-
-    Parameters
-    ----------
-    owner:          GitHub repository owner
-    repo:           GitHub repository name
-    version:        Version tag to search for (without 'v' prefix)
-    asset_filter:   Optional function(asset_name) -> bool to filter assets
-
-    Returns
-    -------
-    Tuple of (filename, download_url) or (None, None) if not found
-    """
-    tag = f"v{version}"  # Assume GitHub tags are prefixed with 'v'
-    url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
-
-    logger.info(f"Querying GitHub release {tag} from {owner}/{repo}")
-    resp = requests.get(url)
-
-    if resp.status_code != 200:
-        logger.warning(f"Failed to fetch release for {tag}, status={resp.status_code}")
-        return None, None
-
-    data = resp.json()
-    assets = data.get("assets", [])
-
-    for asset in assets:
-        name = asset.get("name", "")
-        if asset_filter is None or asset_filter(name):
-            return name, asset.get("browser_download_url")
-
-    # No matching asset found
-    return None, None
-
 
 def normalize_name(name: str) -> str:
     """
