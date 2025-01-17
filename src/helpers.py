@@ -4,7 +4,6 @@ import os.path
 import sys
 
 from jinja2 import Environment, FileSystemLoader
-from src.k8s_utils import apply_manifest
 
 import src.topology as topology
 

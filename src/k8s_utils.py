@@ -156,7 +156,7 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
         with os.fdopen(fd, "w") as f:
             f.write(yaml_str)
         cmd = ["kubectl", "apply", "-n", namespace, "-f", tmp_path]
-        result = run_kubectl_command(cmd)
+        run_kubectl_command(cmd)
     except Exception as e:
         raise RuntimeError(f"Failed to apply manifest: {e}")
     finally:
