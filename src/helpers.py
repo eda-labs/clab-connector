@@ -5,7 +5,7 @@ import subprocess
 import sys
 import tempfile
 
-import requests
+import urllib3
 from jinja2 import Environment, FileSystemLoader
 
 import src.topology as topology
@@ -17,6 +17,10 @@ template_environment = Environment(loader=template_loader)
 # set up logging
 logger = logging.getLogger(__name__)
 
+# Create a global urllib3 pool manager
+http = urllib3.PoolManager(
+    retries=urllib3.Retry(3)
+)
 
 def parse_topology(topology_file) -> topology.Topology:
     """
@@ -101,7 +105,7 @@ def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
 
 def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=None):
     """
-    Queries GitHub for a specific release artifact.
+    Queries GitHub for a specific release artifact using urllib3.
 
     Parameters
     ----------
@@ -118,19 +122,27 @@ def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=N
     url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
 
     logger.info(f"Querying GitHub release {tag} from {owner}/{repo}")
-    resp = requests.get(url)
 
-    if resp.status_code != 200:
-        logger.warning(f"Failed to fetch release for {tag}, status={resp.status_code}")
-        return None, None
+    try:
+        response = http.request('GET', url)
+        if response.status != 200:
+            logger.warning(f"Failed to fetch release for {tag}, status={response.status}")
+            return None, None
 
-    data = resp.json()
-    assets = data.get("assets", [])
+        data = json.loads(response.data.decode('utf-8'))
+        assets = data.get("assets", [])
 
-    for asset in assets:
-        name = asset.get("name", "")
-        if asset_filter is None or asset_filter(name):
-            return name, asset.get("browser_download_url")
+        for asset in assets:
+            name = asset.get("name", "")
+            if asset_filter is None or asset_filter(name):
+                return name, asset.get("browser_download_url")
+
+    except urllib3.exceptions.HTTPError as e:
+        logger.error(f"HTTP error occurred: {e}")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
 
     # No matching asset found
     return None, None
