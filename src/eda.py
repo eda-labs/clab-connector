@@ -44,7 +44,7 @@ class EDA:
         payload = {"username": self.username, "password": self.password}
 
         response = self.post("auth/login", payload, False)
-        response_data = json.loads(response.data.decode('utf-8'))
+        response_data = json.loads(response.data.decode("utf-8"))
 
         if "code" in response_data and response_data["code"] != 200:
             raise Exception(
@@ -92,11 +92,7 @@ class EDA:
         url = f"{self.url}/{api_path}"
         logger.info(f"Performing GET request to '{url}'")
 
-        return self.http.request(
-            'GET',
-            url,
-            headers=self.get_headers(requires_auth)
-        )
+        return self.http.request("GET", url, headers=self.get_headers(requires_auth))
 
     def post(self, api_path, payload, requires_auth=True):
         """
@@ -115,10 +111,10 @@ class EDA:
         url = f"{self.url}/{api_path}"
         logger.info(f"Performing POST request to '{url}'")
         return self.http.request(
-            'POST',
+            "POST",
             url,
             headers=self.get_headers(requires_auth),
-            body=json.dumps(payload).encode('utf-8')
+            body=json.dumps(payload).encode("utf-8"),
         )
 
     def is_up(self):
@@ -131,7 +127,7 @@ class EDA:
         """
         logger.info("Checking whether EDA is up")
         health = self.get("core/about/health", requires_auth=False)
-        health_data = json.loads(health.data.decode('utf-8'))
+        health_data = json.loads(health.data.decode("utf-8"))
         logger.debug(health_data)
         return health_data["status"] == "UP"
 
@@ -146,7 +142,7 @@ class EDA:
 
         logger.info("Getting EDA version")
         version_response = self.get("core/about/version")
-        version_data = json.loads(version_response.data.decode('utf-8'))
+        version_data = json.loads(version_response.data.decode("utf-8"))
         version = version_data["eda"]["version"].split("-")[0]
         logger.info(f"EDA version is {version}")
 
@@ -265,7 +261,9 @@ class EDA:
             logger.info("Validation successful")
             return True
 
-        response_data = json.loads(response.data.decode('utf-8'))  # Need to decode response data
+        response_data = json.loads(
+            response.data.decode("utf-8")
+        )  # Need to decode response data
 
         if "code" in response_data:
             message = f"{response_data['message']}"
@@ -303,16 +301,20 @@ class EDA:
         logger.debug(json.dumps(payload, indent=4))
 
         response = self.post("core/transaction/v1", payload)
-        response_data = json.loads(response.data.decode('utf-8'))
+        response_data = json.loads(response.data.decode("utf-8"))
         if "id" not in response_data:
-            raise Exception(f"Could not find transaction ID in response {response_data}")
+            raise Exception(
+                f"Could not find transaction ID in response {response_data}"
+            )
 
         transactionId = response_data["id"]
 
         logger.info(f"Waiting for transaction with ID {transactionId} to complete")
-        result = json.loads(self.get(
-            f"core/transaction/v1/details/{transactionId}?waitForComplete=true&failOnErrors=true"
-        ).data.decode('utf-8'))
+        result = json.loads(
+            self.get(
+                f"core/transaction/v1/details/{transactionId}?waitForComplete=true&failOnErrors=true"
+            ).data.decode("utf-8")
+        )
 
         if "code" in result:
             message = f"{result['message']}"
@@ -356,7 +358,7 @@ class EDA:
         ).json()
 
         response = self.post(f"core/transaction/v1/revert/{transactionId}", {})
-        result = json.loads(response.data.decode('utf-8'))
+        result = json.loads(response.data.decode("utf-8"))
 
         if "code" in result and result["code"] != 0:
             message = f"{result['message']}"
@@ -400,7 +402,7 @@ class EDA:
         ).json()
 
         response = self.post(f"core/transaction/v1/restore/{restore_point}", {})
-        result = json.loads(response.data.decode('utf-8'))
+        result = json.loads(response.data.decode("utf-8"))
 
         if "code" in result and result["code"] != 0:
             message = f"{result['message']}"

@@ -134,16 +134,20 @@ def get_artifact_from_github(owner: str, repo: str, version: str, asset_filter=N
         logger.debug(f"Response headers: {response.headers}")
 
         if response.status == 403:
-            response_data = json.loads(response.data.decode('utf-8'))
+            response_data = json.loads(response.data.decode("utf-8"))
             if "rate limit exceeded" in response_data.get("message", "").lower():
-                logger.warning(f"GitHub API rate limit exceeded. {response_data.get('message')}")
+                logger.warning(
+                    f"GitHub API rate limit exceeded. {response_data.get('message')}"
+                )
                 if response_data.get("documentation_url"):
                     logger.warning(f"See: {response_data['documentation_url']}")
                 return None, None
             else:
-                logger.error(f"Access forbidden: {response_data.get('message', 'No message provided')}")
+                logger.error(
+                    f"Access forbidden: {response_data.get('message', 'No message provided')}"
+                )
                 return None, None
-                
+
         if response.status != 200:
             logger.error(f"Failed to fetch release {tag} (status={response.status})")
             logger.debug(f"Response data: {response.data.decode('utf-8')}")
