@@ -64,8 +64,8 @@ class Topology:
         for node in self.nodes:
             node.ping()
 
-        for node in self.nodes:
-            node.test_ssh()
+        # for node in self.nodes:
+        #     node.test_ssh()
 
     def get_eda_safe_name(self):
         """

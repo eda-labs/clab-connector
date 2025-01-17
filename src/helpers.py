@@ -1,11 +1,10 @@
 import json
 import logging
 import os.path
-import subprocess
 import sys
-import tempfile
 
 from jinja2 import Environment, FileSystemLoader
+from src.k8s_utils import apply_manifest
 
 import src.topology as topology
 
@@ -73,29 +72,6 @@ def render_template(template_name, data):
     template = template_environment.get_template(template_name)
     return template.render(data)
 
-
-def apply_manifest_via_kubectl(yaml_str: str, namespace: str = "eda-system"):
-    """
-    Applies the given resource via `kubectl apply -f` in the specified namespace.
-    """
-    fd, tmp_path = tempfile.mkstemp(suffix=".yaml")
-    try:
-        with os.fdopen(fd, "w") as f:
-            f.write(yaml_str)
-
-        cmd = ["kubectl", "apply", "-n", namespace, "-f", tmp_path]
-        logger.debug(f"Running command: {cmd}")
-
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            # Raise an error so the caller can parse if it's "AlreadyExists" or some other error
-            raise RuntimeError(
-                f"kubectl create failed:\nstdout={result.stdout}\nstderr={result.stderr}"
-            )
-        else:
-            logger.info(f"kubectl apply succeeded:\n{result.stdout}")
-    finally:
-        os.remove(tmp_path)
 
 def normalize_name(name: str) -> str:
     """
