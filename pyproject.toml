@@ -1,9 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "clab-connector"
 version = "0.1.0"
 description = "EDA Containerlab Connector"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 dependencies = [
     "bcrypt==4.2.0",
     "certifi==2024.8.30",
@@ -18,5 +22,12 @@ dependencies = [
     "pynacl==1.5.0",
     "pyyaml==6.0.2",
     "requests==2.32.3",
+    "typer>=0.15.1",
     "urllib3==2.2.3",
 ]
+
+[project.scripts]
+clab-connector = "clab_connector.cli.main:app"
+
+[tool.setuptools]
+packages = ["clab_connector"]

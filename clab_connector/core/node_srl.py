@@ -10,8 +10,8 @@ from paramiko import (
     SSHException,
 )
 
-import src.helpers as helpers
-from src.node import Node
+from clab_connector.core import helpers
+from clab_connector.core.node import Node
 
 # set up logging
 logger = logging.getLogger(__name__)

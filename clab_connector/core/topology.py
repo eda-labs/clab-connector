@@ -1,8 +1,10 @@
 import logging
 
-from src import helpers
-from src.link import from_obj as link_from_obj
-from src.node import from_obj as node_from_obj
+from clab_connector.core import helpers
+from clab_connector.core.link import from_obj as link_from_obj
+from clab_connector.core.node import from_obj as node_from_obj
+
+
 
 # set up logging
 logger = logging.getLogger(__name__)

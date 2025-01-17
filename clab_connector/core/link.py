@@ -1,6 +1,6 @@
 import logging
 
-import src.helpers as helpers
+from clab_connector.core import helpers
 
 # set up logging
 logger = logging.getLogger(__name__)

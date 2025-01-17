@@ -1,7 +1,7 @@
 import logging
 
-from src import helpers
-from src.k8s_utils import ping_from_bsvr
+from clab_connector.core import helpers
+from clab_connector.core.k8s_utils import ping_from_bsvr
 
 # set up logging
 logger = logging.getLogger(__name__)
@@ -180,7 +180,7 @@ class Node:
 
 
 # import specific nodes down here to avoid circular dependencies
-from src.node_srl import SRLNode  # noqa: E402
+from clab_connector.core.node_srl import SRLNode  # noqa: E402
 
 KIND_MAPPING = {
     "nokia_srlinux": "srl",

@@ -1,9 +1,9 @@
 import logging
 
-import src.helpers as helpers
-from src.eda import EDA
-from src.subcommand import SubCommand
-from src.k8s_utils import (
+from clab_connector.core import helpers
+from clab_connector.core.eda import EDA
+from clab_connector.core.subcommand import SubCommand
+from clab_connector.core.k8s_utils import (
     apply_manifest,
     edactl_namespace_bootstrap,
     wait_for_namespace,

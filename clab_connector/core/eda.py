@@ -2,7 +2,7 @@ import json
 import logging
 import yaml
 
-from src.http_client import create_pool_manager
+from clab_connector.core.http_client import create_pool_manager
 
 # configure logging
 logger = logging.getLogger(__name__)

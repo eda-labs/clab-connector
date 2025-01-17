@@ -2,10 +2,12 @@ import json
 import logging
 import os.path
 import sys
+from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader
 
-import src.topology as topology
+if TYPE_CHECKING:
+    from clab_connector.core.topology import Topology
 
 # set up jinja2 templating engine
 template_loader = FileSystemLoader(searchpath="templates")
@@ -15,7 +17,7 @@ template_environment = Environment(loader=template_loader)
 logger = logging.getLogger(__name__)
 
 
-def parse_topology(topology_file) -> topology.Topology:
+def parse_topology(topology_file) -> "Topology":
     """
     Parses a topology file from JSON
 
@@ -27,6 +29,10 @@ def parse_topology(topology_file) -> topology.Topology:
     -------
     A parsed Topology object
     """
+    from clab_connector.core.topology import (
+        Topology,
+    )  # Import here to avoid circular import
+
     logger.info(f"Parsing topology file '{topology_file}'")
     if not os.path.isfile(topology_file):
         logger.critical(f"Topology file '{topology_file}' does not exist!")
@@ -37,7 +43,7 @@ def parse_topology(topology_file) -> topology.Topology:
             data = json.load(f)
             # Check if this is a topology-data.json file
             if "type" in data and data["type"] == "clab":
-                topo = topology.Topology(data["name"], "", [], [])
+                topo = Topology(data["name"], "", [], [])
                 topo = topo.from_topology_data(data)
                 # Sanitize the topology name after parsing
                 original_name = topo.name
@@ -53,46 +59,3 @@ def parse_topology(topology_file) -> topology.Topology:
             f"File '{topology_file}' is not supported. Please provide a valid JSON topology file."
         )
         sys.exit(1)
-
-
-def render_template(template_name, data):
-    """
-    Loads a jinja template and renders it with the data provided
-
-    Parameters
-    ----------
-    template_name:  name of the template in the 'templates' folder
-    data:           data to be rendered in the template
-
-    Returns
-    -------
-    The rendered template, as str
-    """
-    template = template_environment.get_template(template_name)
-    return template.render(data)
-
-
-def normalize_name(name: str) -> str:
-    """
-    Returns a Kubernetes-compliant name by:
-        - Converting to lowercase
-        - Replacing underscores and spaces with hyphens
-        - Removing any other invalid characters
-        - Ensuring it starts and ends with alphanumeric characters
-    """
-    # Convert to lowercase and replace underscores/spaces with hyphens
-    safe_name = name.lower().replace("_", "-").replace(" ", "-")
-
-    # Remove any characters that aren't lowercase alphanumeric, dots or hyphens
-    safe_name = "".join(c for c in safe_name if c.isalnum() or c in ".-")
-
-    # Ensure it starts and ends with alphanumeric character
-    safe_name = safe_name.strip(".-")
-
-    # Handle empty string or invalid result
-    if not safe_name or not safe_name[0].isalnum():
-        safe_name = "x" + safe_name
-    if not safe_name[-1].isalnum():
-        safe_name = safe_name + "0"
-
-    return safe_name

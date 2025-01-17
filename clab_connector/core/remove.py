@@ -1,8 +1,8 @@
 import logging
 
-import src.helpers as helpers
-from src.eda import EDA
-from src.subcommand import SubCommand
+from clab_connector.core import helpers
+from clab_connector.core.eda import EDA
+from clab_connector.core.subcommand import SubCommand
 
 # set up logging
 logger = logging.getLogger(__name__)
