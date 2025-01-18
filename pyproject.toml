@@ -26,6 +26,7 @@ dependencies = [
     "urllib3==2.2.3",
 ]
 
+
 [project.scripts]
 clab-connector = "clab_connector.cli.main:app"
 

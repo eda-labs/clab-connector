@@ -1,8 +1,8 @@
 import logging
+import typer
 
 from clab_connector.core import helpers
 from clab_connector.core.eda import EDA
-from clab_connector.core.subcommand import SubCommand
 from clab_connector.core.k8s_utils import (
     apply_manifest,
     edactl_namespace_bootstrap,
@@ -13,7 +13,7 @@ from clab_connector.core.k8s_utils import (
 logger = logging.getLogger(__name__)
 
 
-class IntegrateCommand(SubCommand):
+class IntegrateCommand:
     PARSER_NAME = "integrate"
     PARSER_ALIASES = [PARSER_NAME, "i"]
 
@@ -28,6 +28,15 @@ class IntegrateCommand(SubCommand):
         self.args = args
         self.topology = helpers.parse_topology(self.args.topology_data)
         self.topology.log_debug()
+
+        # Check if there are any supported nodes
+        supported_nodes = [node for node in self.topology.nodes if node.kind == "srl"]
+        if not supported_nodes:
+            logger.error(
+                "No supported nodes (nokia_srlinux) found in the topology. Exiting."
+            )
+            raise typer.Exit(code=1)
+
         self.eda = EDA(
             args.eda_url,
             args.eda_user,
@@ -38,57 +47,47 @@ class IntegrateCommand(SubCommand):
         print("== Running pre-checks ==")
         self.prechecks()
 
-        try:
-            print("== Creating namespace ==")
-            self.create_namespace()
+        print("== Creating namespace ==")
+        self.create_namespace()
 
-            print("== Creating artifacts ==")
-            self.create_artifacts()
+        print("== Creating artifacts ==")
+        self.create_artifacts()
 
-            print("== Creating init ==")
-            self.create_init()
-            self.eda.commit_transaction(
-                "EDA Containerlab Connector: create init (bootstrap)"
-            )
+        print("== Creating init ==")
+        self.create_init()
+        self.eda.commit_transaction(
+            "EDA Containerlab Connector: create init (bootstrap)"
+        )
 
-            print("== Creating node security profile ==")
-            self.create_node_security_profile()
+        print("== Creating node security profile ==")
+        self.create_node_security_profile()
 
-            print("== Creating node users ==")
-            self.create_node_user_groups()
-            self.create_node_users()
-            self.eda.commit_transaction(
-                "EDA Containerlab Connector: create node users and groups"
-            )
+        print("== Creating node users ==")
+        self.create_node_user_groups()
+        self.create_node_users()
+        self.eda.commit_transaction(
+            "EDA Containerlab Connector: create node users and groups"
+        )
 
-            print("== Creating node profiles ==")
-            self.create_node_profiles()
-            self.eda.commit_transaction(
-                "EDA Containerlab Connector: create node profiles"
-            )
+        print("== Creating node profiles ==")
+        self.create_node_profiles()
+        self.eda.commit_transaction("EDA Containerlab Connector: create node profiles")
 
-            print("== Onboarding nodes ==")
-            self.create_toponodes()
-            self.eda.commit_transaction("EDA Containerlab Connector: create nodes")
+        print("== Onboarding nodes ==")
+        self.create_toponodes()
+        self.eda.commit_transaction("EDA Containerlab Connector: create nodes")
 
-            print("== Adding topolink interfaces ==")
-            self.create_topolink_interfaces()
-            self.eda.commit_transaction(
-                "EDA Containerlab Connector: create topolink interfaces"
-            )
+        print("== Adding topolink interfaces ==")
+        self.create_topolink_interfaces()
+        self.eda.commit_transaction(
+            "EDA Containerlab Connector: create topolink interfaces"
+        )
 
-            print("== Creating topolinks ==")
-            self.create_topolinks()
-            self.eda.commit_transaction("EDA Containerlab Connector: create topolinks")
+        print("== Creating topolinks ==")
+        self.create_topolinks()
+        self.eda.commit_transaction("EDA Containerlab Connector: create topolinks")
 
-            print("Done!")
-
-        except Exception as e:
-            print(f"Error occurred: {e}")
-            print("Rolling back changes...")
-            self.remove_namespace()
-            self.eda.commit_transaction("EDA Containerlab Connector: remove namespace")
-            raise e
+        print("Done!")
 
     def prechecks(self):
         """
@@ -368,14 +367,3 @@ class IntegrateCommand(SubCommand):
         )
 
         return parser
-
-    def remove_namespace(self):
-        """
-        Removes the namespace for the topology
-        """
-        logger.info("Removing namespace")
-        self.eda.add_delete_to_transaction(
-            "",
-            "Namespace",
-            f"clab-{self.topology.name}",
-        )

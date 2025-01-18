@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Create the wrapper script
+# Create the wrapper script that preserves the original shell
 cat > /usr/local/bin/clab-connector << 'EOF'
-#!/bin/bash
-uv run clab-connector "$@"
+#!/usr/bin/env sh
+exec uv run clab-connector "$@"
 EOF
 
 # Make it executable

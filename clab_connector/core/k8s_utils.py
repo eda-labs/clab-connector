@@ -32,7 +32,7 @@ def run_kubectl_command(
         result = subprocess.run(cmd, capture_output=True, text=True, check=check)
         if result.returncode == 0:
             if result.stdout.strip():
-                logger.info(f"Command succeeded:\n{result.stdout}")
+                logger.debug(f"Command output:\n{result.stdout}")
         else:
             logger.debug(
                 f"Command failed:\nstdout={result.stdout}\nstderr={result.stderr}"
@@ -179,17 +179,30 @@ def edactl_namespace_bootstrap(namespace: str) -> Optional[int]:
     """
     toolbox_pod = get_toolbox_pod()
     result = exec_in_pod(
-        toolbox_pod, "eda-system", ["edactl", "namespace", "bootstrap", namespace]
+        toolbox_pod,
+        "eda-system",
+        ["edactl", "namespace", "bootstrap", namespace],
+        check=False,  # Don't raise exception on failure
     )
+
+    if result.returncode != 0:
+        if "already exists" in result.stderr:
+            logger.info(f"Namespace {namespace} already exists")
+            return None
+        else:
+            # Log other errors and raise exception
+            logger.error(f"Failed to bootstrap namespace: {result.stderr}")
+            raise subprocess.CalledProcessError(
+                result.returncode, result.args, result.stdout, result.stderr
+            )
 
     match = re.search(r"Transaction (\d+)", result.stdout)
     if match:
         transaction_id = int(match.group(1))
-        logger.info(
-            f"Successfully created namespace {namespace} (Transaction ID: {transaction_id})"
-        )
+        logger.info(f"Created namespace {namespace} (Transaction: {transaction_id})")
         return transaction_id
-    logger.info(f"Namespace {namespace} created but no transaction ID found")
+
+    logger.info(f"Created namespace {namespace}")
     return None
 
 
@@ -273,7 +286,12 @@ def ping_from_bsvr(target_ip: str) -> bool:
     result = exec_in_pod(
         bsvr_pod, "eda-system", ["ping", "-c", "1", target_ip], check=False
     )
-    return result.returncode == 0
+    success = result.returncode == 0
+    if success:
+        logger.info(f"Ping from {bsvr_pod} to {target_ip} succeeded")
+    else:
+        logger.error(f"Ping from {bsvr_pod} to {target_ip} failed")
+    return success
 
 
 def edactl_revert_commit(commit_hash: str) -> bool:

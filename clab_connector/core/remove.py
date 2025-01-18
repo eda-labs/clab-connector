@@ -2,13 +2,12 @@ import logging
 
 from clab_connector.core import helpers
 from clab_connector.core.eda import EDA
-from clab_connector.core.subcommand import SubCommand
 
 # set up logging
 logger = logging.getLogger(__name__)
 
 
-class RemoveCommand(SubCommand):
+class RemoveCommand():
     PARSER_NAME = "remove"
     PARSER_ALIASES = [PARSER_NAME, "r"]
 
