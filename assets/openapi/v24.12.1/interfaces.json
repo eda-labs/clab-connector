@@ -1,0 +1,3012 @@
+{
+    "components": {
+        "schemas": {
+            "AppGroup": {
+                "properties": {
+                    "apiVersion": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "preferredVersion": {
+                        "$ref": "#/components/schemas/AppGroupVersion"
+                    },
+                    "versions": {
+                        "items": {
+                            "$ref": "#/components/schemas/AppGroupVersion"
+                        },
+                        "type": "array"
+                    }
+                },
+                "type": "object"
+            },
+            "AppGroupVersion": {
+                "properties": {
+                    "groupVersion": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "DeletedResourceEntry": {
+                "properties": {
+                    "commitTime": {
+                        "type": "string"
+                    },
+                    "hash": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "namespace": {
+                        "type": "string"
+                    },
+                    "transactionId": {
+                        "format": "uint64",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "DeletedResources": {
+                "items": {
+                    "$ref": "#/components/schemas/DeletedResourceEntry"
+                },
+                "type": "array"
+            },
+            "ErrorIndex": {
+                "properties": {
+                    "index": {
+                        "format": "int64",
+                        "type": "integer"
+                    }
+                },
+                "title": "Wrapper for index information inside an error.",
+                "type": "object"
+            },
+            "ErrorItem": {
+                "properties": {
+                    "error": {
+                        "type": "object"
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorResponse": {
+                "description": "Generic error response for REST APIs",
+                "properties": {
+                    "code": {
+                        "description": "the numeric HTTP error code for the response.",
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "details": {
+                        "description": "The optional details of the error response.",
+                        "type": "string"
+                    },
+                    "dictionary": {
+                        "additionalProperties": {
+                            "type": "object"
+                        },
+                        "description": "Dictionary/map of associated data/information relevant to the error.\nThe error \"message\" may contain {{name}} escapes that should be substituted\nwith information from this dictionary.",
+                        "type": "object"
+                    },
+                    "errors": {
+                        "description": "Collection of errors in cases where more than one exists. This needs to be\nflexible so we can support multiple formats",
+                        "items": {
+                            "$ref": "#/components/schemas/ErrorItem"
+                        },
+                        "type": "array"
+                    },
+                    "index": {
+                        "$ref": "#/components/schemas/ErrorIndex"
+                    },
+                    "internal": {
+                        "description": "Internal error code in cases where we don't have an array of errors",
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "message": {
+                        "description": "The basic text error message for the error response.",
+                        "type": "string"
+                    },
+                    "ref": {
+                        "description": "Reference to the error source. Should typically be the URI of the request",
+                        "type": "string"
+                    },
+                    "type": {
+                        "description": "URI pointing at a document that describes the error and mitigation steps\nIf there is no document, point to the RFC for the HTTP error code",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "message"
+                ],
+                "type": "object"
+            },
+            "Metadata": {
+                "properties": {
+                    "annotations": {
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "type": "object",
+                        "x-eda-nokia-com": {
+                            "ui-order-priority": 40,
+                            "ui-title": "Annotations",
+                            "ui-title-key": "annotations"
+                        }
+                    },
+                    "labels": {
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "type": "object",
+                        "x-eda-nokia-com": {
+                            "ui-auto-completes": [
+                                {
+                                    "condition": "true",
+                                    "group": "interfaces.eda.nokia.com",
+                                    "kind": "InterfaceState",
+                                    "type": "label",
+                                    "version": "v1alpha1"
+                                }
+                            ],
+                            "ui-order-priority": 30,
+                            "ui-title": "Labels",
+                            "ui-title-key": "labels"
+                        }
+                    },
+                    "name": {
+                        "maxLength": 253,
+                        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                        "type": "string",
+                        "x-eda-nokia-com": {
+                            "immutable": true,
+                            "ui-order-priority": 10,
+                            "ui-pattern-error": "A valid name is made up of one or more components where each component is separated by period characters.  Each component must start and end with a lower case alphanumeric character and the body of the component is made up of zero or more lower case alphanumeric and hyphen characters.",
+                            "ui-title": "Name",
+                            "ui-title-key": "name"
+                        }
+                    },
+                    "namespace": {
+                        "readOnly": true,
+                        "type": "string",
+                        "x-eda-nokia-com": {
+                            "immutable": true,
+                            "ui-order-priority": 20,
+                            "ui-title": "Namespace",
+                            "ui-title-key": "namespace"
+                        }
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "title": "Metadata",
+                "type": "object"
+            },
+            "Resource": {
+                "properties": {
+                    "kind": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "readOnly": {
+                        "type": "boolean"
+                    },
+                    "singularName": {
+                        "type": "string"
+                    },
+                    "uiCategory": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ResourceHistory": {
+                "items": {
+                    "$ref": "#/components/schemas/ResourceHistoryEntry"
+                },
+                "type": "array"
+            },
+            "ResourceHistoryEntry": {
+                "properties": {
+                    "author": {
+                        "type": "string"
+                    },
+                    "changeType": {
+                        "type": "string"
+                    },
+                    "commitTime": {
+                        "type": "string"
+                    },
+                    "hash": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "transactionId": {
+                        "format": "uint64",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "ResourceList": {
+                "properties": {
+                    "apiVersion": {
+                        "type": "string"
+                    },
+                    "groupVersion": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "resources": {
+                        "items": {
+                            "$ref": "#/components/schemas/Resource"
+                        },
+                        "type": "array"
+                    }
+                },
+                "type": "object"
+            },
+            "Status": {
+                "properties": {
+                    "apiVersion": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "$ref": "#/components/schemas/StatusDetails"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "string": {
+                        "type": "string"
+                    }
+                },
+                "title": "Status is a return value for calls that don't return other objects.",
+                "type": "object"
+            },
+            "StatusDetails": {
+                "properties": {
+                    "group": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "UIResult": {
+                "type": "string"
+            },
+            "com.nokia.eda.interfaces.v1alpha1.Breakout": {
+                "description": "Breakout is the Schema for the breakouts API",
+                "properties": {
+                    "apiVersion": {
+                        "default": "interfaces.eda.nokia.com/v1alpha1",
+                        "type": "string",
+                        "x-eda-nokia-com": {
+                            "ui-visible-if": "false"
+                        }
+                    },
+                    "kind": {
+                        "default": "Breakout",
+                        "type": "string",
+                        "x-eda-nokia-com": {
+                            "ui-visible-if": "false"
+                        }
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/Metadata"
+                    },
+                    "spec": {
+                        "description": "Breakout allowes for the configuration of interface breakouts on specified Nodes. This resource specifies the Nodes, parent Interfaces, the number of breakout channels, and the speed of each channel.",
+                        "properties": {
+                            "channels": {
+                                "description": "The number of breakout channels to create.",
+                                "maximum": 8,
+                                "minimum": 1,
+                                "title": "Number of Channels",
+                                "type": "integer",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 2,
+                                    "ui-order-priority": 300
+                                }
+                            },
+                            "interface": {
+                                "description": "A list of normalized parent interface/port.",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "title": "Nomalized Parent Interface",
+                                "type": "array",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 2,
+                                    "ui-order-priority": 200
+                                }
+                            },
+                            "node": {
+                                "description": "Reference to a list of TopoNodes where the parent interfaces are to be broken out.",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "title": "Nodes",
+                                "type": "array",
+                                "x-eda-nokia-com": {
+                                    "ui-auto-completes": [
+                                        {
+                                            "condition": "true",
+                                            "group": "core.eda.nokia.com",
+                                            "resource": "toponodes",
+                                            "type": "gvr",
+                                            "version": "v1"
+                                        }
+                                    ],
+                                    "ui-column-span": 2,
+                                    "ui-order-priority": 100
+                                }
+                            },
+                            "speed": {
+                                "description": "The speed of each breakout channel.",
+                                "enum": [
+                                    "800G",
+                                    "400G",
+                                    "200G",
+                                    "100G",
+                                    "50G",
+                                    "40G",
+                                    "25G",
+                                    "10G"
+                                ],
+                                "title": "Speed",
+                                "type": "string",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 2,
+                                    "ui-order-priority": 400
+                                }
+                            }
+                        },
+                        "required": [
+                            "channels",
+                            "node",
+                            "speed"
+                        ],
+                        "title": "Specification",
+                        "type": "object"
+                    },
+                    "status": {
+                        "description": "BreakoutStatus defines the observed state of Breakout",
+                        "readOnly": true,
+                        "title": "Status",
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "apiVersion",
+                    "kind",
+                    "metadata",
+                    "spec"
+                ],
+                "type": "object"
+            },
+            "com.nokia.eda.interfaces.v1alpha1.BreakoutList": {
+                "description": "BreakoutList is a list of breakouts",
+                "properties": {
+                    "apiVersion": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Breakout"
+                        },
+                        "type": "array"
+                    },
+                    "kind": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "apiVersion",
+                    "kind"
+                ],
+                "type": "object"
+            },
+            "com.nokia.eda.interfaces.v1alpha1.Interface": {
+                "description": "Interface is the Schema for the interfaces API",
+                "properties": {
+                    "apiVersion": {
+                        "default": "interfaces.eda.nokia.com/v1alpha1",
+                        "type": "string",
+                        "x-eda-nokia-com": {
+                            "ui-visible-if": "false"
+                        }
+                    },
+                    "kind": {
+                        "default": "Interface",
+                        "type": "string",
+                        "x-eda-nokia-com": {
+                            "ui-visible-if": "false"
+                        }
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/Metadata"
+                    },
+                    "spec": {
+                        "description": "Interface allows for the configuration of various interface properties such as enabling/disabling the interface, setting descriptions, specifying interface types (e.g., LAG, interface, loopback), configuring VLAN encapsulation, and setting Ethernet or LAG-specific options.",
+                        "properties": {
+                            "description": {
+                                "description": "Description of the interface.",
+                                "title": "Description",
+                                "type": "string",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 4,
+                                    "ui-order-priority": 150
+                                }
+                            },
+                            "enabled": {
+                                "default": true,
+                                "description": "Enable or disable the interface.",
+                                "title": "Enabled",
+                                "type": "boolean",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 1,
+                                    "ui-order-priority": 100
+                                }
+                            },
+                            "encapType": {
+                                "default": "null",
+                                "description": "Enable or disable VLAN tagging on this interface. [default=\"null\"]",
+                                "enum": [
+                                    "null",
+                                    "dot1q"
+                                ],
+                                "title": "Encapsulation Type",
+                                "type": "string",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 2,
+                                    "ui-order-priority": 300
+                                }
+                            },
+                            "ethernet": {
+                                "description": "Ethernet configuration options.",
+                                "properties": {
+                                    "fec": {
+                                        "description": "Sets the Fordward Error Correction (FEC) on the members of the interface.",
+                                        "enum": [
+                                            "disabled",
+                                            "rs528",
+                                            "rs544",
+                                            "baser",
+                                            "rs108"
+                                        ],
+                                        "title": "Forward Error Correction",
+                                        "type": "string",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 1800
+                                        }
+                                    },
+                                    "holdDownTimer": {
+                                        "description": "The hold-time down behavior is triggered with events that try to bring the ethernet interface down and can change quickly. It is not triggered with an admin-state disable event or interface disable due to other internal reasons.  Units in milliseconds.",
+                                        "format": "int32",
+                                        "maximum": 86400000,
+                                        "minimum": 100,
+                                        "title": "Hold Down Timer",
+                                        "type": "integer",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 1900,
+                                            "ui-single-line-group": "holdtimer"
+                                        }
+                                    },
+                                    "holdUpTimer": {
+                                        "description": "The hold-time up behavior is triggered with any event that tries to bring up the ethernet interface.  While the hold-time up is running, the transceiver laser will be enabled, however the higher layers will not be notified that the interface is operationally up until the timer expires.  Units in milliseconds.",
+                                        "format": "int32",
+                                        "maximum": 86400000,
+                                        "minimum": 100,
+                                        "title": "Hold Up Timer",
+                                        "type": "integer",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 1900,
+                                            "ui-single-line-group": "holdtimer"
+                                        }
+                                    },
+                                    "reloadDelayTimer": {
+                                        "description": "After the system boots, the reload-delay timer in seconds keeps an interface shut down with the laser off for a configured amount of time until connectivity with the rest of network is established.",
+                                        "maximum": 86400,
+                                        "minimum": 1,
+                                        "title": "Reload Delay Timer",
+                                        "type": "integer",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 1400,
+                                            "units": "\"seconds\""
+                                        }
+                                    },
+                                    "speed": {
+                                        "description": "The speed of this interface, in human-readable format - e.g. 25G, 100G.",
+                                        "enum": [
+                                            "100G",
+                                            "10G",
+                                            "1G",
+                                            "25G",
+                                            "40G",
+                                            "50G",
+                                            "400G"
+                                        ],
+                                        "title": "Speed",
+                                        "type": "string",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 1300
+                                        }
+                                    },
+                                    "standbySignaling": {
+                                        "description": "Indicates the standby-signaling used in the interface.",
+                                        "enum": [
+                                            "lacp",
+                                            "power-off"
+                                        ],
+                                        "title": "Standby Signaling",
+                                        "type": "string",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 1500,
+                                            "ui-visible-if": "spec.type === \"lag\""
+                                        }
+                                    },
+                                    "stormControl": {
+                                        "description": "Enables storm control.",
+                                        "properties": {
+                                            "broadcastRate": {
+                                                "description": "Sets the maximum rate allowed for ingress broadcast frames on the interface.",
+                                                "format": "int32",
+                                                "maximum": 100000000,
+                                                "minimum": 0,
+                                                "title": "Broadcast Rate",
+                                                "type": "integer",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 2100,
+                                                    "ui-visible-if": "self.enabled === true"
+                                                }
+                                            },
+                                            "enabled": {
+                                                "description": "Enables storm control.",
+                                                "title": "Enabled",
+                                                "type": "boolean",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 1,
+                                                    "ui-order-priority": 1800
+                                                }
+                                            },
+                                            "multicastRate": {
+                                                "description": "Sets the maximum rate allowed for ingress multicast frames on the interface.",
+                                                "format": "int32",
+                                                "maximum": 100000000,
+                                                "minimum": 0,
+                                                "title": "Multicast Rate",
+                                                "type": "integer",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 2000,
+                                                    "ui-visible-if": "self.enabled === true"
+                                                }
+                                            },
+                                            "units": {
+                                                "description": "Set the units to be used for measurement.",
+                                                "enum": [
+                                                    "kbps",
+                                                    "percentage"
+                                                ],
+                                                "title": "Units",
+                                                "type": "string",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 1900,
+                                                    "ui-visible-if": "self.enabled === true"
+                                                }
+                                            },
+                                            "unknownUnicastRate": {
+                                                "description": "Sets the maximum rate allowed for ingress unknown unicast frames on the interface.",
+                                                "maximum": 100000000,
+                                                "minimum": 0,
+                                                "title": "Unknown Unicast Rate",
+                                                "type": "integer",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 2200,
+                                                    "ui-visible-if": "self.enabled === true"
+                                                }
+                                            }
+                                        },
+                                        "title": "Storm Control",
+                                        "type": "object",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 1700
+                                        }
+                                    },
+                                    "transparentL2CPProtocols": {
+                                        "description": "A list of L2CP protocols to tunnel. Options: LLDP, LACP, xSTP, Dot1x, PTP, All.",
+                                        "items": {
+                                            "enum": [
+                                                "LLDP",
+                                                "LACP",
+                                                "xSTP",
+                                                "Dot1x",
+                                                "PTP",
+                                                "All"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "title": "Transparent L2CP Protocols",
+                                        "type": "array",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 1600
+                                        }
+                                    }
+                                },
+                                "title": "Ethernet",
+                                "type": "object",
+                                "x-eda-nokia-com": {
+                                    "ui-order-priority": 600
+                                }
+                            },
+                            "lag": {
+                                "description": "LAG configuration options.",
+                                "properties": {
+                                    "lacp": {
+                                        "properties": {
+                                            "adminKey": {
+                                                "description": "\tConfigure the LACP admin-key to be advertised by the local system.",
+                                                "maximum": 65535,
+                                                "minimum": 1,
+                                                "title": "Admin Key",
+                                                "type": "integer",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 2600
+                                                }
+                                            },
+                                            "interval": {
+                                                "default": "fast",
+                                                "description": "Set the period between LACP messages, uses the lacp-period-type enumeration. [default=\"fast\"]",
+                                                "enum": [
+                                                    "fast",
+                                                    "slow"
+                                                ],
+                                                "title": "Interval",
+                                                "type": "string",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 2800,
+                                                    "ui-single-line-group": "ModeInterval"
+                                                }
+                                            },
+                                            "lacpFallback": {
+                                                "description": "LACP fallback allows one or more designated links of an LACP controlled LAG to go into forwarding mode if LACP is not yet operational after a configured timeout period. [default=disabled]",
+                                                "properties": {
+                                                    "mode": {
+                                                        "default": "static",
+                                                        "description": "Specifies lacp-fallback mode if enabled.",
+                                                        "enum": [
+                                                            "static"
+                                                        ],
+                                                        "title": "Mode",
+                                                        "type": "string",
+                                                        "x-eda-nokia-com": {
+                                                            "ui-column-span": 2,
+                                                            "ui-order-priority": 3200
+                                                        }
+                                                    },
+                                                    "timeout": {
+                                                        "default": 60,
+                                                        "description": "Specifies the LACP-fallback timeout interval in seconds. [default=60]",
+                                                        "maximum": 3600,
+                                                        "minimum": 4,
+                                                        "title": "Timeout",
+                                                        "type": "integer",
+                                                        "x-eda-nokia-com": {
+                                                            "ui-column-span": 2,
+                                                            "ui-order-priority": 3300
+                                                        }
+                                                    }
+                                                },
+                                                "title": "Fallback",
+                                                "type": "object",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 3100,
+                                                    "units": "\"seconds\""
+                                                }
+                                            },
+                                            "mode": {
+                                                "default": "active",
+                                                "description": "\tActive is to initiate the transmission of LACP PDUs. Passive is to wait for peer to initiate the transmission of LACP PDUs.[default=\"active\"]",
+                                                "enum": [
+                                                    "active",
+                                                    "passive"
+                                                ],
+                                                "title": "Mode",
+                                                "type": "string",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 2700,
+                                                    "ui-single-line-group": "ModeInterval"
+                                                }
+                                            },
+                                            "systemIdMac": {
+                                                "description": "\tThe MAC address portion of the Node's System ID. This is combined with the system priority to construct the 8-octet system-id.",
+                                                "title": "System ID MAC",
+                                                "type": "string",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 3000,
+                                                    "ui-single-line-group": "SystemPrioritySystemIDMAC"
+                                                }
+                                            },
+                                            "systemPriority": {
+                                                "default": 32768,
+                                                "description": "System priority used by the Node on this LAG interface. Lower value is higher priority for determining which Node is the controlling system.[default=32768]",
+                                                "maximum": 65535,
+                                                "minimum": 0,
+                                                "title": "System Priority",
+                                                "type": "integer",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 2900,
+                                                    "ui-single-line-group": "SystemPrioritySystemIDMAC"
+                                                }
+                                            }
+                                        },
+                                        "title": "LACP",
+                                        "type": "object",
+                                        "x-eda-nokia-com": {
+                                            "ui-order-priority": 2400
+                                        }
+                                    },
+                                    "minLinks": {
+                                        "default": 1,
+                                        "description": "The min-link threshold specifies the minimum number of member links that must be active in order for the LAG to be operationally up. If the number of active links falls below this threshold, the entire LAG is brought operationally down.[default=1]",
+                                        "maximum": 64,
+                                        "minimum": 1,
+                                        "title": "Minimum Links",
+                                        "type": "integer",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 2300
+                                        }
+                                    },
+                                    "multihoming": {
+                                        "properties": {
+                                            "esi": {
+                                                "default": "auto",
+                                                "description": "10 byte Ethernet Segment Identifier, if not set a type 0 ESI is generated. [default=auto]",
+                                                "title": "ESI",
+                                                "type": "string",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 3900
+                                                }
+                                            },
+                                            "mode": {
+                                                "default": "all-active",
+                                                "description": "\"all-active\": All interfaces are active.\n\"single-active\": In a single active MH LAG, the active and standby function is handled at the sub-interface layer within a network-instance.  That is, the physical interfaces within the same LAG all remain operationally up, however each sub-interface associated with a network-instance has its operational state up or down based on whether it is selected to be the active or standby sub-interface.\n\"port-active\": When port active MH LAG is enabled, the active and standby function is handled at the interface level.",
+                                                "enum": [
+                                                    "all-active",
+                                                    "single-active",
+                                                    "port-active"
+                                                ],
+                                                "title": "Mode",
+                                                "type": "string",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 3400
+                                                }
+                                            },
+                                            "preferredActiveNode": {
+                                                "description": "To be used in single-active or port-active modes.  This references the Node object and when set, the DF algorithm is configured to type preference and the selected Node is set with a higher preference value.  All other Nodes have a lower value configured.",
+                                                "title": "Preferred Active Node",
+                                                "type": "string",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 3600,
+                                                    "ui-visible-if": "spec.lag.multihoming.mode === \"single-active\" || spec.lag.multihoming.mode === \"port-active\""
+                                                }
+                                            },
+                                            "reloadDelayTimer": {
+                                                "default": 100,
+                                                "description": "After the system boots, the reload-delay timer in seconds keeps an interface shut down with the laser off for a configured amount of time until connectivity with the rest of network is established. [default=100]",
+                                                "maximum": 86400,
+                                                "minimum": 1,
+                                                "title": "Reload Delay Timer",
+                                                "type": "integer",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 2,
+                                                    "ui-order-priority": 3800
+                                                }
+                                            },
+                                            "revertive": {
+                                                "default": false,
+                                                "description": "To be used in single-active or port-active modes.  When true, if there is a switch of active interface in the LAG and the original interface comes back up, the LAG will switch back to using the original interface as active. [default=false]",
+                                                "title": "Revertive",
+                                                "type": "boolean",
+                                                "x-eda-nokia-com": {
+                                                    "ui-column-span": 1,
+                                                    "ui-order-priority": 3500,
+                                                    "ui-visible-if": "spec.lag.multihoming.mode === \"single-active\" || spec.lag.multihoming.mode === \"port-active\""
+                                                }
+                                            }
+                                        },
+                                        "title": "Multi Homing",
+                                        "type": "object",
+                                        "x-eda-nokia-com": {
+                                            "ui-order-priority": 2500
+                                        }
+                                    },
+                                    "type": {
+                                        "default": "lacp",
+                                        "description": "This type defines whether whether it is a static or LACP LAG. [default=lacp]",
+                                        "enum": [
+                                            "lacp",
+                                            "static"
+                                        ],
+                                        "title": "Type",
+                                        "type": "string",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2,
+                                            "ui-order-priority": 2200
+                                        }
+                                    }
+                                },
+                                "title": "LAG",
+                                "type": "object",
+                                "x-eda-nokia-com": {
+                                    "ui-order-priority": 700,
+                                    "ui-visible-if": "spec.type === \"lag\""
+                                }
+                            },
+                            "lldp": {
+                                "default": true,
+                                "description": "Enable or disable LLDP on the members of the interface.",
+                                "title": "Link Layer Discovery Protocol",
+                                "type": "boolean",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 2,
+                                    "ui-order-priority": 350
+                                }
+                            },
+                            "members": {
+                                "description": "List of members on which to apply properties, for single interface this would be a list of 1.",
+                                "items": {
+                                    "properties": {
+                                        "aggregateId": {
+                                            "description": "When using a LAG, the aggregateId can be specified per set of interfaces on a node.\nLAG interface with which this interface is associated.",
+                                            "title": "Aggregate ID",
+                                            "type": "string",
+                                            "x-eda-nokia-com": {
+                                                "ui-column-span": 2,
+                                                "ui-order-priority": 1100,
+                                                "ui-visible-if": "spec.type === \"lag\""
+                                            }
+                                        },
+                                        "description": {
+                                            "description": "Description of the member, inherited from the interface if not provided.",
+                                            "title": "Description",
+                                            "type": "string",
+                                            "x-eda-nokia-com": {
+                                                "ui-column-span": 4,
+                                                "ui-order-priority": 950
+                                            }
+                                        },
+                                        "enabled": {
+                                            "default": true,
+                                            "description": "Enable or disable this member.",
+                                            "title": "Enabled",
+                                            "type": "boolean",
+                                            "x-eda-nokia-com": {
+                                                "ui-column-span": 2,
+                                                "ui-order-priority": 800
+                                            }
+                                        },
+                                        "interface": {
+                                            "description": "Reference to an interface in the normalized format. Ex: SRL ethernet-1/1 would be ethernet-1-1. SROS port 2/1/1 would be ethernet-2-1.",
+                                            "title": "Interface",
+                                            "type": "string",
+                                            "x-eda-nokia-com": {
+                                                "ui-column-span": 2,
+                                                "ui-order-priority": 900
+                                            }
+                                        },
+                                        "lacpPortPriority": {
+                                            "default": 32768,
+                                            "description": "Configure the port priority for LACP. This value is used to determine which port should be activated with LACP fallback mode. Lower values are more preferred.[default=32768]",
+                                            "maximum": 65535,
+                                            "minimum": 0,
+                                            "title": "LACP Port Priority",
+                                            "type": "integer",
+                                            "x-eda-nokia-com": {
+                                                "ui-column-span": 2,
+                                                "ui-order-priority": 1200,
+                                                "ui-visible-if": "spec.type === \"lag\""
+                                            }
+                                        },
+                                        "node": {
+                                            "description": "Node name.",
+                                            "title": "Node Name",
+                                            "type": "string",
+                                            "x-eda-nokia-com": {
+                                                "ui-auto-completes": [
+                                                    {
+                                                        "condition": "true",
+                                                        "group": "core.eda.nokia.com",
+                                                        "resource": "toponodes",
+                                                        "type": "gvr",
+                                                        "version": "v1"
+                                                    }
+                                                ],
+                                                "ui-column-span": 2,
+                                                "ui-order-priority": 1000
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "interface",
+                                        "node"
+                                    ],
+                                    "type": "object"
+                                },
+                                "title": "Members",
+                                "type": "array",
+                                "x-eda-nokia-com": {
+                                    "ui-order-priority": 500
+                                }
+                            },
+                            "mtu": {
+                                "description": "MTU to apply on the interface(s).",
+                                "maximum": 9500,
+                                "minimum": 1450,
+                                "title": "MTU",
+                                "type": "integer",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 1,
+                                    "ui-order-priority": 400,
+                                    "units": "\"bytes\""
+                                }
+                            },
+                            "type": {
+                                "default": "interface",
+                                "description": "Type defines whether the interface is a Lag or Interface.",
+                                "enum": [
+                                    "lag",
+                                    "interface",
+                                    "loopback"
+                                ],
+                                "title": "Type",
+                                "type": "string",
+                                "x-eda-nokia-com": {
+                                    "ui-column-span": 2,
+                                    "ui-order-priority": 200
+                                }
+                            }
+                        },
+                        "required": [
+                            "members"
+                        ],
+                        "title": "Specification",
+                        "type": "object"
+                    },
+                    "status": {
+                        "properties": {
+                            "enabled": {
+                                "description": "The administrative status of the Interface.",
+                                "title": "Enabled",
+                                "type": "boolean"
+                            },
+                            "lag": {
+                                "properties": {
+                                    "adminKey": {
+                                        "title": "Admin Key",
+                                        "type": "integer",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2
+                                        }
+                                    },
+                                    "systemIdMac": {
+                                        "title": "System ID MAC",
+                                        "type": "string",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2
+                                        }
+                                    }
+                                },
+                                "title": "Lag",
+                                "type": "object"
+                            },
+                            "lastChange": {
+                                "description": "Indicates when this Interface last changed state.",
+                                "format": "date",
+                                "title": "Last Change",
+                                "type": "string"
+                            },
+                            "members": {
+                                "description": "List of members in this Interface.",
+                                "items": {
+                                    "properties": {
+                                        "enabled": {
+                                            "description": "The administrative status of this member.",
+                                            "title": "Enabled",
+                                            "type": "boolean"
+                                        },
+                                        "interface": {
+                                            "description": "The name of the interface in normalized format.",
+                                            "title": "Interface",
+                                            "type": "string"
+                                        },
+                                        "lastChange": {
+                                            "description": "Indicates when this member last changed state.",
+                                            "format": "date",
+                                            "title": "Last Change",
+                                            "type": "string"
+                                        },
+                                        "neighbors": {
+                                            "description": "List of discovered neighbors on this member.",
+                                            "items": {
+                                                "properties": {
+                                                    "interface": {
+                                                        "description": "The name of a neighbor interface of this member in node specific format.",
+                                                        "title": "Interface",
+                                                        "type": "string"
+                                                    },
+                                                    "node": {
+                                                        "description": "The name of a neighbor node of this member in node specific format.",
+                                                        "title": "Node",
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            },
+                                            "title": "Neighbors",
+                                            "type": "array"
+                                        },
+                                        "node": {
+                                            "description": "The node on which the interface is configured.",
+                                            "title": "Node",
+                                            "type": "string"
+                                        },
+                                        "nodeInterface": {
+                                            "description": "Node specific interface name, for example \"ethernet-1/1\", \"1/1/c1/1\".",
+                                            "title": "Node Interface",
+                                            "type": "string"
+                                        },
+                                        "operationalState": {
+                                            "description": "Indicates the current operational state of this member.",
+                                            "title": "Operational State",
+                                            "type": "string"
+                                        },
+                                        "speed": {
+                                            "description": "Indicates the operational speed of the member.",
+                                            "title": "Speed",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "nodeInterface"
+                                    ],
+                                    "type": "object"
+                                },
+                                "title": "Members",
+                                "type": "array"
+                            },
+                            "operationalState": {
+                                "description": "Indicates the current operational state of the Interface.",
+                                "title": "Operational State",
+                                "type": "string"
+                            },
+                            "speed": {
+                                "description": "Indicates the operational speed of the Interface in aggregate.",
+                                "title": "Speed",
+                                "type": "string"
+                            }
+                        },
+                        "readOnly": true,
+                        "title": "Status",
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "apiVersion",
+                    "kind",
+                    "metadata",
+                    "spec"
+                ],
+                "type": "object"
+            },
+            "com.nokia.eda.interfaces.v1alpha1.InterfaceList": {
+                "description": "InterfaceList is a list of interfaces",
+                "properties": {
+                    "apiVersion": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Interface"
+                        },
+                        "type": "array"
+                    },
+                    "kind": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "apiVersion",
+                    "kind"
+                ],
+                "type": "object"
+            },
+            "com.nokia.eda.interfaces.v1alpha1.InterfaceState": {
+                "description": "InterfaceState is the Schema for the interfacestates API",
+                "properties": {
+                    "apiVersion": {
+                        "default": "interfaces.eda.nokia.com/v1alpha1",
+                        "type": "string",
+                        "x-eda-nokia-com": {
+                            "ui-visible-if": "false"
+                        }
+                    },
+                    "kind": {
+                        "default": "InterfaceState",
+                        "type": "string",
+                        "x-eda-nokia-com": {
+                            "ui-visible-if": "false"
+                        }
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/Metadata"
+                    },
+                    "spec": {
+                        "properties": {
+                            "enabled": {
+                                "description": "Enable or disable the interface.",
+                                "type": "boolean"
+                            },
+                            "lag": {
+                                "properties": {
+                                    "adminKey": {
+                                        "title": "Admin Key",
+                                        "type": "integer",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2
+                                        }
+                                    },
+                                    "systemIdMac": {
+                                        "title": "System ID MAC",
+                                        "type": "string",
+                                        "x-eda-nokia-com": {
+                                            "ui-column-span": 2
+                                        }
+                                    }
+                                },
+                                "title": "Lag",
+                                "type": "object"
+                            },
+                            "members": {
+                                "description": "List of members on which to monitor state for",
+                                "items": {
+                                    "properties": {
+                                        "aggregateId": {
+                                            "description": "LAG interface with which this interface is associated",
+                                            "type": "string"
+                                        },
+                                        "enabled": {
+                                            "description": "Enable or disable this member.",
+                                            "type": "boolean"
+                                        },
+                                        "interface": {
+                                            "description": "Normalized interface name",
+                                            "type": "string"
+                                        },
+                                        "node": {
+                                            "description": "Reference to the TopoNode on which this member resides",
+                                            "type": "string"
+                                        },
+                                        "nodeInterface": {
+                                            "description": "Node specific interface name, for example \"ethernet-1/1\", \"1/1/c1/1\"",
+                                            "type": "string"
+                                        },
+                                        "operatingSystem": {
+                                            "description": "The operating system of the TopoNode on which this member resides",
+                                            "type": "string"
+                                        },
+                                        "version": {
+                                            "description": "The version of the TopoNode on which this interface resides",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "interface",
+                                        "node",
+                                        "nodeInterface",
+                                        "operatingSystem",
+                                        "version"
+                                    ],
+                                    "type": "object"
+                                },
+                                "type": "array"
+                            },
+                            "role": {
+                                "default": "edge",
+                                "description": "Role of this interface. This is used to calculate severity of alarms. [default=\"edge\"]",
+                                "enum": [
+                                    "isl",
+                                    "edge",
+                                    "loopback"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "members"
+                        ],
+                        "title": "Specification",
+                        "type": "object"
+                    },
+                    "status": {
+                        "description": "InterfaceStateStatus defines the observed state of Interface",
+                        "readOnly": true,
+                        "title": "Status",
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "apiVersion",
+                    "kind",
+                    "metadata",
+                    "spec"
+                ],
+                "type": "object"
+            },
+            "com.nokia.eda.interfaces.v1alpha1.InterfaceStateList": {
+                "description": "InterfaceStateList is a list of interfacestates",
+                "properties": {
+                    "apiVersion": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceState"
+                        },
+                        "type": "array"
+                    },
+                    "kind": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "apiVersion",
+                    "kind"
+                ],
+                "type": "object"
+            }
+        }
+    },
+    "info": {
+        "title": "api for interfaces.eda.nokia.com/v1alpha1.",
+        "version": "v1alpha1"
+    },
+    "openapi": "3.0.1",
+    "paths": {
+        "/apps/interfaces.eda.nokia.com": {
+            "get": {
+                "description": "list versions available from interfaces.eda.nokia.com",
+                "operationId": "getVersionInterfacesEdaNokiaCom",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AppGroup"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1": {
+            "get": {
+                "description": "list resources available from interfaces.eda.nokia.com/v1alpha1",
+                "operationId": "getResourcesInterfacesEdaNokiaComV1alpha1",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResourceList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/_ui/{pathname}": {
+            "get": {
+                "description": "get UI specification for interfaces.eda.nokia.com v1alpha1",
+                "operationId": "uiInterfacesEdaNokiaComV1alpha1",
+                "parameters": [
+                    {
+                        "description": "pathname to the UI specification to retrieve",
+                        "in": "path",
+                        "name": "pathname",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UIResult"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/breakouts": {
+            "get": {
+                "description": "list breakouts",
+                "operationId": "listInterfacesEdaNokiaComV1alpha1Breakouts",
+                "parameters": [
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.BreakoutList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/interfaces": {
+            "get": {
+                "description": "list interfaces",
+                "operationId": "listInterfacesEdaNokiaComV1alpha1Interfaces",
+                "parameters": [
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/interfacestates": {
+            "get": {
+                "description": "list interfacestates",
+                "operationId": "listInterfacesEdaNokiaComV1alpha1Interfacestates",
+                "parameters": [
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceStateList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/breakouts": {
+            "delete": {
+                "operationId": "deleteAllInterfacesEdaNokiaComV1alpha1NamespaceBreakouts",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to perform the delete",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the set of CRs deleted based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.BreakoutList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Delete all instances of Breakout in the specified namespace.",
+                "tags": [
+                    "apps"
+                ]
+            },
+            "get": {
+                "description": "list breakouts in namespace",
+                "operationId": "listInterfacesEdaNokiaComV1alpha1NamespaceBreakouts",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.BreakoutList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "post": {
+                "description": "create a Breakout",
+                "operationId": "createInterfacesEdaNokiaComV1alpha1NamespaceBreakouts",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Breakout"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Breakout"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/breakouts/_deleted": {
+            "get": {
+                "operationId": "getDeletedInterfacesEdaNokiaComV1alpha1NamespaceBreakouts",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeletedResources"
+                                }
+                            }
+                        },
+                        "description": "Returns list of deleted resource entries"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Get information about the instances of Breakout that have been deleted that existed in the specified namespace.",
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/breakouts/{name}": {
+            "delete": {
+                "description": "delete the specified Breakout",
+                "operationId": "deleteInterfacesEdaNokiaComV1alpha1NamespaceBreakouts",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to perform the delete",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "name of the Breakout to delete",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Status"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "get": {
+                "description": "read the specified Breakout.  If a git hash query parameter\nis supplied, the resource as it existed at the time of the git hash\nwill be returned. Streaming is not supported when a particular revision\nis asked for.",
+                "operationId": "readInterfacesEdaNokiaComV1alpha1NamespaceBreakouts",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "name of the Breakout to retrieve",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "resource content will be returned as it was at the time of this git hash",
+                        "in": "query",
+                        "name": "hash",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Breakout"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "put": {
+                "description": "replace a Breakout",
+                "operationId": "replaceInterfacesEdaNokiaComV1alpha1NamespaceBreakouts",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Breakout"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Breakout"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/breakouts/{name}/_revs": {
+            "get": {
+                "operationId": "getHistoryInterfacesEdaNokiaComV1alpha1NamespaceBreakouts",
+                "parameters": [
+                    {
+                        "description": "name of the Breakout to retrieve",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "maximum number of history entries to return",
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "format": "uint64",
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResourceHistory"
+                                }
+                            }
+                        },
+                        "description": "Returns the change history of the specified resource"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Get revision history for the specified namespaced Breakout.",
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/interfaces": {
+            "delete": {
+                "operationId": "deleteAllInterfacesEdaNokiaComV1alpha1NamespaceInterfaces",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to perform the delete",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the set of CRs deleted based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Delete all instances of Interface in the specified namespace.",
+                "tags": [
+                    "apps"
+                ]
+            },
+            "get": {
+                "description": "list interfaces in namespace",
+                "operationId": "listInterfacesEdaNokiaComV1alpha1NamespaceInterfaces",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "post": {
+                "description": "create a Interface",
+                "operationId": "createInterfacesEdaNokiaComV1alpha1NamespaceInterfaces",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Interface"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Interface"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/interfaces/_deleted": {
+            "get": {
+                "operationId": "getDeletedInterfacesEdaNokiaComV1alpha1NamespaceInterfaces",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeletedResources"
+                                }
+                            }
+                        },
+                        "description": "Returns list of deleted resource entries"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Get information about the instances of Interface that have been deleted that existed in the specified namespace.",
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/interfaces/{name}": {
+            "delete": {
+                "description": "delete the specified Interface",
+                "operationId": "deleteInterfacesEdaNokiaComV1alpha1NamespaceInterfaces",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to perform the delete",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "name of the Interface to delete",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Status"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "get": {
+                "description": "read the specified Interface.  If a git hash query parameter\nis supplied, the resource as it existed at the time of the git hash\nwill be returned. Streaming is not supported when a particular revision\nis asked for.",
+                "operationId": "readInterfacesEdaNokiaComV1alpha1NamespaceInterfaces",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "name of the Interface to retrieve",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "resource content will be returned as it was at the time of this git hash",
+                        "in": "query",
+                        "name": "hash",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Interface"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "put": {
+                "description": "replace a Interface",
+                "operationId": "replaceInterfacesEdaNokiaComV1alpha1NamespaceInterfaces",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Interface"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.Interface"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/interfaces/{name}/_revs": {
+            "get": {
+                "operationId": "getHistoryInterfacesEdaNokiaComV1alpha1NamespaceInterfaces",
+                "parameters": [
+                    {
+                        "description": "name of the Interface to retrieve",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "maximum number of history entries to return",
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "format": "uint64",
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResourceHistory"
+                                }
+                            }
+                        },
+                        "description": "Returns the change history of the specified resource"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Get revision history for the specified namespaced Interface.",
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/interfacestates": {
+            "delete": {
+                "operationId": "deleteAllInterfacesEdaNokiaComV1alpha1NamespaceInterfacestates",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to perform the delete",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the set of CRs deleted based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceStateList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Delete all instances of InterfaceState in the specified namespace.",
+                "tags": [
+                    "apps"
+                ]
+            },
+            "get": {
+                "description": "list interfacestates in namespace",
+                "operationId": "listInterfacesEdaNokiaComV1alpha1NamespaceInterfacestates",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceStateList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "post": {
+                "description": "create a InterfaceState",
+                "operationId": "createInterfacesEdaNokiaComV1alpha1NamespaceInterfacestates",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceState"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceState"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/interfacestates/_deleted": {
+            "get": {
+                "operationId": "getDeletedInterfacesEdaNokiaComV1alpha1NamespaceInterfacestates",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeletedResources"
+                                }
+                            }
+                        },
+                        "description": "Returns list of deleted resource entries"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Get information about the instances of InterfaceState that have been deleted that existed in the specified namespace.",
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/interfacestates/{name}": {
+            "delete": {
+                "description": "delete the specified InterfaceState",
+                "operationId": "deleteInterfacesEdaNokiaComV1alpha1NamespaceInterfacestates",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to perform the delete",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "name of the InterfaceState to delete",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Status"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "get": {
+                "description": "read the specified InterfaceState.  If a git hash query parameter\nis supplied, the resource as it existed at the time of the git hash\nwill be returned. Streaming is not supported when a particular revision\nis asked for.",
+                "operationId": "readInterfacesEdaNokiaComV1alpha1NamespaceInterfacestates",
+                "parameters": [
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "name of the InterfaceState to retrieve",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "a label selector string to filter the results based on CR labels",
+                        "in": "query",
+                        "name": "label-selector",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "resource content will be returned as it was at the time of this git hash",
+                        "in": "query",
+                        "name": "hash",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceState"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            },
+            "put": {
+                "description": "replace a InterfaceState",
+                "operationId": "replaceInterfacesEdaNokiaComV1alpha1NamespaceInterfacestates",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceState"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/com.nokia.eda.interfaces.v1alpha1.InterfaceState"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "tags": [
+                    "apps"
+                ]
+            }
+        },
+        "/apps/interfaces.eda.nokia.com/v1alpha1/namespaces/{namespace}/interfacestates/{name}/_revs": {
+            "get": {
+                "operationId": "getHistoryInterfacesEdaNokiaComV1alpha1NamespaceInterfacestates",
+                "parameters": [
+                    {
+                        "description": "name of the InterfaceState to retrieve",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "the namespace scope from which to retrieve the result",
+                        "in": "path",
+                        "name": "namespace",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "client information for streaming request",
+                        "in": "query",
+                        "name": "eventclient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "stream information for streaming request",
+                        "in": "query",
+                        "name": "stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "maximum number of history entries to return",
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "format": "uint64",
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResourceHistory"
+                                }
+                            }
+                        },
+                        "description": "Returns the change history of the specified resource"
+                    },
+                    "default": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        },
+                        "description": "Details of an error in response to an API REST request."
+                    }
+                },
+                "summary": "Get revision history for the specified namespaced InterfaceState.",
+                "tags": [
+                    "apps"
+                ]
+            }
+        }
+    }
+}
