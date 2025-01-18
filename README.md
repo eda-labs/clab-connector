@@ -28,7 +28,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 - **Network Connectivity:**
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab:**
-  - Minimum required version - `v0.61.0`
+  - Minimum required version - `v0.62.2`
 - **kubectl:**
   - You must have `kubectl` installed and configured to connect to the same Kubernetes cluster that is running EDA. The connector will use `kubectl apply` in the background to create the necessary `Artifact` resources.
 
@@ -61,17 +61,22 @@ Follow these steps to set up the Containerlab EDA Connector tool:
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-2. **Run the Connector** (uv automatically installs dependencies in a venv from `pyproject.toml`):
+2. **Install clab-connector**
+    ```
+    uv tool install git+https://github.com/eda-labs/clab-connector.git
+    ```
+
+3. **Run the Connector** (uv automatically installs dependencies in a venv from `pyproject.toml`):
 
     ```
-    uv run python eda_containerlab_connector.py --help
+    clab-connector --help
     ```
 
 ## Alternative: Using pip
 
 If you’d rather use pip or can’t install uv:
 
-1. **(Optional) Create & Activate a Virtual Environment**:
+1. **Create & Activate a Virtual Environment after cloning**:
 
     ```
     python -m venv venv
@@ -87,7 +92,7 @@ If you’d rather use pip or can’t install uv:
 3. **Run the Connector**:
 
     ```
-    python eda_containerlab_connector.py --help
+    clab-connector --help
     ```
 
 ### Quick try
@@ -95,14 +100,9 @@ If you’d rather use pip or can’t install uv:
 With either uv or pip, you can now run:
 
 ```
-uv run python eda_containerlab_connector.py <subcommand> [options]
+clab-connector <subcommand> [options]
 ```
 
-Or, using non uv:
-
-```
-python eda_containerlab_connector.py <subcommand> [options]
-```
 
 ## Usage
 
@@ -120,8 +120,6 @@ python eda_containerlab_connector.py integrate \
 --eda-password yourpassword \
 ```
 
-> [!NOTE]
-> In the coming Containerlab 0.62.0 version, the Lab Directory will be created always in the directory where the topology clab file is located.
 
 ### Remove Containerlab Integration from EDA
 
