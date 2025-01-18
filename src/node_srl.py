@@ -132,7 +132,7 @@ class SRLNode(Node):
             "operating_system": self.kind,
             "version_path": self.VERSION_PATH,
             # below evaluates to something like v24\.7\.1.*
-            "version_match": "v{}.*".format(self.version.replace(".", "\.")),
+            "version_match": "v{}.*".format(self.version.replace(".", r"\.")),
             "yang_path": self.YANG_PATH.format(
                 artifact_name=artifact_name, filename=filename
             ),
