@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "clab-connector"
@@ -26,9 +26,15 @@ dependencies = [
     "urllib3==2.2.3",
 ]
 
-
 [project.scripts]
 clab-connector = "clab_connector.cli.main:app"
 
-[tool.setuptools]
+[tool.hatch.build]
+include = [
+    "clab_connector/**/*.py",
+    "clab_connector/**/*.j2",
+    "clab_connector/templates/*"
+]
+
+[tool.hatch.build.targets.wheel]
 packages = ["clab_connector"]
