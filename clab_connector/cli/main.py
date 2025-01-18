@@ -3,11 +3,13 @@ import logging
 import os
 from enum import Enum
 from pathlib import Path
+from typing import List
 
 import typer
 import urllib3
 from rich.logging import RichHandler
 from rich import print as rprint
+from typing_extensions import Annotated
 
 from clab_connector.core.integrate import IntegrateCommand
 from clab_connector.core.remove import RemoveCommand
@@ -25,6 +27,26 @@ class LogLevel(str, Enum):
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
 
+
+def complete_json_files(ctx: typer.Context, param: typer.Option, incomplete: str) -> List[str]:
+    """Provide completion for JSON files"""
+    current = Path(incomplete) if incomplete else Path.cwd()
+    
+    if not current.is_dir():
+        current = current.parent
+
+    return [
+        str(path) for path in current.glob("*.json")
+        if incomplete in str(path)
+    ]
+
+def complete_eda_url(ctx: typer.Context, param: typer.Option, incomplete: str) -> List[str]:
+    """Provide completion for EDA URL"""
+    if not incomplete:
+        return ["https://"]
+    if not incomplete.startswith("https://"):
+        return ["https://" + incomplete]
+    return []
 
 app = typer.Typer(
     name="clab-connector",
@@ -58,16 +80,28 @@ def execute_command(command_class, args):
 
 @app.command(name="integrate", help="Integrate containerlab with EDA")
 def integrate_cmd(
-    topology_data: Path = typer.Option(
-        ...,
-        "--topology-data",
-        "-t",
-        help="The containerlab topology data JSON file",
-        exists=True,
-    ),
-    eda_url: str = typer.Option(
-        ..., "--eda-url", "-e", help="The hostname or IP of your EDA deployment"
-    ),
+    topology_data: Annotated[
+        Path,
+        typer.Option(
+            "--topology-data",
+            "-t",
+            help="The containerlab topology data JSON file",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            shell_complete=complete_json_files,
+        ),
+    ],
+    eda_url: Annotated[
+        str,
+        typer.Option(
+            "--eda-url",
+            "-e",
+            help="The hostname or IP of your EDA deployment",
+            shell_complete=complete_eda_url,
+        ),
+    ],
     eda_user: str = typer.Option(
         "admin", "--eda-user", help="The username of the EDA user"
     ),
@@ -101,13 +135,19 @@ def integrate_cmd(
 
 @app.command(name="remove", help="Remove containerlab integration from EDA")
 def remove_cmd(
-    topology_data: Path = typer.Option(
-        ...,
-        "--topology-data",
-        "-t",
-        help="The containerlab topology data JSON file",
-        exists=True,
-    ),
+    topology_data: Annotated[
+        Path,
+        typer.Option(
+            "--topology-data",
+            "-t",
+            help="The containerlab topology data JSON file",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            shell_complete=complete_json_files,
+        ),
+    ],
     eda_url: str = typer.Option(
         ..., "--eda-url", "-e", help="The hostname or IP of your EDA deployment"
     ),
