@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import logging
 import os
 from enum import Enum
@@ -28,25 +27,28 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-def complete_json_files(ctx: typer.Context, param: typer.Option, incomplete: str) -> List[str]:
+def complete_json_files(
+    ctx: typer.Context, param: typer.Option, incomplete: str
+) -> List[str]:
     """Provide completion for JSON files"""
     current = Path(incomplete) if incomplete else Path.cwd()
-    
+
     if not current.is_dir():
         current = current.parent
 
-    return [
-        str(path) for path in current.glob("*.json")
-        if incomplete in str(path)
-    ]
+    return [str(path) for path in current.glob("*.json") if incomplete in str(path)]
 
-def complete_eda_url(ctx: typer.Context, param: typer.Option, incomplete: str) -> List[str]:
+
+def complete_eda_url(
+    ctx: typer.Context, param: typer.Option, incomplete: str
+) -> List[str]:
     """Provide completion for EDA URL"""
     if not incomplete:
         return ["https://"]
     if not incomplete.startswith("https://"):
         return ["https://" + incomplete]
     return []
+
 
 app = typer.Typer(
     name="clab-connector",
