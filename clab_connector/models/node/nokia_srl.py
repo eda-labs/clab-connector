@@ -2,15 +2,6 @@
 
 import logging
 import re
-import socket
-
-from paramiko import (
-    SSHClient,
-    AutoAddPolicy,
-    AuthenticationException,
-    BadHostKeyException,
-    SSHException,
-)
 
 from .base import Node
 from clab_connector.utils import helpers
@@ -44,42 +35,6 @@ class NokiaSRLinuxNode(Node):
             "releases/download/v24.10.1/srlinux-24.10.1-492.zip"
         )
     }
-
-    def test_ssh(self):
-        """
-        Test SSH connectivity using Paramiko.
-
-        Raises
-        ------
-        BadHostKeyException
-            If the server's host key could not be verified.
-        AuthenticationException
-            If authentication fails.
-        SSHException
-            If there was an error connecting or establishing an SSH session.
-        socket.error
-            For general socket errors.
-        """
-        logger.debug(f"Testing SSH for node '{self.name}' IP {self.mgmt_ipv4}")
-        ssh = SSHClient()
-        ssh.set_missing_host_key_policy(AutoAddPolicy())
-        try:
-            ssh.connect(
-                hostname=self.mgmt_ipv4,
-                username=self.SRL_USERNAME,
-                password=self.SRL_PASSWORD,
-                allow_agent=False,
-            )
-            logger.info(f"SSH to {self.name} succeeded")
-            return True
-        except (
-            BadHostKeyException,
-            AuthenticationException,
-            SSHException,
-            socket.error,
-        ) as exc:
-            logger.error(f"SSH to node {self.name} failed: {exc}")
-            raise
 
     def get_default_node_type(self):
         """
