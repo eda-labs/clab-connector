@@ -49,8 +49,6 @@ class EDAClient:
 
     CORE_GROUP = "core.eda.nokia.com"
     CORE_VERSION = "v1"
-    INTERFACE_GROUP = "interfaces.eda.nokia.com"
-    INTERFACE_VERSION = "v1alpha1"
 
     def __init__(
         self,
