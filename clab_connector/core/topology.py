@@ -5,7 +5,6 @@ from clab_connector.core.link import from_obj as link_from_obj
 from clab_connector.core.node import from_obj as node_from_obj
 
 
-
 # set up logging
 logger = logging.getLogger(__name__)
 
@@ -15,6 +14,7 @@ class Topology:
         self,
         name,
         mgmt_ipv4_subnet,
+        ssh_pub_keys,
         nodes,
         links,
         clab_file_path="",
@@ -37,6 +37,7 @@ class Topology:
         """
         self.name = name
         self.mgmt_ipv4_subnet = mgmt_ipv4_subnet
+        self.ssh_pub_keys = ssh_pub_keys
         self.nodes = nodes
         self.links = links
         self.clab_file_path = clab_file_path
@@ -175,6 +176,8 @@ class Topology:
         name = json_obj["name"]
         mgmt_ipv4_subnet = json_obj["clab"]["config"]["mgmt"]["ipv4-subnet"]
 
+        ssh_pub_keys = json_obj.get("ssh-pub-keys", [])
+
         clab_file_path = ""
         for node_name, node_data in json_obj["nodes"].items():
             if clab_file_path == "":
@@ -225,4 +228,6 @@ class Topology:
                     f"Skipping link between {link_data['a']['node']} and {link_data['z']['node']} as one or both nodes are not supported"
                 )
 
-        return Topology(name, mgmt_ipv4_subnet, nodes, links, clab_file_path)
+        return Topology(
+            name, mgmt_ipv4_subnet, ssh_pub_keys, nodes, links, clab_file_path
+        )

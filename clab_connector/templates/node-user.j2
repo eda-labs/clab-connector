@@ -11,4 +11,7 @@ spec:
         - sudo
       nodeSelector:
         - containerlab=managed
-  sshPublicKeys: []
+  sshPublicKeys:
+{%- for key in ssh_pub_keys %}
+    - {{ key }}
+{%- endfor %}

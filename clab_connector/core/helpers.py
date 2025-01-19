@@ -15,8 +15,7 @@ TEMPLATE_DIR = os.path.join(PACKAGE_ROOT, "templates")
 
 # Create the Jinja2 environment with the correct template directory
 template_environment = Environment(
-    loader=FileSystemLoader(TEMPLATE_DIR),
-    autoescape=select_autoescape()
+    loader=FileSystemLoader(TEMPLATE_DIR), autoescape=select_autoescape()
 )
 
 # set up logging
@@ -49,7 +48,16 @@ def parse_topology(topology_file) -> "Topology":
             data = json.load(f)
             # Check if this is a topology-data.json file
             if "type" in data and data["type"] == "clab":
-                topo = Topology(data["name"], "", [], [])
+                # Initialize with empty values, will be populated by from_topology_data
+                topo = Topology(
+                    name=data["name"],
+                    mgmt_ipv4_subnet="",
+                    ssh_pub_keys=data.get(
+                        "ssh-pub-keys", []
+                    ),  # Get SSH keys with empty list as default
+                    nodes=[],
+                    links=[],
+                )
                 topo = topo.from_topology_data(data)
                 # Sanitize the topology name after parsing
                 original_name = topo.name
@@ -65,6 +73,7 @@ def parse_topology(topology_file) -> "Topology":
             f"File '{topology_file}' is not supported. Please provide a valid JSON topology file."
         )
         sys.exit(1)
+
 
 def render_template(template_name, data):
     """

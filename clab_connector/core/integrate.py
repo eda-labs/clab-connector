@@ -253,8 +253,10 @@ class IntegrateCommand:
             "node_user": "admin",
             "username": "admin",
             "password": "NokiaSrl1!",
+            "ssh_pub_keys": self.topology.ssh_pub_keys
+            if hasattr(self.topology, "ssh_pub_keys")
+            else [],
         }
-
         node_user = helpers.render_template("node-user.j2", data)
         logger.debug(node_user)
         item = self.eda.add_replace_to_transaction(node_user)
