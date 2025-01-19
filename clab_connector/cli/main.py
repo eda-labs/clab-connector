@@ -10,8 +10,8 @@ from rich.logging import RichHandler
 from rich import print as rprint
 from typing_extensions import Annotated
 
-from clab_connector.core.integrate import IntegrateCommand
-from clab_connector.core.remove import RemoveCommand
+from clab_connector.services.integration.topology_integrator import IntegrateCommand
+from clab_connector.services.removal.topology_remover import RemoveCommand
 
 # Disable urllib3 warnings
 urllib3.disable_warnings()

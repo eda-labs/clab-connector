@@ -1,14 +1,19 @@
+# clab_connector/services/integration/topology_integrator.py
+
 import logging
 import typer
 
-from clab_connector.core import helpers
-from clab_connector.core.eda import EDA
-from clab_connector.core.k8s_utils import (
+from clab_connector.models.topology import parse_topology_file
+from clab_connector.clients.eda.client import (
+    EDA,
+)  # old eda.py -> EDA => in step 1, we just rename
+from clab_connector.clients.kubernetes.client import (
     apply_manifest,
     edactl_namespace_bootstrap,
     wait_for_namespace,
     update_namespace_description,
 )
+from clab_connector.utils import helpers
 
 logger = logging.getLogger(__name__)
 
@@ -18,30 +23,21 @@ class IntegrateCommand:
     PARSER_ALIASES = [PARSER_NAME, "i"]
 
     def run(self, args):
-        """
-        Run the program with the arguments specified for this sub-command
-
-        Parameters
-        ----------
-        args: input arguments returned by the argument parser
-        """
         self.args = args
-        self.topology = helpers.parse_topology(self.args.topology_data)
-        self.topology.log_debug()
+        self.topology = parse_topology_file(str(self.args.topology_data))
+        self.topology.check_connectivity()
 
-        # Check if there are any supported nodes
-        supported_nodes = [node for node in self.topology.nodes if node.kind == "srl"]
-        if not supported_nodes:
-            logger.error(
-                "No supported nodes (nokia_srlinux) found in the topology. Exiting."
-            )
+        # minimal "only SR Linux is recognized" check
+        srl_nodes = [n for n in self.topology.nodes if n.kind == "nokia_srlinux"]
+        if not srl_nodes:
+            logger.error("No Nokia SR Linux nodes found, exiting.")
             raise typer.Exit(code=1)
 
         self.eda = EDA(
-            args.eda_url,
-            args.eda_user,
-            args.eda_password,
-            args.verify,
+            hostname=args.eda_url,
+            username=args.eda_user,
+            password=args.eda_password,
+            verify=args.verify,
         )
 
         print("== Running pre-checks ==")
@@ -55,9 +51,7 @@ class IntegrateCommand:
 
         print("== Creating init ==")
         self.create_init()
-        self.eda.commit_transaction(
-            "EDA Containerlab Connector: create init (bootstrap)"
-        )
+        self.eda.commit_transaction("create init (bootstrap)")
 
         print("== Creating node security profile ==")
         self.create_node_security_profile()
@@ -65,46 +59,39 @@ class IntegrateCommand:
         print("== Creating node users ==")
         self.create_node_user_groups()
         self.create_node_users()
-        self.eda.commit_transaction(
-            "EDA Containerlab Connector: create node users and groups"
-        )
+        self.eda.commit_transaction("create node users and groups")
 
         print("== Creating node profiles ==")
         self.create_node_profiles()
-        self.eda.commit_transaction("EDA Containerlab Connector: create node profiles")
+        self.eda.commit_transaction("create node profiles")
 
         print("== Onboarding nodes ==")
         self.create_toponodes()
-        self.eda.commit_transaction("EDA Containerlab Connector: create nodes")
+        self.eda.commit_transaction("create nodes")
 
         print("== Adding topolink interfaces ==")
         self.create_topolink_interfaces()
-        self.eda.commit_transaction(
-            "EDA Containerlab Connector: create topolink interfaces"
-        )
+        self.eda.commit_transaction("create topolink interfaces")
 
         print("== Creating topolinks ==")
         self.create_topolinks()
-        self.eda.commit_transaction("EDA Containerlab Connector: create topolinks")
+        self.eda.commit_transaction("create topolinks")
 
         print("Done!")
 
     def prechecks(self):
-        """
-        Performs pre-checks to see if everything is reachable
-        """
-        # check if the nodes are reachable
-        self.topology.check_connectivity()
-
-        # check if EDA is reachable
         if not self.eda.is_up():
-            raise Exception("EDA status is not 'UP'")
-
-        # check if we can authenticate with EDA
+            raise Exception("EDA not up")
         if not self.eda.is_authenticated():
-            raise Exception(
-                "Could not authenticate to EDA with the provided credentials"
-            )
+            raise Exception("EDA credentials invalid")
+
+    def create_namespace(self):
+        ns = f"clab-{self.topology.name}"
+        logger.info(f"Creating namespace {ns}")
+        edactl_namespace_bootstrap(ns)
+        wait_for_namespace(ns)
+        desc = f"Containerlab topology {self.topology.name}, file: {self.topology.clab_file_path}"
+        update_namespace_description(ns, desc)
 
     def create_artifacts(self):
         """Creates artifacts needed by nodes that need them"""
@@ -167,23 +154,6 @@ class IntegrateCommand:
                     )
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
-
-    def create_namespace(self):
-        """
-        Creates EDA namespace named after clab-<lab_name> using edactl namespace bootstrap command.
-        """
-        namespace = f"clab-{self.topology.name}"
-        logger.info(f"Creating namespace {namespace}")
-
-        # Create namespace using edactl
-        edactl_namespace_bootstrap(namespace)
-
-        # Wait for namespace to be available
-        wait_for_namespace(namespace)
-
-        # Update namespace description
-        description = f"Containerlab topology. Name: {self.topology.name}, Topology file: {self.topology.clab_file_path}, IPv4 subnet: {self.topology.mgmt_ipv4_subnet}"
-        update_namespace_description(namespace, description)
 
     def create_init(self):
         """
