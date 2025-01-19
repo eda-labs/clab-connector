@@ -1,19 +1,19 @@
 # clab_connector/cli/main.py
 
 import logging
-import os
 from enum import Enum
+from typing import Optional
 from pathlib import Path
 from typing import List
 
 import typer
 import urllib3
-from rich.logging import RichHandler
 from rich import print as rprint
 from typing_extensions import Annotated
 
 from clab_connector.services.integration.topology_integrator import TopologyIntegrator
 from clab_connector.services.removal.topology_remover import TopologyRemover
+from clab_connector.utils.logging_config import setup_logging
 from clab_connector.clients.eda.client import EDAClient
 
 # Disable urllib3 warnings
@@ -40,6 +40,23 @@ app = typer.Typer(
 def complete_json_files(
     ctx: typer.Context, param: typer.Option, incomplete: str
 ) -> List[str]:
+    """
+    Complete JSON file paths for CLI autocomplete.
+
+    Parameters
+    ----------
+    ctx : typer.Context
+        The Typer context object.
+    param : typer.Option
+        The option that is being completed.
+    incomplete : str
+        The partial input from the user.
+
+    Returns
+    -------
+    List[str]
+        A list of matching .json file paths.
+    """
     current = Path(incomplete) if incomplete else Path.cwd()
     if not current.is_dir():
         current = current.parent
@@ -49,6 +66,23 @@ def complete_json_files(
 def complete_eda_url(
     ctx: typer.Context, param: typer.Option, incomplete: str
 ) -> List[str]:
+    """
+    Complete EDA URL for CLI autocomplete.
+
+    Parameters
+    ----------
+    ctx : typer.Context
+        The Typer context object.
+    param : typer.Option
+        The option that is being completed.
+    incomplete : str
+        The partial input from the user.
+
+    Returns
+    -------
+    List[str]
+        A list containing suggestions such as 'https://'.
+    """
     if not incomplete:
         return ["https://"]
     if not incomplete.startswith("https://"):
@@ -56,19 +90,19 @@ def complete_eda_url(
     return []
 
 
-def setup_logging(log_level: str):
-    logging.basicConfig(
-        level=log_level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True)],
-    )
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Supported containerlab kinds are: {SUPPORTED_KINDS}")
-
-
 def execute_integration(args):
-    # Build the EDA client here
+    """
+    Execute integration logic by creating the EDAClient and calling the TopologyIntegrator.
+
+    Parameters
+    ----------
+    args : object
+        A generic object with integration arguments (topology_data, eda_url, etc.).
+
+    Returns
+    -------
+    None
+    """
     eda_client = EDAClient(
         hostname=args.eda_url,
         username=args.eda_user,
@@ -86,6 +120,18 @@ def execute_integration(args):
 
 
 def execute_removal(args):
+    """
+    Execute removal logic by creating the EDAClient and calling the TopologyRemover.
+
+    Parameters
+    ----------
+    args : object
+        A generic object with removal arguments (topology_data, eda_url, etc.).
+
+    Returns
+    -------
+    None
+    """
     eda_client = EDAClient(
         hostname=args.eda_url,
         username=args.eda_user,
@@ -125,14 +171,44 @@ def integrate_cmd(
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
     ),
+    log_file: Optional[str] = typer.Option(
+        None,
+        "--log-file",
+        "-f",
+        help="Optional log file path",
+    ),
     verify: bool = typer.Option(
         False, "--verify", help="Enables certificate verification for EDA"
     ),
 ):
-    setup_logging(log_level.value)
-    os.environ["no_proxy"] = eda_url
+    """
+    CLI command to integrate a containerlab topology with EDA.
 
-    # Build an args object
+    Parameters
+    ----------
+    topology_data : Path
+        Path to the containerlab topology JSON file.
+    eda_url : str
+        The hostname or IP of the EDA deployment.
+    eda_user : str
+        The EDA username.
+    eda_password : str
+        The EDA password.
+    log_level : LogLevel
+        Logging level to use.
+    log_file : Optional[str]
+        Path to an optional log file.
+    verify : bool
+        Whether to enable certificate verification.
+
+    Returns
+    -------
+    None
+    """
+    setup_logging(log_level.value, log_file)
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Supported containerlab kinds are: {SUPPORTED_KINDS}")
+
     Args = type("Args", (), {})
     args = Args()
     args.topology_data = topology_data
@@ -169,10 +245,40 @@ def remove_cmd(
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
     ),
+    log_file: Optional[str] = typer.Option(
+        None,
+        "--log-file",
+        "-f",
+        help="Optional log file path",
+    ),
     verify: bool = typer.Option(False, "--verify", help="Verify EDA certs"),
 ):
-    setup_logging(log_level.value)
-    os.environ["no_proxy"] = eda_url
+    """
+    CLI command to remove an existing containerlab-EDA integration.
+
+    Parameters
+    ----------
+    topology_data : Path
+        Path to the containerlab topology JSON file.
+    eda_url : str
+        The EDA hostname/IP address.
+    eda_user : str
+        The EDA username.
+    eda_password : str
+        The EDA password.
+    log_level : LogLevel
+        Logging level to use.
+    log_file : Optional[str]
+        Path to an optional log file.
+    verify : bool
+        Whether to enable certificate verification.
+
+    Returns
+    -------
+    None
+    """
+    setup_logging(log_level.value, log_file)
+    logger = logging.getLogger(__name__)
 
     Args = type("Args", (), {})
     args = Args()

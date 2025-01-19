@@ -12,6 +12,25 @@ logger = logging.getLogger(__name__)
 
 
 class Topology:
+    """
+    Represents a containerlab topology.
+
+    Parameters
+    ----------
+    name : str
+        The name of the topology.
+    mgmt_subnet : str
+        The management IPv4 subnet for the topology.
+    ssh_keys : list
+        A list of SSH public keys.
+    nodes : list
+        A list of Node objects in the topology.
+    links : list
+        A list of Link objects in the topology.
+    clab_file_path : str
+        Path to the original containerlab file if available.
+    """
+
     def __init__(self, name, mgmt_subnet, ssh_keys, nodes, links, clab_file_path=""):
         self.name = name
         self.mgmt_ipv4_subnet = mgmt_subnet
@@ -21,12 +40,28 @@ class Topology:
         self.clab_file_path = clab_file_path
 
     def __repr__(self):
+        """
+        Return a string representation of the topology.
+
+        Returns
+        -------
+        str
+            Description of the topology name, mgmt_subnet, number of nodes and links.
+        """
         return (
             f"Topology(name={self.name}, mgmt_subnet={self.mgmt_ipv4_subnet}, "
             f"nodes={len(self.nodes)}, links={len(self.links)})"
         )
 
     def get_eda_safe_name(self):
+        """
+        Convert the topology name into a format safe for use in EDA.
+
+        Returns
+        -------
+        str
+            A name suitable for EDA resource naming.
+        """
         safe = self.name.lower().replace("_", "-").replace(" ", "-")
         safe = "".join(c for c in safe if c.isalnum() or c in ".-").strip(".-")
         if not safe or not safe[0].isalnum():
@@ -36,10 +71,26 @@ class Topology:
         return safe
 
     def check_connectivity(self):
+        """
+        Attempt to ping each node's management IP from the bootstrap server.
+
+        Raises
+        ------
+        RuntimeError
+            If any node fails to respond to ping.
+        """
         for node in self.nodes:
             node.ping()
 
     def get_node_profiles(self):
+        """
+        Generate NodeProfile YAML for all nodes that produce them.
+
+        Returns
+        -------
+        list
+            A list of node profile YAML strings.
+        """
         profiles = {}
         for n in self.nodes:
             prof = n.get_node_profile(self)
@@ -49,6 +100,14 @@ class Topology:
         return profiles.values()
 
     def get_toponodes(self):
+        """
+        Generate TopoNode YAML for all EDA-supported nodes.
+
+        Returns
+        -------
+        list
+            A list of toponode YAML strings.
+        """
         tnodes = []
         for n in self.nodes:
             tn = n.get_toponode(self)
@@ -57,6 +116,14 @@ class Topology:
         return tnodes
 
     def get_topolinks(self):
+        """
+        Generate TopoLink YAML for all EDA-supported links.
+
+        Returns
+        -------
+        list
+            A list of topolink YAML strings.
+        """
         links = []
         for ln in self.links:
             if ln.is_topolink():
@@ -66,6 +133,14 @@ class Topology:
         return links
 
     def get_topolink_interfaces(self):
+        """
+        Generate Interface YAML for each link endpoint (if EDA-supported).
+
+        Returns
+        -------
+        list
+            A list of interface YAML strings for the link endpoints.
+        """
         interfaces = []
         for ln in self.links:
             if ln.is_topolink():
@@ -79,6 +154,26 @@ class Topology:
 
 
 def parse_topology_file(path: str) -> Topology:
+    """
+    Parse a containerlab topology JSON file and return a Topology object.
+
+    Parameters
+    ----------
+    path : str
+        Path to the containerlab topology JSON file.
+
+    Returns
+    -------
+    Topology
+        A populated Topology object.
+
+    Raises
+    ------
+    SystemExit
+        If the file does not exist or cannot be parsed.
+    ValueError
+        If the file is not recognized as a containerlab topology.
+    """
     logger.info(f"Parsing topology file '{path}'")
     if not os.path.isfile(path):
         logger.critical(f"Topology file '{path}' does not exist!")
@@ -103,7 +198,7 @@ def parse_topology_file(path: str) -> Topology:
         first_key = next(iter(data["nodes"]))
         file_path = data["nodes"][first_key]["labels"].get("clab-topo-file", "")
 
-    # create node objects
+    # Create node objects
     node_objects = []
     for node_name, node_data in data["nodes"].items():
         image = node_data.get("image")
@@ -120,7 +215,7 @@ def parse_topology_file(path: str) -> Topology:
         if node_obj:
             node_objects.append(node_obj)
 
-    # create link objects
+    # Create link objects
     link_objects = []
     for link_info in data["links"]:
         a_node = link_info["a"]["node"]

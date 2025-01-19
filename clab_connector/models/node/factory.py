@@ -12,6 +12,21 @@ KIND_MAPPING = {
 
 
 def create_node(name: str, config: dict) -> Node:
+    """
+    Create a node instance based on the kind specified in config.
+
+    Parameters
+    ----------
+    name : str
+        The name of the node.
+    config : dict
+        A dictionary containing 'kind', 'type', 'version', 'mgmt_ipv4', etc.
+
+    Returns
+    -------
+    Node or None
+        An appropriate Node subclass instance if supported; otherwise None.
+    """
     kind = config.get("kind")
     if not kind:
         logger.error(f"No 'kind' in config for node '{name}'")
@@ -19,7 +34,7 @@ def create_node(name: str, config: dict) -> Node:
 
     cls = KIND_MAPPING.get(kind)
     if cls is None:
-        logger.warning(f"Unsupported kind '{kind}' for node '{name}'")
+        logger.info(f"Unsupported kind '{kind}' for node '{name}'")
         return None
 
     return cls(

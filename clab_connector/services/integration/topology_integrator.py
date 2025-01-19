@@ -1,7 +1,6 @@
 # clab_connector/services/integration/topology_integrator.py
 
 import logging
-import typer
 
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.clients.eda.client import EDAClient
@@ -19,8 +18,12 @@ logger = logging.getLogger(__name__)
 
 class TopologyIntegrator:
     """
-    Formerly IntegrateCommand
-    Demonstrates dependency injection of EDAClient.
+    Handles creation of EDA resources for a given containerlab topology.
+
+    Parameters
+    ----------
+    eda_client : EDAClient
+        A connected EDAClient used to submit resources to the EDA cluster.
     """
 
     def __init__(self, eda_client: EDAClient):
@@ -28,6 +31,33 @@ class TopologyIntegrator:
         self.topology = None
 
     def run(self, topology_file, eda_url, eda_user, eda_password, verify):
+        """
+        Parse the topology, run connectivity checks, and create EDA resources.
+
+        Parameters
+        ----------
+        topology_file : str or Path
+            Path to the containerlab topology JSON file.
+        eda_url : str
+            EDA hostname/IP.
+        eda_user : str
+            EDA username.
+        eda_password : str
+            EDA password.
+        verify : bool
+            Certificate verification flag.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        EDAConnectionError
+            If EDA is unreachable or credentials are invalid.
+        ClabConnectorError
+            If any resource fails validation.
+        """
         logger.info("Parsing topology for integration")
         self.topology = parse_topology_file(str(topology_file))
         self.topology.check_connectivity()
@@ -72,12 +102,23 @@ class TopologyIntegrator:
         print("Done!")
 
     def prechecks(self):
+        """
+        Verify that EDA is up and credentials are valid.
+
+        Raises
+        ------
+        EDAConnectionError
+            If EDA is not reachable or not authenticated.
+        """
         if not self.eda_client.is_up():
             raise EDAConnectionError("EDA not up or unreachable")
         if not self.eda_client.is_authenticated():
             raise EDAConnectionError("EDA credentials invalid")
 
     def create_namespace(self):
+        """
+        Create and bootstrap a namespace for the topology in EDA.
+        """
         ns = f"clab-{self.topology.name}"
         edactl_namespace_bootstrap(ns)
         wait_for_namespace(ns)
@@ -85,6 +126,11 @@ class TopologyIntegrator:
         update_namespace_description(ns, desc)
 
     def create_artifacts(self):
+        """
+        Create Artifact resources for nodes that need them.
+
+        Skips creation if already exists or no artifact data is available.
+        """
         logger.info("Creating artifacts for nodes that need them")
         nodes_by_artifact = {}
         for node in self.topology.nodes:
@@ -108,9 +154,6 @@ class TopologyIntegrator:
             logger.info(
                 f"Creating YANG artifact for node: {first_node} (version={info['version']})"
             )
-            # re-use first node to produce the YAML
-            # or you can pick an actual node object
-            # for step 2, let's assume self.topology.nodes[0] is also SRL
             artifact_yaml = self.topology.nodes[0].get_artifact_yaml(
                 artifact_name, info["filename"], info["download_url"]
             )
@@ -132,6 +175,9 @@ class TopologyIntegrator:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 
     def create_init(self):
+        """
+        Create an Init resource in the namespace to bootstrap additional resources.
+        """
         data = {"namespace": f"clab-{self.topology.name}"}
         yml = helpers.render_template("init.yaml.j2", data)
         item = self.eda_client.add_replace_to_transaction(yml)
@@ -139,6 +185,9 @@ class TopologyIntegrator:
             raise ClabConnectorError("Validation error for init resource")
 
     def create_node_security_profile(self):
+        """
+        Create a NodeSecurityProfile resource that references an EDA node issuer.
+        """
         data = {"namespace": f"clab-{self.topology.name}"}
         yaml_str = helpers.render_template("nodesecurityprofile.yaml.j2", data)
         try:
@@ -151,6 +200,9 @@ class TopologyIntegrator:
                 raise
 
     def create_node_user_groups(self):
+        """
+        Create a NodeGroup resource for user groups (like 'sudo').
+        """
         data = {"namespace": f"clab-{self.topology.name}"}
         node_user_group = helpers.render_template("node-user-group.yaml.j2", data)
         item = self.eda_client.add_replace_to_transaction(node_user_group)
@@ -158,6 +210,9 @@ class TopologyIntegrator:
             raise ClabConnectorError("Validation error for node user group")
 
     def create_node_users(self):
+        """
+        Create a NodeUser resource with SSH pub keys, if any.
+        """
         data = {
             "namespace": f"clab-{self.topology.name}",
             "node_user": "admin",
@@ -171,6 +226,9 @@ class TopologyIntegrator:
             raise ClabConnectorError("Validation error for node user")
 
     def create_node_profiles(self):
+        """
+        Create NodeProfile resources for each EDA-supported node version-kind combo.
+        """
         profiles = self.topology.get_node_profiles()
         for prof_yaml in profiles:
             item = self.eda_client.add_replace_to_transaction(prof_yaml)
@@ -178,6 +236,9 @@ class TopologyIntegrator:
                 raise ClabConnectorError("Validation error creating node profile")
 
     def create_toponodes(self):
+        """
+        Create TopoNode resources for each node.
+        """
         tnodes = self.topology.get_toponodes()
         for node_yaml in tnodes:
             item = self.eda_client.add_replace_to_transaction(node_yaml)
@@ -185,6 +246,9 @@ class TopologyIntegrator:
                 raise ClabConnectorError("Validation error creating toponode")
 
     def create_topolink_interfaces(self):
+        """
+        Create Interface resources for each link endpoint in the topology.
+        """
         interfaces = self.topology.get_topolink_interfaces()
         for intf_yaml in interfaces:
             item = self.eda_client.add_replace_to_transaction(intf_yaml)
@@ -192,6 +256,9 @@ class TopologyIntegrator:
                 raise ClabConnectorError("Validation error creating topolink interface")
 
     def create_topolinks(self):
+        """
+        Create TopoLink resources for each EDA-supported link in the topology.
+        """
         links = self.topology.get_topolinks()
         for l_yaml in links:
             item = self.eda_client.add_replace_to_transaction(l_yaml)

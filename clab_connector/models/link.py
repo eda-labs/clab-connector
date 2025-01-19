@@ -7,6 +7,21 @@ logger = logging.getLogger(__name__)
 
 
 class Link:
+    """
+    Represents a bidirectional link between two nodes.
+
+    Parameters
+    ----------
+    node_1 : Node
+        The first node in the link.
+    intf_1 : str
+        The interface name on the first node.
+    node_2 : Node
+        The second node in the link.
+    intf_2 : str
+        The interface name on the second node.
+    """
+
     def __init__(self, node_1, intf_1, node_2, intf_2):
         self.node_1 = node_1
         self.intf_1 = intf_1
@@ -14,9 +29,25 @@ class Link:
         self.intf_2 = intf_2
 
     def __repr__(self):
+        """
+        Return a string representation of the link.
+
+        Returns
+        -------
+        str
+            A description of the link endpoints.
+        """
         return f"Link({self.node_1}-{self.intf_1}, {self.node_2}-{self.intf_2})"
 
     def is_topolink(self):
+        """
+        Check if both endpoints are EDA-supported nodes.
+
+        Returns
+        -------
+        bool
+            True if both nodes support EDA, False otherwise.
+        """
         if self.node_1 is None or not self.node_1.is_eda_supported():
             return False
         if self.node_2 is None or not self.node_2.is_eda_supported():
@@ -24,9 +55,35 @@ class Link:
         return True
 
     def get_link_name(self, topology):
+        """
+        Create a unique name for the link resource.
+
+        Parameters
+        ----------
+        topology : Topology
+            The topology that owns this link.
+
+        Returns
+        -------
+        str
+            A link name safe for EDA.
+        """
         return f"{self.node_1.get_node_name(topology)}-{self.intf_1}-{self.node_2.get_node_name(topology)}-{self.intf_2}"
 
     def get_topolink_yaml(self, topology):
+        """
+        Render and return the TopoLink YAML if the link is EDA-supported.
+
+        Parameters
+        ----------
+        topology : Topology
+            The topology that owns this link.
+
+        Returns
+        -------
+        str or None
+            The rendered TopoLink CR YAML, or None if not EDA-supported.
+        """
         if not self.is_topolink():
             return None
         data = {
@@ -42,6 +99,27 @@ class Link:
 
 
 def create_link(endpoints: list, nodes: list) -> Link:
+    """
+    Create a Link object from two endpoint definitions and a list of Node objects.
+
+    Parameters
+    ----------
+    endpoints : list
+        A list of exactly two endpoint strings, e.g. ["nodeA:e1-1", "nodeB:e1-1"].
+    nodes : list
+        A list of Node objects in the topology.
+
+    Returns
+    -------
+    Link
+        A Link object representing the connection.
+
+    Raises
+    ------
+    ValueError
+        If the endpoint format is invalid or length is not 2.
+    """
+
     if len(endpoints) != 2:
         raise ValueError("Link endpoints must be a list of length 2")
 

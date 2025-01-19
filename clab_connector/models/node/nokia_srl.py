@@ -19,6 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 class NokiaSRLinuxNode(Node):
+    """
+    Nokia SR Linux Node representation.
+
+    This subclass implements specific logic for SR Linux nodes, including
+    SSH tests, naming, interface mapping, and EDA resource generation.
+    """
+
     SRL_USERNAME = "admin"
     SRL_PASSWORD = "NokiaSrl1!"
     NODE_TYPE = "srlinux"
@@ -28,8 +35,8 @@ class NokiaSRLinuxNode(Node):
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
-    # Add mapping for EDA operating system
-    EDA_OPERATING_SYSTEM = "srl"  # Map nokia_srlinux to srl
+    # Mapping for EDA operating system
+    EDA_OPERATING_SYSTEM = "srl"
 
     SUPPORTED_SCHEMA_PROFILES = {
         "24.10.1": (
@@ -39,6 +46,20 @@ class NokiaSRLinuxNode(Node):
     }
 
     def test_ssh(self):
+        """
+        Test SSH connectivity using Paramiko.
+
+        Raises
+        ------
+        BadHostKeyException
+            If the server's host key could not be verified.
+        AuthenticationException
+            If authentication fails.
+        SSHException
+            If there was an error connecting or establishing an SSH session.
+        socket.error
+            For general socket errors.
+        """
         logger.debug(f"Testing SSH for node '{self.name}' IP {self.mgmt_ipv4}")
         ssh = SSHClient()
         ssh.set_missing_host_key_policy(AutoAddPolicy())
@@ -61,19 +82,69 @@ class NokiaSRLinuxNode(Node):
             raise
 
     def get_default_node_type(self):
+        """
+        Return the default node type for an SR Linux node.
+
+        Returns
+        -------
+        str
+            The default node type (e.g., "ixrd3l").
+        """
         return "ixrd3l"
 
     def get_platform(self):
+        """
+        Return the platform name based on node type.
+
+        Returns
+        -------
+        str
+            The platform name (e.g. '7220 IXR-D3L').
+        """
         t = self.node_type.replace("ixr", "")
         return f"7220 IXR-{t.upper()}"
 
     def is_eda_supported(self):
+        """
+        Indicates SR Linux nodes are EDA-supported.
+
+        Returns
+        -------
+        bool
+            True for SR Linux.
+        """
         return True
 
     def get_profile_name(self, topology):
+        """
+        Generate a NodeProfile name specific to this SR Linux node.
+
+        Parameters
+        ----------
+        topology : Topology
+            The topology object.
+
+        Returns
+        -------
+        str
+            The NodeProfile name for EDA.
+        """
         return f"{topology.get_eda_safe_name()}-{self.NODE_TYPE}-{self.version}"
 
     def get_node_profile(self, topology):
+        """
+        Render the NodeProfile YAML for this SR Linux node.
+
+        Parameters
+        ----------
+        topology : Topology
+            The topology object.
+
+        Returns
+        -------
+        str
+            The rendered NodeProfile YAML.
+        """
         logger.info(f"Rendering node profile for {self.name}")
         artifact_name = self.get_artifact_name()
         filename = f"srlinux-{self.version}.zip"
@@ -98,6 +169,19 @@ class NokiaSRLinuxNode(Node):
         return helpers.render_template("node-profile.j2", data)
 
     def get_toponode(self, topology):
+        """
+        Render the TopoNode YAML for this SR Linux node.
+
+        Parameters
+        ----------
+        topology : Topology
+            The topology object.
+
+        Returns
+        -------
+        str
+            The rendered TopoNode YAML.
+        """
         logger.info(f"Creating toponode for {self.name}")
         role_value = "leaf"
         nl = self.name.lower()
@@ -122,6 +206,19 @@ class NokiaSRLinuxNode(Node):
         return helpers.render_template("toponode.j2", data)
 
     def get_interface_name_for_kind(self, ifname):
+        """
+        Convert a containerlab interface name to an SR Linux style interface.
+
+        Parameters
+        ----------
+        ifname : str
+            Containerlab interface name, e.g., 'e1-1'.
+
+        Returns
+        -------
+        str
+            SR Linux style name, e.g. 'ethernet-1-1'.
+        """
         pattern = re.compile(r"^e(\d+)-(\d+)$")
         match = pattern.match(ifname)
         if match:
@@ -129,6 +226,23 @@ class NokiaSRLinuxNode(Node):
         return ifname
 
     def get_topolink_interface(self, topology, ifname, other_node):
+        """
+        Render the Interface CR YAML for an SR Linux link endpoint.
+
+        Parameters
+        ----------
+        topology : Topology
+            The topology object.
+        ifname : str
+            The containerlab interface name on this node.
+        other_node : Node
+            The peer node.
+
+        Returns
+        -------
+        str
+            The rendered Interface CR YAML.
+        """
         logger.info(f"Creating topolink interface for {self.name}")
         data = {
             "namespace": f"clab-{topology.name}",
@@ -143,12 +257,36 @@ class NokiaSRLinuxNode(Node):
         return helpers.render_template("interface.j2", data)
 
     def needs_artifact(self):
+        """
+        SR Linux nodes may require a YANG artifact.
+
+        Returns
+        -------
+        bool
+            True if an artifact is needed based on the version.
+        """
         return True
 
     def get_artifact_name(self):
+        """
+        Return a name for the SR Linux schema artifact.
+
+        Returns
+        -------
+        str
+            A string such as 'clab-srlinux-24.10.1'.
+        """
         return f"clab-srlinux-{self.version}"
 
     def get_artifact_info(self):
+        """
+        Return artifact metadata for the SR Linux YANG schema file.
+
+        Returns
+        -------
+        tuple
+            (artifact_name, filename, download_url)
+        """
         if self.version not in self.SUPPORTED_SCHEMA_PROFILES:
             logger.warning(f"No schema profile for version {self.version}")
             return (None, None, None)
@@ -158,6 +296,23 @@ class NokiaSRLinuxNode(Node):
         return (artifact_name, filename, download_url)
 
     def get_artifact_yaml(self, artifact_name, filename, download_url):
+        """
+        Render the Artifact CR YAML for the SR Linux YANG schema.
+
+        Parameters
+        ----------
+        artifact_name : str
+            The name of the artifact in EDA.
+        filename : str
+            The artifact file name.
+        download_url : str
+            The download URL of the artifact file.
+
+        Returns
+        -------
+        str
+            The rendered Artifact CR YAML.
+        """
         data = {
             "artifact_name": artifact_name,
             "namespace": "eda-system",

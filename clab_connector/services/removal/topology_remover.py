@@ -10,8 +10,12 @@ logger = logging.getLogger(__name__)
 
 class TopologyRemover:
     """
-    Formerly RemoveCommand
-    Demonstrates EDAClient injection for removal
+    Handles removal of EDA resources for a given containerlab topology.
+
+    Parameters
+    ----------
+    eda_client : EDAClient
+        A connected EDAClient used to remove resources from the EDA cluster.
     """
 
     def __init__(self, eda_client: EDAClient):
@@ -19,6 +23,18 @@ class TopologyRemover:
         self.topology = None
 
     def run(self, topology_file):
+        """
+        Parse the topology file and remove its associated namespace.
+
+        Parameters
+        ----------
+        topology_file : str or Path
+            The containerlab topology JSON file.
+
+        Returns
+        -------
+        None
+        """
         self.topology = parse_topology_file(str(topology_file))
 
         print("== Removing namespace ==")
@@ -28,6 +44,9 @@ class TopologyRemover:
         print("Done!")
 
     def remove_namespace(self):
+        """
+        Delete the EDA namespace corresponding to this topology.
+        """
         ns = f"clab-{self.topology.name}"
         logger.info(f"Removing namespace {ns}")
         self.eda_client.add_delete_to_transaction(

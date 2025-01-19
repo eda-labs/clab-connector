@@ -2,7 +2,6 @@
 
 import os
 import logging
-import sys
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
@@ -16,11 +15,39 @@ template_environment = Environment(
 
 
 def render_template(template_name: str, data: dict) -> str:
+    """
+    Render a Jinja2 template by name, using a data dictionary.
+
+    Parameters
+    ----------
+    template_name : str
+        The name of the template file (e.g., "node-profile.j2").
+    data : dict
+        A dictionary of values to substitute into the template.
+
+    Returns
+    -------
+    str
+        The rendered template as a string.
+    """
     template = template_environment.get_template(template_name)
     return template.render(data)
 
 
 def normalize_name(name: str) -> str:
+    """
+    Convert a name to a normalized, EDA-safe format.
+
+    Parameters
+    ----------
+    name : str
+        The original name.
+
+    Returns
+    -------
+    str
+        The normalized name.
+    """
     safe_name = name.lower().replace("_", "-").replace(" ", "-")
     safe_name = "".join(c for c in safe_name if c.isalnum() or c in ".-").strip(".-")
     if not safe_name or not safe_name[0].isalnum():
