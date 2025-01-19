@@ -1,6 +1,9 @@
+# clab_connector/cli/main.py
+
 import logging
 import os
 from enum import Enum
+from typing import Optional
 from pathlib import Path
 from typing import List
 
@@ -10,8 +13,10 @@ from rich.logging import RichHandler
 from rich import print as rprint
 from typing_extensions import Annotated
 
-from clab_connector.core.integrate import IntegrateCommand
-from clab_connector.core.remove import RemoveCommand
+from clab_connector.services.integration.topology_integrator import TopologyIntegrator
+from clab_connector.services.removal.topology_remover import TopologyRemover
+from clab_connector.utils.logging_config import setup_logging
+from clab_connector.clients.eda.client import EDAClient
 
 # Disable urllib3 warnings
 urllib3.disable_warnings()
@@ -27,22 +32,31 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
+app = typer.Typer(
+    name="clab-connector",
+    help="Integrate or remove an existing containerlab topology with EDA (Event-Driven Automation)",
+    add_completion=True,
+)
+
+
 def complete_json_files(
     ctx: typer.Context, param: typer.Option, incomplete: str
 ) -> List[str]:
-    """Provide completion for JSON files"""
+    """
+    Complete JSON file paths for CLI autocomplete.
+    """
     current = Path(incomplete) if incomplete else Path.cwd()
-
     if not current.is_dir():
         current = current.parent
-
     return [str(path) for path in current.glob("*.json") if incomplete in str(path)]
 
 
 def complete_eda_url(
     ctx: typer.Context, param: typer.Option, incomplete: str
 ) -> List[str]:
-    """Provide completion for EDA URL"""
+    """
+    Complete EDA URL for CLI autocomplete.
+    """
     if not incomplete:
         return ["https://"]
     if not incomplete.startswith("https://"):
@@ -50,34 +64,40 @@ def complete_eda_url(
     return []
 
 
-app = typer.Typer(
-    name="clab-connector",
-    help="Integrate an existing containerlab topology with EDA (Event-Driven Automation)",
-    add_completion=True,
-)
-
-
-def setup_logging(log_level: str):
-    """Configure logging with colored output"""
-    logging.basicConfig(
-        level=log_level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True)],
+def execute_integration(args):
+    """
+    Execute integration logic by creating the EDAClient and calling the TopologyIntegrator.
+    """
+    eda_client = EDAClient(
+        hostname=args.eda_url,
+        username=args.eda_user,
+        password=args.eda_password,
+        verify=args.verify,
+        client_secret=args.client_secret,
+    )
+    integrator = TopologyIntegrator(eda_client)
+    integrator.run(
+        topology_file=args.topology_data,
+        eda_url=args.eda_url,
+        eda_user=args.eda_user,
+        eda_password=args.eda_password,
+        verify=args.verify,
     )
 
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Supported containerlab kinds are: {SUPPORTED_KINDS}")
 
-
-def execute_command(command_class, args):
-    """Execute a command with common error handling"""
-    try:
-        cmd = command_class()
-        cmd.run(args)
-    except Exception as e:
-        rprint(f"[red]Error: {str(e)}[/red]")
-        raise typer.Exit(code=1)
+def execute_removal(args):
+    """
+    Execute removal logic by creating the EDAClient and calling the TopologyRemover.
+    """
+    eda_client = EDAClient(
+        hostname=args.eda_url,
+        username=args.eda_user,
+        password=args.eda_password,
+        verify=args.verify,
+        client_secret=args.client_secret,
+    )
+    remover = TopologyRemover(eda_client)
+    remover.run(topology_file=args.topology_data)
 
 
 @app.command(name="integrate", help="Integrate containerlab with EDA")
@@ -105,34 +125,47 @@ def integrate_cmd(
         ),
     ],
     eda_user: str = typer.Option(
-        "admin", "--eda-user", help="The username of the EDA user"
+        "admin", "--eda-user", help="User to log in (realm='eda' and admin realm)"
     ),
     eda_password: str = typer.Option(
-        "admin", "--eda-password", help="The password of the EDA user"
+        "admin", "--eda-password", help="Password for EDA user"
+    ),
+    client_secret: Optional[str] = typer.Option(
+        None,
+        "--client-secret",
+        help="Keycloak client secret for the 'eda' client (if already known). If not specified, the secret is fetched from Keycloak using the same eda-user/eda-password in the 'master' realm.",
     ),
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
+    ),
+    log_file: Optional[str] = typer.Option(
+        None, "--log-file", "-f", help="Optional log file path"
     ),
     verify: bool = typer.Option(
         False, "--verify", help="Enables certificate verification for EDA"
     ),
 ):
-    setup_logging(log_level.value)
-    os.environ["no_proxy"] = eda_url
+    """
+    CLI command to integrate a containerlab topology with EDA.
+    """
+    setup_logging(log_level.value, log_file)
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Supported containerlab kinds are: {SUPPORTED_KINDS}")
 
-    args = type(
-        "Args",
-        (),
-        {
-            "topology_data": topology_data,
-            "eda_url": eda_url,
-            "eda_user": eda_user,
-            "eda_password": eda_password,
-            "verify": verify,
-        },
-    )()
+    Args = type("Args", (), {})
+    args = Args()
+    args.topology_data = topology_data
+    args.eda_url = eda_url
+    args.eda_user = eda_user
+    args.eda_password = eda_password
+    args.client_secret = client_secret
+    args.verify = verify
 
-    execute_command(IntegrateCommand, args)
+    try:
+        execute_integration(args)
+    except Exception as e:
+        rprint(f"[red]Error: {str(e)}[/red]")
+        raise typer.Exit(code=1)
 
 
 @app.command(name="remove", help="Remove containerlab integration from EDA")
@@ -150,37 +183,49 @@ def remove_cmd(
             shell_complete=complete_json_files,
         ),
     ],
-    eda_url: str = typer.Option(
-        ..., "--eda-url", "-e", help="The hostname or IP of your EDA deployment"
-    ),
+    eda_url: str = typer.Option(..., "--eda-url", "-e", help="EDA deployment hostname"),
     eda_user: str = typer.Option(
-        "admin", "--eda-user", help="The username of the EDA user"
+        "admin", "--eda-user", help="User to log in (realm='eda' and admin realm)"
     ),
     eda_password: str = typer.Option(
-        "admin", "--eda-password", help="The password of the EDA user"
+        "admin", "--eda-password", help="Password for EDA user"
+    ),
+    client_secret: Optional[str] = typer.Option(
+        None,
+        "--client-secret",
+        help="Keycloak client secret for 'eda' client (if already known). If not specified, the secret is fetched from Keycloak using the same eda-user/eda-password in the 'master' realm.",
     ),
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
     ),
-    verify: bool = typer.Option(
-        False, "--verify", help="Enables certificate verification for EDA"
+    log_file: Optional[str] = typer.Option(
+        None,
+        "--log-file",
+        "-f",
+        help="Optional log file path",
     ),
+    verify: bool = typer.Option(False, "--verify", help="Verify EDA certs"),
 ):
-    setup_logging(log_level.value)
+    """
+    CLI command to remove an existing containerlab-EDA integration (delete the namespace).
+    """
+    setup_logging(log_level.value, log_file)
+    logger = logging.getLogger(__name__)
 
-    args = type(
-        "Args",
-        (),
-        {
-            "topology_data": topology_data,
-            "eda_url": eda_url,
-            "eda_user": eda_user,
-            "eda_password": eda_password,
-            "verify": verify,
-        },
-    )()
+    Args = type("Args", (), {})
+    args = Args()
+    args.topology_data = topology_data
+    args.eda_url = eda_url
+    args.eda_user = eda_user
+    args.eda_password = eda_password
+    args.client_secret = client_secret
+    args.verify = verify
 
-    execute_command(RemoveCommand, args)
+    try:
+        execute_removal(args)
+    except Exception as e:
+        rprint(f"[red]Error: {str(e)}[/red]")
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
