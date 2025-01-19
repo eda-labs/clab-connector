@@ -1,6 +1,7 @@
 # clab_connector/cli/main.py
 
 import logging
+import os
 from enum import Enum
 from typing import Optional
 from pathlib import Path
@@ -8,6 +9,7 @@ from typing import List
 
 import typer
 import urllib3
+from rich.logging import RichHandler
 from rich import print as rprint
 from typing_extensions import Annotated
 
@@ -32,7 +34,7 @@ class LogLevel(str, Enum):
 
 app = typer.Typer(
     name="clab-connector",
-    help="Integrate an existing containerlab topology with EDA (Event-Driven Automation)",
+    help="Integrate or remove an existing containerlab topology with EDA (Event-Driven Automation)",
     add_completion=True,
 )
 
@@ -42,20 +44,6 @@ def complete_json_files(
 ) -> List[str]:
     """
     Complete JSON file paths for CLI autocomplete.
-
-    Parameters
-    ----------
-    ctx : typer.Context
-        The Typer context object.
-    param : typer.Option
-        The option that is being completed.
-    incomplete : str
-        The partial input from the user.
-
-    Returns
-    -------
-    List[str]
-        A list of matching .json file paths.
     """
     current = Path(incomplete) if incomplete else Path.cwd()
     if not current.is_dir():
@@ -68,20 +56,6 @@ def complete_eda_url(
 ) -> List[str]:
     """
     Complete EDA URL for CLI autocomplete.
-
-    Parameters
-    ----------
-    ctx : typer.Context
-        The Typer context object.
-    param : typer.Option
-        The option that is being completed.
-    incomplete : str
-        The partial input from the user.
-
-    Returns
-    -------
-    List[str]
-        A list containing suggestions such as 'https://'.
     """
     if not incomplete:
         return ["https://"]
@@ -93,21 +67,13 @@ def complete_eda_url(
 def execute_integration(args):
     """
     Execute integration logic by creating the EDAClient and calling the TopologyIntegrator.
-
-    Parameters
-    ----------
-    args : object
-        A generic object with integration arguments (topology_data, eda_url, etc.).
-
-    Returns
-    -------
-    None
     """
     eda_client = EDAClient(
         hostname=args.eda_url,
         username=args.eda_user,
         password=args.eda_password,
         verify=args.verify,
+        client_secret=args.client_secret,
     )
     integrator = TopologyIntegrator(eda_client)
     integrator.run(
@@ -122,21 +88,13 @@ def execute_integration(args):
 def execute_removal(args):
     """
     Execute removal logic by creating the EDAClient and calling the TopologyRemover.
-
-    Parameters
-    ----------
-    args : object
-        A generic object with removal arguments (topology_data, eda_url, etc.).
-
-    Returns
-    -------
-    None
     """
     eda_client = EDAClient(
         hostname=args.eda_url,
         username=args.eda_user,
         password=args.eda_password,
         verify=args.verify,
+        client_secret=args.client_secret,
     )
     remover = TopologyRemover(eda_client)
     remover.run(topology_file=args.topology_data)
@@ -166,16 +124,22 @@ def integrate_cmd(
             shell_complete=complete_eda_url,
         ),
     ],
-    eda_user: str = typer.Option("admin", "--eda-user", help="EDA username"),
-    eda_password: str = typer.Option("admin", "--eda-password", help="EDA password"),
+    eda_user: str = typer.Option(
+        "admin", "--eda-user", help="User to log in (realm='eda' and admin realm)"
+    ),
+    eda_password: str = typer.Option(
+        "admin", "--eda-password", help="Password for EDA user"
+    ),
+    client_secret: Optional[str] = typer.Option(
+        None,
+        "--client-secret",
+        help="Keycloak client secret for the 'eda' client (if already known). If not specified, the secret is fetched from Keycloak using the same eda-user/eda-password in the 'master' realm.",
+    ),
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
     ),
     log_file: Optional[str] = typer.Option(
-        None,
-        "--log-file",
-        "-f",
-        help="Optional log file path",
+        None, "--log-file", "-f", help="Optional log file path"
     ),
     verify: bool = typer.Option(
         False, "--verify", help="Enables certificate verification for EDA"
@@ -183,27 +147,6 @@ def integrate_cmd(
 ):
     """
     CLI command to integrate a containerlab topology with EDA.
-
-    Parameters
-    ----------
-    topology_data : Path
-        Path to the containerlab topology JSON file.
-    eda_url : str
-        The hostname or IP of the EDA deployment.
-    eda_user : str
-        The EDA username.
-    eda_password : str
-        The EDA password.
-    log_level : LogLevel
-        Logging level to use.
-    log_file : Optional[str]
-        Path to an optional log file.
-    verify : bool
-        Whether to enable certificate verification.
-
-    Returns
-    -------
-    None
     """
     setup_logging(log_level.value, log_file)
     logger = logging.getLogger(__name__)
@@ -215,6 +158,7 @@ def integrate_cmd(
     args.eda_url = eda_url
     args.eda_user = eda_user
     args.eda_password = eda_password
+    args.client_secret = client_secret
     args.verify = verify
 
     try:
@@ -240,8 +184,17 @@ def remove_cmd(
         ),
     ],
     eda_url: str = typer.Option(..., "--eda-url", "-e", help="EDA deployment hostname"),
-    eda_user: str = typer.Option("admin", "--eda-user", help="EDA username"),
-    eda_password: str = typer.Option("admin", "--eda-password", help="EDA password"),
+    eda_user: str = typer.Option(
+        "admin", "--eda-user", help="User to log in (realm='eda' and admin realm)"
+    ),
+    eda_password: str = typer.Option(
+        "admin", "--eda-password", help="Password for EDA user"
+    ),
+    client_secret: Optional[str] = typer.Option(
+        None,
+        "--client-secret",
+        help="Keycloak client secret for 'eda' client (if already known). If not specified, the secret is fetched from Keycloak using the same eda-user/eda-password in the 'master' realm.",
+    ),
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
     ),
@@ -254,28 +207,7 @@ def remove_cmd(
     verify: bool = typer.Option(False, "--verify", help="Verify EDA certs"),
 ):
     """
-    CLI command to remove an existing containerlab-EDA integration.
-
-    Parameters
-    ----------
-    topology_data : Path
-        Path to the containerlab topology JSON file.
-    eda_url : str
-        The EDA hostname/IP address.
-    eda_user : str
-        The EDA username.
-    eda_password : str
-        The EDA password.
-    log_level : LogLevel
-        Logging level to use.
-    log_file : Optional[str]
-        Path to an optional log file.
-    verify : bool
-        Whether to enable certificate verification.
-
-    Returns
-    -------
-    None
+    CLI command to remove an existing containerlab-EDA integration (delete the namespace).
     """
     setup_logging(log_level.value, log_file)
     logger = logging.getLogger(__name__)
@@ -286,6 +218,7 @@ def remove_cmd(
     args.eda_url = eda_url
     args.eda_user = eda_user
     args.eda_password = eda_password
+    args.client_secret = client_secret
     args.verify = verify
 
     try:
