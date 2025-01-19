@@ -16,7 +16,7 @@ There are two primary methods to create and experiment with network functions pr
 > [!IMPORTANT]
 > **EDA Installation Mode:** This tool **requires EDA to be installed with `Simulate=False`**. Ensure that your EDA deployment is configured accordingly.
 >
-> **Hardware License:** A valid **`hardware license` for EDA version 24.12.0** is mandatory for using this connector tool.
+> **Hardware License:** A valid **`hardware license` for EDA version 24.12.1** is mandatory for using this connector tool.
 
 ## Prerequisites
 
@@ -24,24 +24,14 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 
 - **EDA Setup:**
   - Installed without simulation (`Simulate=False`).
-  - Contains a valid `hardware license` for version 24.12.0.
+  - Contains a valid `hardware license` for version 24.12.1.
 - **Network Connectivity:**
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab:**
-  - Minimum required version - `v0.61.0`
+  - Minimum required version - `v0.62.2`
 - **kubectl:**
   - You must have `kubectl` installed and configured to connect to the same Kubernetes cluster that is running EDA. The connector will use `kubectl apply` in the background to create the necessary `Artifact` resources.
 
-> [!TIP]
-> **Network Connectivity between Kind and Containerlab:**
->
-> If you're running EDA in KinD (Kubernetes in Docker) and Containerlab on the same host, you need to allow communication between containerlab and kind docker networks:
->
-> ```bash
-> sudo iptables -I DOCKER-USER 2 \
-> -o $(sudo docker network inspect kind -f '{{.Id}}' | cut -c 1-12 | awk '{print "br-"$1}') \
-> -m comment --comment "allow communications to kind bridge" -j ACCEPT
-> ```
 
 > [!NOTE]
 > **Proxy Settings:** This tool does utilize the system's proxy (`$HTTP_PROXY` and `$HTTPS_PROXY` ) variables.
@@ -54,24 +44,32 @@ Follow these steps to set up the Containerlab EDA Connector tool:
 > **Why uv?**
 > [uv](https://docs.astral.sh/uv) is a single, ultra-fast tool that can replace `pip`, `pipx`, `virtualenv`, `pip-tools`, `poetry`, and more. It automatically manages Python versions, handles ephemeral or persistent virtual environments (`uv venv`), lockfiles, and often runs **10–100× faster** than pip installs.
 
-1. **Install uv** (no Python or Rust needed):
+1. **Install uv** (no Python needed):
 
     ```
-    # On macOS and Linux
+    # On Linux and macOS
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-2. **Run the Connector** (uv automatically installs dependencies in a venv from `pyproject.toml`):
+2. **Install clab-connector**
+    ```
+    uv tool install git+https://github.com/eda-labs/clab-connector.git
+    ```
+
+3. **Run the Connector**
 
     ```
-    uv run python eda_containerlab_connector.py --help
+    clab-connector --help
     ```
 
-## Alternative: Using pip
+> [!TIP]
+> Upgrade clab-connector to the latest version using `uv tool upgrade clab-connector`.
+
+### Alternative: Using pip
 
 If you’d rather use pip or can’t install uv:
 
-1. **(Optional) Create & Activate a Virtual Environment**:
+1. **Create & Activate a Virtual Environment after cloning**:
 
     ```
     python -m venv venv
@@ -87,28 +85,16 @@ If you’d rather use pip or can’t install uv:
 3. **Run the Connector**:
 
     ```
-    python eda_containerlab_connector.py --help
+    clab-connector --help
     ```
 
-### Quick try
 
-With either uv or pip, you can now run:
-
-```
-uv run python eda_containerlab_connector.py <subcommand> [options]
-```
-
-Or, using non uv:
-
-```
-python eda_containerlab_connector.py <subcommand> [options]
-```
 
 ## Usage
 
 The tool offers two primary subcommands: `integrate` and `remove`.
 
-### Integrate Containerlab with EDA
+#### Integrate Containerlab with EDA
 
 To integrate your Containerlab topology with EDA you need to get a path to the `topology-data.json` file created by Containerlab when it deploys the lab. This file is located in the Containerlab's Lab Directory as described in the [documentation](https://containerlab.dev/manual/conf-artifacts/). With the path to the topology data file is known, you can use the following command to integrate the Containerlab topology with EDA:
 
@@ -116,14 +102,11 @@ To integrate your Containerlab topology with EDA you need to get a path to the `
 python eda_containerlab_connector.py integrate \
 --topology-data path/to/topology-data.json \
 --eda-url https://eda.example.com \
---eda-user admin \
+--eda-user youruser \
 --eda-password yourpassword \
 ```
 
-> [!NOTE]
-> In the coming Containerlab 0.62.0 version, the Lab Directory will be created always in the directory where the topology clab file is located.
-
-### Remove Containerlab Integration from EDA
+#### Remove Containerlab Integration from EDA
 
 Remove the previously integrated Containerlab topology from EDA:
 
@@ -131,12 +114,19 @@ Remove the previously integrated Containerlab topology from EDA:
 python eda_containerlab_connector.py remove \
     --topology-data path/to/topology-data.json \
     --eda-url https://eda.example.com \
-    --eda-user admin \
+    --eda-user youruser \
     --eda-password yourpassword
 ```
 
-> [!NOTE]
-> **Logging Levels:** Use the `--log-level` flag to set the desired logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). For example, `--log-level DEBUG` provides detailed logs for troubleshooting.
+| Option              | Required | Default   | Description                                                            |
+|---------------------|----------|-----------|------------------------------------------------------------------------|
+| `--topology-data`, `-t` | Yes      | None      | Path to the Containerlab topology data JSON file                        |
+| `--eda-url`, `-e`   | Yes      | None      | EDA deployment hostname or IP address                                   |
+| `--eda-user`        | No       | admin     | EDA username                                                            |
+| `--eda-password`    | No       | admin     | EDA password                                                            |
+| `--log-level`, `-l` | No       | WARNING   | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                       |
+| `--verify`          | No       | False     | Enable certificate verification for EDA                                 |
+
 
 ### Example Command
 

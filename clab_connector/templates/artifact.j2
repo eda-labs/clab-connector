@@ -1,0 +1,10 @@
+apiVersion: artifacts.eda.nokia.com/v1
+kind: Artifact
+metadata:
+  name: {{ artifact_name }}
+  namespace: {{ namespace }}
+spec:
+  filePath: {{ artifact_filename }}
+  remoteFileUrl:
+    fileUrl: "{{ artifact_url }}"
+  repo: clab-schemaprofiles

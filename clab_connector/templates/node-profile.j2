@@ -1,0 +1,20 @@
+---
+apiVersion: core.eda.nokia.com/v1
+kind: NodeProfile
+metadata:
+  name: {{ profile_name }}
+  namespace: {{ namespace }}
+spec:
+  port: {{ gnmi_port }}
+  annotate: true
+  operatingSystem: {{ operating_system }}
+  version: {{ sw_version }}
+  versionPath: {{ version_path }}
+  versionMatch: {{ version_match }}
+  yang: {{ yang_path }}
+  nodeUser: {{ node_user }}
+  onboardingPassword: {{ onboarding_password }}
+  onboardingUsername: {{ onboarding_username }}
+  images:
+  - image: fake.bin
+    imageMd5: fake.bin.md5

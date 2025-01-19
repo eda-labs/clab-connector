@@ -1,0 +1,18 @@
+apiVersion: core.eda.nokia.com/v1
+kind: NodeSecurityProfile
+metadata:
+  name: managed-tls
+  namespace: {{ namespace }}
+spec:
+  nodeSelector:
+    - eda.nokia.com/security-profile=managed
+  tls:
+    csrParams:
+      certificateValidity: 2160h
+      city: Sunnyvale
+      country: US
+      csrSuite: CSRSUITE_X509_KEY_TYPE_RSA_2048_SIGNATURE_ALGORITHM_SHA_2_256
+      org: NI
+      orgUnit: EDA
+      state: California
+    issuerRef: eda-node-issuer
