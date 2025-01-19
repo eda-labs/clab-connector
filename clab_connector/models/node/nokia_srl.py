@@ -2,7 +2,15 @@
 
 import logging
 import re
+import socket
 
+from paramiko import (
+    SSHClient,
+    AutoAddPolicy,
+    AuthenticationException,
+    BadHostKeyException,
+    SSHException,
+)
 
 from .base import Node
 from clab_connector.utils import helpers
@@ -27,11 +35,32 @@ class NokiaSRLinuxNode(Node):
         )
     }
 
+    def test_ssh(self):
+        logger.debug(f"Testing SSH for node '{self.name}' IP {self.mgmt_ipv4}")
+        ssh = SSHClient()
+        ssh.set_missing_host_key_policy(AutoAddPolicy())
+        try:
+            ssh.connect(
+                hostname=self.mgmt_ipv4,
+                username=self.SRL_USERNAME,
+                password=self.SRL_PASSWORD,
+                allow_agent=False,
+            )
+            logger.info(f"SSH to {self.name} succeeded")
+            return True
+        except (
+            BadHostKeyException,
+            AuthenticationException,
+            SSHException,
+            socket.error,
+        ) as exc:
+            logger.error(f"SSH to node {self.name} failed: {exc}")
+            raise
+
     def get_default_node_type(self):
         return "ixrd3l"
 
     def get_platform(self):
-        # example: node_type 'ixrd2' => platform '7220 IXR-D2'
         t = self.node_type.replace("ixr", "")
         return f"7220 IXR-{t.upper()}"
 
@@ -53,7 +82,6 @@ class NokiaSRLinuxNode(Node):
             "gnmi_port": self.GNMI_PORT,
             "operating_system": self.kind,
             "version_path": self.VERSION_PATH,
-            # e.g. 24.10.1 => v24\.10\.1.*
             "version_match": "v{}.*".format(self.version.replace(".", "\.")),
             "yang_path": self.YANG_PATH.format(
                 artifact_name=artifact_name, filename=filename
@@ -64,20 +92,17 @@ class NokiaSRLinuxNode(Node):
             "sw_image": self.SRL_IMAGE.format(version=self.version),
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),
         }
-
         return helpers.render_template("node-profile.j2", data)
 
     def get_toponode(self, topology):
         logger.info(f"Creating toponode for {self.name}")
         role_value = "leaf"
-        name_lower = self.name.lower()
-        if "leaf" in name_lower:
-            role_value = "leaf"
-        elif "spine" in name_lower:
+        nl = self.name.lower()
+        if "spine" in nl:
             role_value = "spine"
-        elif "borderleaf" in name_lower or "bl" in name_lower:
+        elif "borderleaf" in nl or "bl" in nl:
             role_value = "borderleaf"
-        elif "dcgw" in name_lower:
+        elif "dcgw" in nl:
             role_value = "dcgw"
 
         data = {
@@ -94,10 +119,7 @@ class NokiaSRLinuxNode(Node):
         return helpers.render_template("toponode.j2", data)
 
     def get_interface_name_for_kind(self, ifname):
-        """
-        containerlab says 'e1-1', we must convert to 'ethernet-1-1'
-        """
-        pattern = re.compile(r"^e([0-9])-([0-9]+)$")
+        pattern = re.compile(r"^e(\d+)-(\d+)$")
         match = pattern.match(ifname)
         if match:
             return f"ethernet-{match.group(1)}-{match.group(2)}"

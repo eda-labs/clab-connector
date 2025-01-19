@@ -22,12 +22,11 @@ class Topology:
 
     def __repr__(self):
         return (
-            f"Topology(name={self.name}, mgmt_ipv4_subnet={self.mgmt_ipv4_subnet}, "
+            f"Topology(name={self.name}, mgmt_subnet={self.mgmt_ipv4_subnet}, "
             f"nodes={len(self.nodes)}, links={len(self.links)})"
         )
 
     def get_eda_safe_name(self):
-        # Just an example
         safe = self.name.lower().replace("_", "-").replace(" ", "-")
         safe = "".join(c for c in safe if c.isalnum() or c in ".-").strip(".-")
         if not safe or not safe[0].isalnum():
@@ -41,9 +40,6 @@ class Topology:
             node.ping()
 
     def get_node_profiles(self):
-        """
-        Return unique node profiles from each node if supported
-        """
         profiles = {}
         for n in self.nodes:
             prof = n.get_node_profile(self)
@@ -53,21 +49,21 @@ class Topology:
         return profiles.values()
 
     def get_toponodes(self):
-        toponodes = []
+        tnodes = []
         for n in self.nodes:
             tn = n.get_toponode(self)
             if tn:
-                toponodes.append(tn)
-        return toponodes
+                tnodes.append(tn)
+        return tnodes
 
     def get_topolinks(self):
-        topolinks = []
+        links = []
         for ln in self.links:
             if ln.is_topolink():
                 link_yaml = ln.get_topolink_yaml(self)
                 if link_yaml:
-                    topolinks.append(link_yaml)
-        return topolinks
+                    links.append(link_yaml)
+        return links
 
     def get_topolink_interfaces(self):
         interfaces = []
@@ -83,9 +79,6 @@ class Topology:
 
 
 def parse_topology_file(path: str) -> Topology:
-    """
-    Equivalent to old parse_topology function
-    """
     logger.info(f"Parsing topology file '{path}'")
     if not os.path.isfile(path):
         logger.critical(f"Topology file '{path}' does not exist!")
@@ -106,12 +99,11 @@ def parse_topology_file(path: str) -> Topology:
     ssh_keys = data.get("ssh-pub-keys", [])
     file_path = ""
 
-    # discover the file path from first node's label if present
     if data["nodes"]:
         first_key = next(iter(data["nodes"]))
         file_path = data["nodes"][first_key]["labels"].get("clab-topo-file", "")
 
-    # build node objects
+    # create node objects
     node_objects = []
     for node_name, node_data in data["nodes"].items():
         image = node_data.get("image")
@@ -128,12 +120,11 @@ def parse_topology_file(path: str) -> Topology:
         if node_obj:
             node_objects.append(node_obj)
 
-    # build link objects
+    # create link objects
     link_objects = []
     for link_info in data["links"]:
         a_node = link_info["a"]["node"]
         z_node = link_info["z"]["node"]
-        # only build link if a_node & z_node exist among node_objects
         if any(n.name == a_node for n in node_objects) and any(
             n.name == z_node for n in node_objects
         ):
@@ -152,7 +143,7 @@ def parse_topology_file(path: str) -> Topology:
         links=link_objects,
         clab_file_path=file_path,
     )
-    # sanitize the name
+
     original = topo.name
     topo.name = topo.get_eda_safe_name()
     if topo.name != original:

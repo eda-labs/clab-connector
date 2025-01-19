@@ -42,17 +42,13 @@ class Link:
 
 
 def create_link(endpoints: list, nodes: list) -> Link:
-    """
-    endpoints = ["dut1:e1-1", "dut2:e1-1"]
-    nodes = list of Node
-    """
     if len(endpoints) != 2:
         raise ValueError("Link endpoints must be a list of length 2")
 
     def parse_endpoint(ep):
         parts = ep.split(":")
         if len(parts) != 2:
-            raise ValueError(f"Invalid endpoint {ep}, must be 'node:iface'")
+            raise ValueError(f"Invalid endpoint '{ep}', must be 'node:iface'")
         return parts[0], parts[1]
 
     nodeA, ifA = parse_endpoint(endpoints[0])

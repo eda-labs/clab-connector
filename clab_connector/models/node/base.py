@@ -43,9 +43,6 @@ class Node:
         logger.info(f"SSH test not supported for {self}")
 
     def get_node_name(self, topology):
-        """
-        Return a name that is safe in EDA or K8s contexts
-        """
         return helpers.normalize_name(self.name)
 
     def get_default_node_type(self):
@@ -54,7 +51,6 @@ class Node:
     def get_platform(self):
         return "UNKNOWN"
 
-    # By default, do not support EDA
     def is_eda_supported(self):
         return False
 
@@ -62,15 +58,9 @@ class Node:
         raise NotImplementedError("Must be implemented by subclass")
 
     def get_node_profile(self, topology):
-        """
-        Subclass: Return the rendered NodeProfile YAML or None if not supported
-        """
         return None
 
     def get_toponode(self, topology):
-        """
-        Subclass: Return a toponode YAML or None if not supported
-        """
         return None
 
     def get_interface_name_for_kind(self, ifname):
@@ -82,9 +72,6 @@ class Node:
         )
 
     def get_topolink_interface(self, topology, ifname, other_node):
-        """
-        Subclass: Return the interface YAML if relevant
-        """
         return None
 
     def needs_artifact(self):
