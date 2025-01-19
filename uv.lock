@@ -165,9 +165,6 @@ requires-dist = [
     { name = "urllib3", specifier = "==2.2.3" },
 ]
 
-[package.metadata.requires-dev]
-dev = []
-
 [[package]]
 name = "click"
 version = "8.1.8"

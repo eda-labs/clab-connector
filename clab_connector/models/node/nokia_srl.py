@@ -28,6 +28,9 @@ class NokiaSRLinuxNode(Node):
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
+    # Add mapping for EDA operating system
+    EDA_OPERATING_SYSTEM = "srl"  # Map nokia_srlinux to srl
+
     SUPPORTED_SCHEMA_PROFILES = {
         "24.10.1": (
             "https://github.com/nokia/srlinux-yang-models/"
@@ -80,7 +83,7 @@ class NokiaSRLinuxNode(Node):
             "profile_name": self.get_profile_name(topology),
             "sw_version": self.version,
             "gnmi_port": self.GNMI_PORT,
-            "operating_system": self.kind,
+            "operating_system": self.EDA_OPERATING_SYSTEM,
             "version_path": self.VERSION_PATH,
             "version_match": "v{}.*".format(self.version.replace(".", "\.")),
             "yang_path": self.YANG_PATH.format(
@@ -111,7 +114,7 @@ class NokiaSRLinuxNode(Node):
             "topology_name": topology.get_eda_safe_name(),
             "role_value": role_value,
             "node_profile": self.get_profile_name(topology),
-            "kind": self.kind,
+            "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
             "sw_version": self.version,
             "mgmt_ip": self.mgmt_ipv4,
