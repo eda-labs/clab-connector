@@ -14,7 +14,7 @@ class NokiaSRLinuxNode(Node):
     Nokia SR Linux Node representation.
 
     This subclass implements specific logic for SR Linux nodes, including
-    SSH tests, naming, interface mapping, and EDA resource generation.
+    naming, interface mapping, and EDA resource generation.
     """
 
     SRL_USERNAME = "admin"

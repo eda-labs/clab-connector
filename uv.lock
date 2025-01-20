@@ -147,7 +147,6 @@ dependencies = [
     { name = "jinja2" },
     { name = "kubernetes" },
     { name = "markupsafe" },
-    { name = "paramiko" },
     { name = "pycparser" },
     { name = "pynacl" },
     { name = "pyyaml" },
@@ -165,14 +164,13 @@ requires-dist = [
     { name = "cryptography", specifier = "==43.0.1" },
     { name = "idna", specifier = "==3.10" },
     { name = "jinja2", specifier = "==3.1.5" },
-    { name = "kubernetes", specifier = ">=31.0.0" },
+    { name = "kubernetes", specifier = "==31.0.0" },
     { name = "markupsafe", specifier = "==2.1.5" },
-    { name = "paramiko", specifier = "==3.5.0" },
     { name = "pycparser", specifier = "==2.22" },
     { name = "pynacl", specifier = "==1.5.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "requests", specifier = "==2.32.3" },
-    { name = "typer", specifier = ">=0.15.1" },
+    { name = "typer", specifier = "==0.15.1" },
     { name = "urllib3", specifier = "==2.2.3" },
 ]
 
@@ -348,20 +346,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6d/fa/fbf4001037904031639e6bfbfc02badfc7e12f137a8afa254df6c4c8a670/oauthlib-3.2.2.tar.gz", hash = "sha256:9859c40929662bec5d64f34d01c99e093149682a3f38915dc0655d5a633dd918", size = 177352 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/80/cab10959dc1faead58dc8384a781dfbf93cb4d33d50988f7a69f1b7c9bbe/oauthlib-3.2.2-py3-none-any.whl", hash = "sha256:8139f29aac13e25d502680e9e19963e83f16838d48a0d71c287fe40e7067fbca", size = 151688 },
-]
-
-[[package]]
-name = "paramiko"
-version = "3.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "bcrypt" },
-    { name = "cryptography" },
-    { name = "pynacl" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1b/0f/c00296e36ff7485935b83d466c4f2cf5934b84b0ad14e81796e1d9d3609b/paramiko-3.5.0.tar.gz", hash = "sha256:ad11e540da4f55cedda52931f1a3f812a8238a7af7f62a60de538cd80bb28124", size = 1704305 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1f/66/14b2c030fcce69cba482d205c2d1462ca5c77303a263260dcb1192801c85/paramiko-3.5.0-py3-none-any.whl", hash = "sha256:1fedf06b085359051cd7d0d270cebe19e755a8a921cc2ddbfa647fb0cd7d68f9", size = 227143 },
 ]
 
 [[package]]

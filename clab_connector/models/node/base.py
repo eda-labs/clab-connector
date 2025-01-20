@@ -65,15 +65,6 @@ class Node:
             logger.error(msg)
             raise RuntimeError(msg)
 
-    def test_ssh(self):
-        """
-        Test SSH connectivity to the node.
-
-        This default implementation logs that SSH is not supported.
-        Subclasses should override if SSH is supported.
-        """
-        logger.info(f"SSH test not supported for {self}")
-
     def get_node_name(self, topology):
         """
         Generate a name suitable for EDA resources, based on the node name.
