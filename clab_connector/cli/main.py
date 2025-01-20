@@ -1,24 +1,15 @@
 # clab_connector/cli/main.py
 
-import logging
-import os
 from enum import Enum
-from typing import Optional
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import typer
 import urllib3
-from rich.logging import RichHandler
 from rich import print as rprint
 from typing_extensions import Annotated
 
-from clab_connector.services.integration.topology_integrator import TopologyIntegrator
-from clab_connector.services.removal.topology_remover import TopologyRemover
-from clab_connector.utils.logging_config import setup_logging
-from clab_connector.clients.eda.client import EDAClient
-
-# Disable urllib3 warnings
+# Disable urllib3 warnings at the top (optional)
 urllib3.disable_warnings()
 
 SUPPORTED_KINDS = ["nokia_srlinux"]
@@ -64,42 +55,6 @@ def complete_eda_url(
     return []
 
 
-def execute_integration(args):
-    """
-    Execute integration logic by creating the EDAClient and calling the TopologyIntegrator.
-    """
-    eda_client = EDAClient(
-        hostname=args.eda_url,
-        username=args.eda_user,
-        password=args.eda_password,
-        verify=args.verify,
-        client_secret=args.client_secret,
-    )
-    integrator = TopologyIntegrator(eda_client)
-    integrator.run(
-        topology_file=args.topology_data,
-        eda_url=args.eda_url,
-        eda_user=args.eda_user,
-        eda_password=args.eda_password,
-        verify=args.verify,
-    )
-
-
-def execute_removal(args):
-    """
-    Execute removal logic by creating the EDAClient and calling the TopologyRemover.
-    """
-    eda_client = EDAClient(
-        hostname=args.eda_url,
-        username=args.eda_user,
-        password=args.eda_password,
-        verify=args.verify,
-        client_secret=args.client_secret,
-    )
-    remover = TopologyRemover(eda_client)
-    remover.run(topology_file=args.topology_data)
-
-
 @app.command(name="integrate", help="Integrate containerlab with EDA")
 def integrate_cmd(
     topology_data: Annotated[
@@ -107,7 +62,7 @@ def integrate_cmd(
         typer.Option(
             "--topology-data",
             "-t",
-            help="The containerlab topology data JSON file",
+            help="Path to containerlab topology JSON file",
             exists=True,
             file_okay=True,
             dir_okay=False,
@@ -120,20 +75,20 @@ def integrate_cmd(
         typer.Option(
             "--eda-url",
             "-e",
-            help="The hostname or IP of your EDA deployment",
+            help="EDA deployment URL (hostname or IP)",
             shell_complete=complete_eda_url,
         ),
     ],
     eda_user: str = typer.Option(
-        "admin", "--eda-user", help="User to log in (realm='eda' and admin realm)"
+        "admin", "--eda-user", help="EDA username (realm='eda')"
     ),
     eda_password: str = typer.Option(
-        "admin", "--eda-password", help="Password for EDA user"
+        "admin", "--eda-password", help="EDA user password"
     ),
     client_secret: Optional[str] = typer.Option(
         None,
         "--client-secret",
-        help="Keycloak client secret for the 'eda' client (if already known). If not specified, the secret is fetched from Keycloak using the same eda-user/eda-password in the 'master' realm.",
+        help="Keycloak client secret for 'eda' client (optional)",
     ),
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
@@ -141,18 +96,28 @@ def integrate_cmd(
     log_file: Optional[str] = typer.Option(
         None, "--log-file", "-f", help="Optional log file path"
     ),
-    verify: bool = typer.Option(
-        False, "--verify", help="Enables certificate verification for EDA"
-    ),
+    verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
 ):
     """
     CLI command to integrate a containerlab topology with EDA.
     """
+    # --- MOVE heavy imports here ---
+    import logging
+    from clab_connector.utils.logging_config import setup_logging
+    from clab_connector.clients.eda.client import EDAClient
+    from clab_connector.services.integration.topology_integrator import (
+        TopologyIntegrator,
+    )
+
+    # Set up logging now
     setup_logging(log_level.value, log_file)
     logger = logging.getLogger(__name__)
     logger.warning(f"Supported containerlab kinds are: {SUPPORTED_KINDS}")
 
-    Args = type("Args", (), {})
+    # Construct a small Args-like object to pass around (optional)
+    class Args:
+        pass
+
     args = Args()
     args.topology_data = topology_data
     args.eda_url = eda_url
@@ -160,6 +125,24 @@ def integrate_cmd(
     args.eda_password = eda_password
     args.client_secret = client_secret
     args.verify = verify
+
+    # Define the logic inline or in a small helper function
+    def execute_integration(a):
+        eda_client = EDAClient(
+            hostname=a.eda_url,
+            username=a.eda_user,
+            password=a.eda_password,
+            verify=a.verify,
+            client_secret=a.client_secret,
+        )
+        integrator = TopologyIntegrator(eda_client)
+        integrator.run(
+            topology_file=a.topology_data,
+            eda_url=a.eda_url,
+            eda_user=a.eda_user,
+            eda_password=a.eda_password,
+            verify=a.verify,
+        )
 
     try:
         execute_integration(args)
@@ -175,7 +158,7 @@ def remove_cmd(
         typer.Option(
             "--topology-data",
             "-t",
-            help="The containerlab topology data JSON file",
+            help="Path to containerlab topology JSON file",
             exists=True,
             file_okay=True,
             dir_okay=False,
@@ -185,34 +168,39 @@ def remove_cmd(
     ],
     eda_url: str = typer.Option(..., "--eda-url", "-e", help="EDA deployment hostname"),
     eda_user: str = typer.Option(
-        "admin", "--eda-user", help="User to log in (realm='eda' and admin realm)"
+        "admin", "--eda-user", help="EDA username (realm='eda')"
     ),
     eda_password: str = typer.Option(
-        "admin", "--eda-password", help="Password for EDA user"
+        "admin", "--eda-password", help="EDA user password"
     ),
     client_secret: Optional[str] = typer.Option(
         None,
         "--client-secret",
-        help="Keycloak client secret for 'eda' client (if already known). If not specified, the secret is fetched from Keycloak using the same eda-user/eda-password in the 'master' realm.",
+        help="Keycloak client secret for 'eda' client (optional)",
     ),
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
     ),
     log_file: Optional[str] = typer.Option(
-        None,
-        "--log-file",
-        "-f",
-        help="Optional log file path",
+        None, "--log-file", "-f", help="Optional log file path"
     ),
-    verify: bool = typer.Option(False, "--verify", help="Verify EDA certs"),
+    verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
 ):
     """
-    CLI command to remove an existing containerlab-EDA integration (delete the namespace).
+    CLI command to remove EDA integration (delete the namespace).
     """
+    import logging
+    from clab_connector.utils.logging_config import setup_logging
+    from clab_connector.clients.eda.client import EDAClient
+    from clab_connector.services.removal.topology_remover import TopologyRemover
+
+    # Set up logging
     setup_logging(log_level.value, log_file)
     logger = logging.getLogger(__name__)
 
-    Args = type("Args", (), {})
+    class Args:
+        pass
+
     args = Args()
     args.topology_data = topology_data
     args.eda_url = eda_url
@@ -220,6 +208,17 @@ def remove_cmd(
     args.eda_password = eda_password
     args.client_secret = client_secret
     args.verify = verify
+
+    def execute_removal(a):
+        eda_client = EDAClient(
+            hostname=a.eda_url,
+            username=a.eda_user,
+            password=a.eda_password,
+            verify=a.verify,
+            client_secret=a.client_secret,
+        )
+        remover = TopologyRemover(eda_client)
+        remover.run(topology_file=a.topology_data)
 
     try:
         execute_removal(args)
