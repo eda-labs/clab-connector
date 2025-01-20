@@ -220,6 +220,8 @@ class TopologyIntegrator:
             "password": "NokiaSrl1!",
             "ssh_pub_keys": getattr(self.topology, "ssh_pub_keys", []),
         }
+        if not data["ssh_pub_keys"]:
+            logger.warning("No SSH public keys found. Proceeding with an empty key list.")
         node_user = helpers.render_template("node-user.j2", data)
         item = self.eda_client.add_replace_to_transaction(node_user)
         if not self.eda_client.is_transaction_item_valid(item):

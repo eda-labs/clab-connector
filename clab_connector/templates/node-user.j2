@@ -12,6 +12,10 @@ spec:
       nodeSelector:
         - containerlab=managed
   sshPublicKeys:
-{%- for key in ssh_pub_keys %}
+  {%- if ssh_pub_keys and ssh_pub_keys|length > 0 %}
+  {% for key in ssh_pub_keys %}
     - {{ key }}
-{%- endfor %}
+  {% endfor %}
+  {%- else %}
+    []
+  {%- endif %}
