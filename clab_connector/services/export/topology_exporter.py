@@ -63,7 +63,7 @@ class TopologyExporter:
 
         # 4. Convert each topolink into containerlab link config
         for link_item in link_items:
-            self._build_link_definitions(link_item, clab_data["topology"]["links"])
+            self._build_link_definitions(link_item, clab_data["topology"]["links"], clab_data["topology"]["nodes"])
 
         # 5. Write the .clab.yaml
         self._write_clab_yaml(clab_data)
@@ -161,7 +161,7 @@ class TopologyExporter:
 
         return node_name, node_def
 
-    def _build_link_definitions(self, link_item, links_array):
+    def _build_link_definitions(self, link_item, links_array, nodes_dict):
         link_spec = link_item.get("spec", {})
         link_entries = link_spec.get("links", [])
         meta = link_item.get("metadata", {})
@@ -193,8 +193,8 @@ class TopologyExporter:
 
         # --- Edge link logic ---
         client_node_name = f"client-{link_name}".replace("_", "-").replace(".", "-")
-        if client_node_name not in self.clab_data["topology"]["nodes"]:
-            self.clab_data["topology"]["nodes"][client_node_name] = {
+        if client_node_name not in nodes_dict:
+            nodes_dict[client_node_name] = {
                 "kind": "linux",
                 "image": "ghcr.io/hellt/network-multitool",
             }
