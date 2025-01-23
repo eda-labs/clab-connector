@@ -343,3 +343,27 @@ def edactl_revert_commit(commit_hash: str) -> bool:
     except ApiException as exc:
         logger.error(f"Failed to revert commit {commit_hash}: {exc}")
         return False
+
+
+def list_toponodes_in_namespace(namespace: str):
+    crd_api = client.CustomObjectsApi()
+    group = "core.eda.nokia.com"
+    version = "v1"
+    plural = "toponodes"
+    # We do a namespaced call
+    toponodes = crd_api.list_namespaced_custom_object(
+        group=group, version=version, namespace=namespace, plural=plural
+    )
+    # returns a dict with "items": [...]
+    return toponodes.get("items", [])
+
+
+def list_topolinks_in_namespace(namespace: str):
+    crd_api = client.CustomObjectsApi()
+    group = "core.eda.nokia.com"
+    version = "v1"
+    plural = "topolinks"
+    topolinks = crd_api.list_namespaced_custom_object(
+        group=group, version=version, namespace=namespace, plural=plural
+    )
+    return topolinks.get("items", [])

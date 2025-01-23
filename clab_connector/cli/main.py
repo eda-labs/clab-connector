@@ -227,5 +227,51 @@ def remove_cmd(
         raise typer.Exit(code=1)
 
 
+@app.command(
+    name="export-lab",
+    help="Export an EDA-managed topology from a namespace to a .clab.yaml file",
+)
+def export_lab_cmd(
+    namespace: str = typer.Option(
+        ...,
+        "--namespace",
+        "-n",
+        help="Kubernetes namespace containing toponodes/topolinks",
+    ),
+    output_file: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Output .clab.yaml file path"
+    ),
+    log_level: LogLevel = typer.Option(
+        LogLevel.WARNING, "--log-level", help="Logging level"
+    ),
+    log_file: Optional[str] = typer.Option(
+        None, "--log-file", help="Optional log file path"
+    ),
+):
+    """
+    Fetch EDA toponodes & topolinks from the specified namespace
+    and convert them to a containerlab .clab.yaml file.
+
+    Example:
+      clab-connector export-lab -n clab-my-topo --output clab-my-topo.clab.yaml
+    """
+    import logging
+    from clab_connector.utils.logging_config import setup_logging
+    from clab_connector.services.export.topology_exporter import TopologyExporter
+
+    setup_logging(log_level.value, log_file)
+    logger = logging.getLogger(__name__)
+
+    if not output_file:
+        output_file = f"{namespace}.clab.yaml"
+
+    exporter = TopologyExporter(namespace, output_file, logger)
+    try:
+        exporter.run()
+    except Exception as e:
+        logger.error(f"Failed to export lab from namespace '{namespace}': {e}")
+        raise typer.Exit(code=1)
+
+
 if __name__ == "__main__":
     app()
