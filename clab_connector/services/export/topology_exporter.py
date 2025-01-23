@@ -28,6 +28,8 @@ class TopologyExporter:
         self.namespace = namespace
         self.output_file = output_file
         self.logger = logger
+        self.edge_link_map = {}
+        self.client_counter = 1
 
     def run(self):
         """
@@ -192,7 +194,14 @@ class TopologyExporter:
             return
 
         # --- Edge link logic ---
-        client_node_name = f"client-{link_name}".replace("_", "-").replace(".", "-")
+        if link_name not in self.edge_link_map:
+            client_node_name = f"client{self.client_counter}"
+            self.client_counter += 1
+            self.edge_link_map[link_name] = client_node_name
+        else:
+            client_node_name = self.edge_link_map[link_name]
+
+        # Create the client node if it doesn't exist in nodes
         if client_node_name not in nodes_dict:
             nodes_dict[client_node_name] = {
                 "kind": "linux",
