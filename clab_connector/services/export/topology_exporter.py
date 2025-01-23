@@ -1,6 +1,7 @@
 # clab_connector/services/export/topology_exporter.py
 
 import logging
+import re
 from ipaddress import IPv4Network, IPv4Address
 from clab_connector.clients.kubernetes.client import (
     list_toponodes_in_namespace,
@@ -65,7 +66,11 @@ class TopologyExporter:
 
         # 4. Convert each topolink into containerlab link config
         for link_item in link_items:
-            self._build_link_definitions(link_item, clab_data["topology"]["links"], clab_data["topology"]["nodes"])
+            self._build_link_definitions(
+                link_item,
+                clab_data["topology"]["links"],
+                clab_data["topology"]["nodes"],
+            )
 
         # 5. Write the .clab.yaml
         self._write_clab_yaml(clab_data)
@@ -179,6 +184,13 @@ class TopologyExporter:
                 remote_node = entry.get("remote", {}).get("node")
                 remote_intf = entry.get("remote", {}).get("interface")
                 if local_node and local_intf and remote_node and remote_intf:
+                    local_intf = self._fix_srlinux_ifname(
+                        local_node, local_intf, nodes_dict
+                    )
+                    remote_intf = self._fix_srlinux_ifname(
+                        remote_node, remote_intf, nodes_dict
+                    )
+
                     links_array.append(
                         {
                             "endpoints": [
@@ -220,6 +232,9 @@ class TopologyExporter:
                 continue
 
             # Each sub-entry gets a unique client intf
+
+            local_intf = self._fix_srlinux_ifname(local_node, local_intf, nodes_dict)
+
             client_intf = f"eth{eth_index}"
             eth_index += 1
 
@@ -231,6 +246,24 @@ class TopologyExporter:
                     ]
                 }
             )
+
+    def _fix_srlinux_ifname(self, node_name, ifname, nodes_dict):
+        """
+        If the node is SR Linux (kind=nokia_srlinux), convert "ethernet-1-49"
+        to "ethernet-1/49" by replacing the second dash with a slash.
+        Otherwise return ifname unchanged.
+        """
+        node_def = nodes_dict.get(node_name, {})
+        if node_def.get("kind") != "nokia_srlinux":
+            return ifname
+
+        # Use a regex to replace "ethernet-X-Y" => "ethernet-X/Y"
+        pattern = r"^ethernet-(\d+)-(\d+)$"
+        match = re.match(pattern, ifname)
+        if match:
+            return f"ethernet-{match.group(1)}/{match.group(2)}"
+
+        return ifname
 
     def _write_clab_yaml(self, clab_data):
         """
