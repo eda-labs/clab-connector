@@ -99,7 +99,7 @@ The tool offers two primary subcommands: `integrate` and `remove`.
 To integrate your Containerlab topology with EDA you need to get a path to the `topology-data.json` file created by Containerlab when it deploys the lab. This file is located in the Containerlab's Lab Directory as described in the [documentation](https://containerlab.dev/manual/conf-artifacts/). With the path to the topology data file is known, you can use the following command to integrate the Containerlab topology with EDA:
 
 ```
-python eda_containerlab_connector.py integrate \
+clab-connector integrate \
 --topology-data path/to/topology-data.json \
 --eda-url https://eda.example.com \
 --eda-user youruser \
@@ -111,7 +111,7 @@ python eda_containerlab_connector.py integrate \
 Remove the previously integrated Containerlab topology from EDA:
 
 ```
-python eda_containerlab_connector.py remove \
+clab-connector remove \
     --topology-data path/to/topology-data.json \
     --eda-url https://eda.example.com \
     --eda-user youruser \
@@ -125,13 +125,28 @@ python eda_containerlab_connector.py remove \
 | `--eda-user`        | No       | admin     | EDA username                                                            |
 | `--eda-password`    | No       | admin     | EDA password                                                            |
 | `--log-level`, `-l` | No       | WARNING   | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                       |
+| `--log-file`        | No       | False     | Optional log file path                                                  |
 | `--verify`          | No       | False     | Enable certificate verification for EDA                                 |
 
+
+#### Export a lab from EDA to Containerlab
+
+```
+clab-connector export-lab \
+    --namespace eda
+```
+
+| Option              | Required | Default   | Description                                                            |
+|---------------------|----------|-----------|------------------------------------------------------------------------|
+| `--namespace`, `-n` | Yes      | None      | Namespace in which the lab is deployed in EDA                          |
+| `--output`, `-o`    | No       | None      | Output .clab.yaml file path                                            |
+| `--log-level`, `-l` | No       | WARNING   | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                      |
+| `--log-file`        | No       | False     | Optional log file path                                                 |
 
 ### Example Command
 
 ```
-python eda_containerlab_connector.py -l INFO integrate -t topology-data.json -e https://eda.example.com 
+clab-connector -l INFO integrate -t topology-data.json -e https://eda.example.com
 ```
 
 ## Example Topologies
