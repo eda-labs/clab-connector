@@ -166,25 +166,62 @@ class TopologyExporter:
         link_entries = link_spec.get("links", [])
         meta = link_item.get("metadata", {})
         link_name = meta.get("name", "unknown-link")
+        labels = meta.get("labels", {})
+        role = labels.get("eda.nokia.com/role", "")
+
+        if role != "edge":
+            # Normal link logic
+            for entry in link_entries:
+                local_node = entry.get("local", {}).get("node")
+                local_intf = entry.get("local", {}).get("interface")
+                remote_node = entry.get("remote", {}).get("node")
+                remote_intf = entry.get("remote", {}).get("interface")
+                if local_node and local_intf and remote_node and remote_intf:
+                    links_array.append(
+                        {
+                            "endpoints": [
+                                f"{local_node}:{local_intf}",
+                                f"{remote_node}:{remote_intf}",
+                            ]
+                        }
+                    )
+                else:
+                    self.logger.warning(
+                        f"Incomplete link entry in {link_name}, skipping that entry."
+                    )
+            return
+
+        # --- Edge link logic ---
+        client_node_name = f"client-{link_name}".replace("_", "-").replace(".", "-")
+        if client_node_name not in self.clab_data["topology"]["nodes"]:
+            self.clab_data["topology"]["nodes"][client_node_name] = {
+                "kind": "linux",
+                "image": "ghcr.io/hellt/network-multitool",
+            }
+
+        eth_index = 0
 
         for entry in link_entries:
             local_node = entry.get("local", {}).get("node")
             local_intf = entry.get("local", {}).get("interface")
-            remote_node = entry.get("remote", {}).get("node")
-            remote_intf = entry.get("remote", {}).get("interface")
-            if local_node and local_intf and remote_node and remote_intf:
-                links_array.append(
-                    {
-                        "endpoints": [
-                            f"{local_node}:{local_intf}",
-                            f"{remote_node}:{remote_intf}",
-                        ]
-                    }
-                )
-            else:
+            if not (local_node and local_intf):
                 self.logger.warning(
-                    f"Incomplete link entry in {link_name}, skipping that entry."
+                    f"Incomplete edge link entry in {link_name}, skipping."
                 )
+                continue
+
+            # Each sub-entry gets a unique client intf
+            client_intf = f"eth{eth_index}"
+            eth_index += 1
+
+            links_array.append(
+                {
+                    "endpoints": [
+                        f"{local_node}:{local_intf}",
+                        f"{client_node_name}:{client_intf}",
+                    ]
+                }
+            )
 
     def _write_clab_yaml(self, clab_data):
         """
