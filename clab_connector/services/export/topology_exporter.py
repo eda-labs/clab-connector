@@ -137,6 +137,12 @@ class TopologyExporter:
             spec.get("productionAddress") or status.get("productionAddress") or {}
         )
         mgmt_ip = production_addr.get("ipv4")
+
+        # If no productionAddress IP, try node-details
+        if not mgmt_ip and "node-details" in status:
+            node_details = status["node-details"]
+            mgmt_ip = node_details.split(":")[0]
+
         if not mgmt_ip:
             self.logger.warning(f"No mgmt IP found for node '{node_name}', skipping.")
             return None, None
