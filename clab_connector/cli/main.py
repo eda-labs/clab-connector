@@ -257,12 +257,7 @@ def export_lab_cmd(
     """
     import logging
     from clab_connector.utils.logging_config import setup_logging
-    from ipaddress import IPv4Network, IPv4Address
-    from clab_connector.clients.kubernetes.client import (
-        list_toponodes_in_namespace,
-        list_topolinks_in_namespace,
-    )
-    from clab_connector.utils.yaml_processor import YAMLProcessor
+    from clab_connector.services.export.topology_exporter import TopologyExporter
 
     setup_logging(log_level.value, log_file)
     logger = logging.getLogger(__name__)
@@ -270,132 +265,11 @@ def export_lab_cmd(
     if not output_file:
         output_file = f"{namespace}.clab.yaml"
 
+    exporter = TopologyExporter(namespace, output_file, logger)
     try:
-        node_items = list_toponodes_in_namespace(namespace)
-        link_items = list_topolinks_in_namespace(namespace)
+        exporter.run()
     except Exception as e:
-        logger.error(f"Failed to list toponodes/topolinks: {e}")
-        raise typer.Exit(code=1)
-
-    # Collect all management IPs
-    mgmt_ips = []
-    for node_item in node_items:
-        spec = node_item.get("spec", {})
-        status = node_item.get("status", {})
-        production_addr = (
-            spec.get("productionAddress") or status.get("productionAddress") or {}
-        )
-        mgmt_ip = production_addr.get("ipv4")
-        if mgmt_ip:
-            try:
-                mgmt_ips.append(IPv4Address(mgmt_ip))
-            except ValueError:
-                logger.warning(f"Invalid IP address found: {mgmt_ip}")
-
-    # Determine the subnet that encompasses all management IPs
-    if mgmt_ips:
-        # Find the minimum and maximum IPs
-        min_ip = min(mgmt_ips)
-        max_ip = max(mgmt_ips)
-
-        # Convert to binary and find the common prefix
-        min_ip_bits = format(int(min_ip), "032b")
-        max_ip_bits = format(int(max_ip), "032b")
-
-        # Find where the bits start to differ
-        common_prefix = 0
-        for i in range(32):
-            if min_ip_bits[i] == max_ip_bits[i]:
-                common_prefix += 1
-            else:
-                break
-
-        # Use the common prefix to create a subnet that includes all IPs
-        subnet = IPv4Network(f"{min_ip}/{common_prefix}", strict=False)
-        mgmt_subnet = str(subnet)
-    else:
-        # Fallback to a default subnet if no valid IPs are found
-        mgmt_subnet = "172.80.80.0/24"
-        logger.warning("No valid management IPs found, using default subnet")
-
-    clab_data = {
-        "name": namespace,  # Use namespace as "lab name"
-        "mgmt": {"network": f"{namespace}_mgmt", "ipv4-subnet": mgmt_subnet},
-        "topology": {
-            "nodes": {},
-            "links": [],
-        },
-    }
-
-    for node_item in node_items:
-        meta = node_item.get("metadata", {})
-        spec = node_item.get("spec", {})
-        status = node_item.get("status", {})
-        node_name = meta.get("name")
-
-        operating_system = (
-            spec.get("operatingSystem") or status.get("operatingSystem") or ""
-        )
-        version = spec.get("version") or status.get("version") or ""
-        mgmt_ip = None
-        # EDA typically stores mgmt IP in .status.productionAddress.ipv4 or .spec.productionAddress.ipv4
-        production_addr = (
-            spec.get("productionAddress") or status.get("productionAddress") or {}
-        )
-        mgmt_ip = production_addr.get("ipv4")
-
-        # If we can't find an IP, skip or log a warning
-        if not mgmt_ip:
-            logger.warning(f"No mgmt IP found for node '{node_name}', skipping.")
-            continue
-
-        kind = "nokia_srlinux"
-        if operating_system.lower().startswith("srl"):
-            kind = "nokia_srlinux"
-        if operating_system.lower().startswith("sros"):
-            kind = "nokia_sros"
-
-        # Build node definition
-        node_def = {
-            "kind": kind,
-            "mgmt-ipv4": mgmt_ip,
-        }
-
-        if version:
-            node_def["image"] = f"ghcr.io/nokia/srlinux:{version}"
-
-        clab_data["topology"]["nodes"][node_name] = node_def
-
-    # Convert topolinks into "links: endpoints: [ nodeA:iface, nodeB:iface ]"
-    for link_item in link_items:
-        link_spec = link_item.get("spec", {})
-        link_entries = link_spec.get("links", [])
-        for entry in link_entries:
-            local_node = entry.get("local", {}).get("node")
-            local_intf = entry.get("local", {}).get("interface")
-            remote_node = entry.get("remote", {}).get("node")
-            remote_intf = entry.get("remote", {}).get("interface")
-            if local_node and local_intf and remote_node and remote_intf:
-                clab_data["topology"]["links"].append(
-                    {
-                        "endpoints": [
-                            f"{local_node}:{local_intf}",
-                            f"{remote_node}:{remote_intf}",
-                        ]
-                    }
-                )
-            else:
-                logger.warning(
-                    f"Incomplete link entry in {link_item['metadata']['name']} - skipping."
-                )
-
-    # Write the .clab.yaml to disk
-    processor = YAMLProcessor()
-    try:
-        processor.save_yaml(clab_data, output_file)
-        logger.info(f"Exported containerlab file: {output_file}")
-    except IOError as e:
-        logger.error(f"Failed to write containerlab file: {e}")
+        logger.error(f"Failed to export lab from namespace '{namespace}': {e}")
         raise typer.Exit(code=1)
 
 
