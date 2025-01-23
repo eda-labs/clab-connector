@@ -77,6 +77,11 @@ class TopologyExporter:
                 spec.get("productionAddress") or status.get("productionAddress") or {}
             )
             mgmt_ip = production_addr.get("ipv4")
+
+            if not mgmt_ip and "node-details" in status:
+                node_details = status["node-details"]
+                mgmt_ip = node_details.split(":")[0]
+
             if mgmt_ip:
                 try:
                     ips.append(IPv4Address(mgmt_ip))
