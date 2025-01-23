@@ -220,7 +220,7 @@ class TopologyExporter:
                 "image": "ghcr.io/hellt/network-multitool",
             }
 
-        eth_index = 0
+        eth_index = 1
 
         for entry in link_entries:
             local_node = entry.get("local", {}).get("node")
