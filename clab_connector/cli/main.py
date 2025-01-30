@@ -9,7 +9,7 @@ import urllib3
 from rich import print as rprint
 from typing_extensions import Annotated
 
-# Disable urllib3 warnings at the top (optional)
+# Disable urllib3 warnings (optional)
 urllib3.disable_warnings()
 
 SUPPORTED_KINDS = ["nokia_srlinux"]
@@ -36,6 +36,8 @@ def complete_json_files(
     """
     Complete JSON file paths for CLI autocomplete.
     """
+    from pathlib import Path
+
     current = Path(incomplete) if incomplete else Path.cwd()
     if not current.is_dir():
         current = current.parent
@@ -83,12 +85,20 @@ def integrate_cmd(
         "admin", "--eda-user", help="EDA username (realm='eda')"
     ),
     eda_password: str = typer.Option(
-        "admin", "--eda-password", help="EDA user password"
+        "admin", "--eda-password", help="EDA user password (realm='eda')"
     ),
-    client_secret: Optional[str] = typer.Option(
+    kc_user: str = typer.Option(
+        "admin", "--kc-user", help="Keycloak master realm admin user (default: admin)"
+    ),
+    kc_password: str = typer.Option(
+        "admin",
+        "--kc-password",
+        help="Keycloak master realm admin password (default: admin)",
+    ),
+    kc_secret: Optional[str] = typer.Option(
         None,
-        "--client-secret",
-        help="Keycloak client secret for 'eda' client (optional)",
+        "--kc-secret",
+        help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
@@ -101,7 +111,6 @@ def integrate_cmd(
     """
     CLI command to integrate a containerlab topology with EDA.
     """
-    # --- MOVE heavy imports here ---
     import logging
     from clab_connector.utils.logging_config import setup_logging
     from clab_connector.clients.eda.client import EDAClient
@@ -123,18 +132,22 @@ def integrate_cmd(
     args.eda_url = eda_url
     args.eda_user = eda_user
     args.eda_password = eda_password
-    args.client_secret = client_secret
+    args.kc_user = kc_user
+    args.kc_password = kc_password
+    args.kc_secret = kc_secret
     args.verify = verify
 
-    # Define the logic inline or in a small helper function
     def execute_integration(a):
         eda_client = EDAClient(
             hostname=a.eda_url,
-            username=a.eda_user,
-            password=a.eda_password,
+            eda_user=a.eda_user,
+            eda_password=a.eda_password,
+            kc_secret=a.kc_secret,  # If set, skip admin flow
+            kc_user=a.kc_user,
+            kc_password=a.kc_password,
             verify=a.verify,
-            client_secret=a.client_secret,
         )
+
         integrator = TopologyIntegrator(eda_client)
         integrator.run(
             topology_file=a.topology_data,
@@ -171,12 +184,21 @@ def remove_cmd(
         "admin", "--eda-user", help="EDA username (realm='eda')"
     ),
     eda_password: str = typer.Option(
-        "admin", "--eda-password", help="EDA user password"
+        "admin", "--eda-password", help="EDA user password (realm='eda')"
     ),
-    client_secret: Optional[str] = typer.Option(
+    # Keycloak options
+    kc_user: str = typer.Option(
+        "admin", "--kc-user", help="Keycloak master realm admin user (default: admin)"
+    ),
+    kc_password: str = typer.Option(
+        "admin",
+        "--kc-password",
+        help="Keycloak master realm admin password (default: admin)",
+    ),
+    kc_secret: Optional[str] = typer.Option(
         None,
-        "--client-secret",
-        help="Keycloak client secret for 'eda' client (optional)",
+        "--kc-secret",
+        help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
     log_level: LogLevel = typer.Option(
         LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
@@ -206,16 +228,20 @@ def remove_cmd(
     args.eda_url = eda_url
     args.eda_user = eda_user
     args.eda_password = eda_password
-    args.client_secret = client_secret
+    args.kc_user = kc_user
+    args.kc_password = kc_password
+    args.kc_secret = kc_secret
     args.verify = verify
 
     def execute_removal(a):
         eda_client = EDAClient(
             hostname=a.eda_url,
-            username=a.eda_user,
-            password=a.eda_password,
+            eda_user=a.eda_user,
+            eda_password=a.eda_password,
+            kc_secret=a.kc_secret,
+            kc_user=a.kc_user,
+            kc_password=a.kc_password,
             verify=a.verify,
-            client_secret=a.client_secret,
         )
         remover = TopologyRemover(eda_client)
         remover.run(topology_file=a.topology_data)

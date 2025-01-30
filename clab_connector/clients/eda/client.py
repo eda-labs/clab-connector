@@ -5,11 +5,12 @@ This module provides the EDAClient class for communicating with the EDA REST API
 Starting with EDA v24.12.1, authentication is handled via Keycloak.
 
 We support two flows:
-1. If client_secret is known (user passes --client-secret), we do resource-owner
+1. If kc_secret is known (user passes --kc-secret), we do resource-owner
    password flow directly in realm='eda'.
-2. If client_secret is unknown, we do an admin login in realm='master' using
-   the same eda_user/eda_password (assuming they are Keycloak admin credentials),
-   retrieve the 'eda' client secret, then proceed with resource-owner flow.
+
+2. If kc_secret is unknown, we do an admin login in realm='master' using
+   kc_user / kc_password to retrieve the 'eda' client secret,
+   then proceed with resource-owner flow in realm='eda'.
 """
 
 import json
@@ -31,15 +32,19 @@ class EDAClient:
     ----------
     hostname : str
         The base URL for EDA, e.g. "https://my-eda.example".
-    username : str
-        EDA user (also used as Keycloak admin if secret is unknown).
-    password : str
-        Password for the above user (also used as Keycloak admin if secret unknown).
-    verify : bool
-        Whether to verify SSL certificates.
-    client_secret : str, optional
+    eda_user : str
+        EDA user in realm='eda'.
+    eda_password : str
+        EDA password in realm='eda'.
+    kc_secret : str, optional
         Known Keycloak client secret for 'eda'. If not provided, we do the admin
-        realm flow to retrieve it using username/password.
+        realm flow to retrieve it using kc_user/kc_password.
+    verify : bool
+        Whether to verify SSL certificates (default=True).
+    kc_user : str
+        Keycloak "master" realm admin username (default="admin").
+    kc_password : str
+        Keycloak "master" realm admin password (default="admin").
     """
 
     KEYCLOAK_ADMIN_REALM = "master"
@@ -53,16 +58,20 @@ class EDAClient:
     def __init__(
         self,
         hostname: str,
-        username: str,
-        password: str,
+        eda_user: str,
+        eda_password: str,
+        kc_secret: str = None,
         verify: bool = True,
-        client_secret: str = None,
+        kc_user: str = "admin",
+        kc_password: str = "admin",
     ):
         self.url = hostname.rstrip("/")
-        self.username = username
-        self.password = password
+        self.eda_user = eda_user
+        self.eda_password = eda_password
+        self.kc_secret = kc_secret  # If set, we skip the admin login
         self.verify = verify
-        self.client_secret = client_secret
+        self.kc_user = kc_user
+        self.kc_password = kc_password
 
         self.access_token = None
         self.refresh_token = None
@@ -74,40 +83,50 @@ class EDAClient:
     def login(self):
         """
         Acquire an access token via Keycloak resource-owner flow in realm='eda'.
-        If client_secret is unknown, fetch it using admin credentials in realm='master'.
+        If kc_secret is not provided, fetch it using kc_user/kc_password in realm='master'.
         """
-        if not self.client_secret:
-            logger.info("No client_secret provided; fetching via Keycloak admin API...")
-            self.client_secret = self._fetch_client_secret_via_admin()
-            logger.info("Successfully retrieved client_secret from Keycloak.")
+        if not self.kc_secret:
+            logger.info(
+                "No kc_secret provided; retrieving it from Keycloak master realm."
+            )
+            self.kc_secret = self._fetch_client_secret_via_admin()
+            logger.info("Successfully retrieved EDA client secret from Keycloak.")
 
-        logger.info("Acquiring user access token via Keycloak resource-owner flow...")
-        self.access_token = self._fetch_user_token(self.client_secret)
+        logger.info(
+            "Acquiring user access token via Keycloak resource-owner flow (realm=eda)."
+        )
+        self.access_token = self._fetch_user_token(self.kc_secret)
         if not self.access_token:
             raise EDAConnectionError("Could not retrieve an access token for EDA.")
 
-        logger.info("Keycloak-based login successful.")
+        logger.info("Keycloak-based login successful (realm=eda).")
 
     def _fetch_client_secret_via_admin(self) -> str:
         """
-        Use the same username/password as Keycloak admin in realm='master'.
-        Then retrieve the client secret for the 'eda' client in realm='eda'.
+        Use kc_user/kc_password in realm='master' to retrieve
+        the client secret for 'eda' client in realm='eda'.
 
         Returns
         -------
         str
-            The client_secret for 'eda'.
+            The 'eda' client secret.
 
         Raises
         ------
         EDAConnectionError
             If we fail to fetch an admin token or the 'eda' client secret.
         """
-        admin_token = self._fetch_admin_token()
-        if not admin_token:
-            raise EDAConnectionError("Failed to fetch Keycloak admin token.")
+        if not self.kc_user or not self.kc_password:
+            raise EDAConnectionError(
+                "Cannot fetch 'eda' client secret: no kc_secret provided and no kc_user/kc_password available."
+            )
 
-        # List clients in the "eda" realm
+        admin_token = self._fetch_admin_token(self.kc_user, self.kc_password)
+        if not admin_token:
+            raise EDAConnectionError(
+                "Failed to fetch Keycloak admin token in realm=master."
+            )
+
         admin_api_url = (
             f"{self.url}/core/httpproxy/v1/keycloak/"
             f"admin/realms/{self.EDA_REALM}/clients"
@@ -120,7 +139,7 @@ class EDAClient:
         resp = self.http.request("GET", admin_api_url, headers=headers)
         if resp.status != 200:
             raise EDAConnectionError(
-                f"Failed to list clients in realm '{self.EDA_REALM}': {resp.data.decode()}"
+                f"Failed to list clients in realm='{self.EDA_REALM}': {resp.data.decode()}"
             )
 
         clients = json.loads(resp.data.decode("utf-8"))
@@ -128,22 +147,23 @@ class EDAClient:
             (c for c in clients if c.get("clientId") == self.EDA_API_CLIENT_ID), None
         )
         if not eda_client:
-            raise EDAConnectionError("Client 'eda' not found in realm 'eda'")
+            raise EDAConnectionError(
+                f"Client '{self.EDA_API_CLIENT_ID}' not found in realm='{self.EDA_REALM}'."
+            )
 
-        # Get the client secret
         client_id = eda_client["id"]
         secret_url = f"{admin_api_url}/{client_id}/client-secret"
         secret_resp = self.http.request("GET", secret_url, headers=headers)
         if secret_resp.status != 200:
             raise EDAConnectionError(
-                f"Failed to fetch 'eda' client secret: {secret_resp.data.decode()}"
+                f"Failed to fetch '{self.EDA_API_CLIENT_ID}' client secret: {secret_resp.data.decode()}"
             )
 
         return json.loads(secret_resp.data.decode("utf-8"))["value"]
 
-    def _fetch_admin_token(self) -> str:
+    def _fetch_admin_token(self, admin_user: str, admin_password: str) -> str:
         """
-        Fetch an admin token from the 'master' realm using self.username/password.
+        Fetch an admin token from the 'master' realm using admin_user/admin_password.
         """
         token_url = (
             f"{self.url}/core/httpproxy/v1/keycloak/"
@@ -152,8 +172,8 @@ class EDAClient:
         form_data = {
             "grant_type": "password",
             "client_id": self.KEYCLOAK_ADMIN_CLIENT_ID,
-            "username": self.username,
-            "password": self.password,
+            "username": admin_user,
+            "password": admin_password,
         }
         encoded_data = urlencode(form_data).encode("utf-8")
 
@@ -161,7 +181,7 @@ class EDAClient:
         resp = self.http.request("POST", token_url, body=encoded_data, headers=headers)
         if resp.status != 200:
             raise EDAConnectionError(
-                f"Failed Keycloak admin login: {resp.data.decode()}"
+                f"Failed Keycloak admin login in realm='{self.KEYCLOAK_ADMIN_REALM}': {resp.data.decode()}"
             )
 
         token_json = json.loads(resp.data.decode("utf-8"))
@@ -169,7 +189,7 @@ class EDAClient:
 
     def _fetch_user_token(self, client_secret: str) -> str:
         """
-        Resource-owner password flow in the 'eda' realm using self.username/password.
+        Resource-owner password flow in realm='eda' using eda_user/eda_password.
         """
         token_url = (
             f"{self.url}/core/httpproxy/v1/keycloak/"
@@ -180,8 +200,8 @@ class EDAClient:
             "client_id": self.EDA_API_CLIENT_ID,
             "client_secret": client_secret,
             "scope": "openid",
-            "username": self.username,
-            "password": self.password,
+            "username": self.eda_user,
+            "password": self.eda_password,
         }
         encoded_data = urlencode(form_data).encode("utf-8")
 
@@ -193,10 +213,11 @@ class EDAClient:
         token_json = json.loads(resp.data.decode("utf-8"))
         return token_json.get("access_token")
 
+    # ---------------------------------------------------------------------
+    # Below here, the rest of the class is unchanged: GET/POST, commit tx, etc.
+    # ---------------------------------------------------------------------
+
     def get_headers(self, requires_auth: bool = True) -> dict:
-        """
-        Construct HTTP headers, adding Bearer auth if requires_auth=True.
-        """
         headers = {}
         if requires_auth:
             if not self.access_token:
@@ -206,17 +227,11 @@ class EDAClient:
         return headers
 
     def get(self, api_path: str, requires_auth: bool = True):
-        """
-        Perform an HTTP GET request against the EDA API.
-        """
         url = f"{self.url}/{api_path}"
         logger.info(f"GET {url}")
         return self.http.request("GET", url, headers=self.get_headers(requires_auth))
 
     def post(self, api_path: str, payload: dict, requires_auth: bool = True):
-        """
-        Perform an HTTP POST request with a JSON body to the EDA API.
-        """
         url = f"{self.url}/{api_path}"
         logger.info(f"POST {url}")
         body = json.dumps(payload).encode("utf-8")
@@ -225,9 +240,6 @@ class EDAClient:
         )
 
     def is_up(self) -> bool:
-        """
-        Check if EDA is healthy by calling /core/about/health.
-        """
         logger.info("Checking EDA health")
         resp = self.get("core/about/health", requires_auth=False)
         if resp.status != 200:
@@ -237,9 +249,6 @@ class EDAClient:
         return data.get("status") == "UP"
 
     def get_version(self) -> str:
-        """
-        Retrieve and cache the EDA version from /core/about/version.
-        """
         if self.version is not None:
             return self.version
 
@@ -255,9 +264,6 @@ class EDAClient:
         return self.version
 
     def is_authenticated(self) -> bool:
-        """
-        Check if the client is authenticated by trying to get the version.
-        """
         try:
             self.get_version()
             return True
@@ -265,26 +271,17 @@ class EDAClient:
             return False
 
     def add_to_transaction(self, cr_type: str, payload: dict) -> dict:
-        """
-        Append an operation (create/replace/delete) to the transaction list.
-        """
         item = {"type": {cr_type: payload}}
         self.transactions.append(item)
         logger.debug(f"Adding item to transaction: {json.dumps(item, indent=2)}")
         return item
 
     def add_create_to_transaction(self, resource_yaml: str) -> dict:
-        """
-        Add a 'create' resource to the transaction from YAML content.
-        """
         return self.add_to_transaction(
             "create", {"value": yaml.safe_load(resource_yaml)}
         )
 
     def add_replace_to_transaction(self, resource_yaml: str) -> dict:
-        """
-        Add a 'replace' resource to the transaction from YAML content.
-        """
         return self.add_to_transaction(
             "replace", {"value": yaml.safe_load(resource_yaml)}
         )
@@ -297,9 +294,6 @@ class EDAClient:
         group: str = None,
         version: str = None,
     ):
-        """
-        Add a 'delete' operation for a resource by namespace/kind/name.
-        """
         group = group or self.CORE_GROUP
         version = version or self.CORE_VERSION
         self.add_to_transaction(
@@ -316,12 +310,9 @@ class EDAClient:
         )
 
     def is_transaction_item_valid(self, item: dict) -> bool:
-        """
-        Validate a single transaction item with /core/transaction/v1/validate.
-        """
         logger.info("Validating transaction item")
         resp = self.post("core/transaction/v1/validate", item)
-        if resp.status == 204:  # 204 means success
+        if resp.status == 204:
             logger.info("Transaction item validation success.")
             return True
 
@@ -336,9 +327,6 @@ class EDAClient:
         resultType: str = "normal",
         retain: bool = True,
     ) -> str:
-        """
-        Commit accumulated transaction items to EDA.
-        """
         payload = {
             "description": description,
             "dryrun": dryrun,
