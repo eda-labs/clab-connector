@@ -298,6 +298,62 @@ def export_lab_cmd(
         logger.error(f"Failed to export lab from namespace '{namespace}': {e}")
         raise typer.Exit(code=1)
 
+@app.command(
+    name="generate-crs",
+    help="Generate CR YAML manifests from a containerlab topology without applying them to EDA."
+)
+def generate_crs_cmd(
+    topology_data: Annotated[
+        Path,
+        typer.Option(
+            "--topology-data",
+            "-t",
+            help="Path to containerlab topology JSON file",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            shell_complete=complete_json_files,
+        ),
+    ],
+    output_file: Optional[str] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file path for a combined manifest; if --separate is used, this is the output directory"
+    ),
+    separate: bool = typer.Option(
+        False, "--separate", help="Generate separate YAML files for each CR instead of one combined file"
+    ),
+    log_level: LogLevel = typer.Option(
+        LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
+    ),
+    log_file: Optional[str] = typer.Option(
+        None, "--log-file", "-f", help="Optional log file path"
+    ),
+):
+    """
+    Generate the CR YAML manifests (artifacts, init, node security profile,
+    node user group/user, node profiles, toponodes, topolink interfaces, and topolinks)
+    from the given containerlab topology file.
+
+    The manifests can be written as one combined YAML file (default) or as separate files
+    (if --separate is specified).
+    """
+    import logging
+    from clab_connector.services.manifest.manifest_generator import ManifestGenerator
+    from clab_connector.utils.logging_config import setup_logging
+
+    setup_logging(log_level.value, log_file)
+    logger = logging.getLogger(__name__)
+
+    try:
+        generator = ManifestGenerator(str(topology_data), output=output_file, separate=separate)
+        generator.generate()
+        generator.output_manifests()
+    except Exception as e:
+        rprint(f"[red]Error: {str(e)}[/red]")
+        raise typer.Exit(code=1)
 
 if __name__ == "__main__":
     app()
