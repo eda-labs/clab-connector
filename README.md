@@ -143,6 +143,26 @@ clab-connector export-lab \
 | `--log-level`, `-l` | No       | WARNING   | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                      |
 | `--log-file`        | No       | False     | Optional log file path                                                 |
 
+#### Generate CR YAML Manifests
+The `generate-crs` command allows you to generate all the CR YAML manifests that would be applied to EDA—grouped by category. By default all manifests are concatenated into a single file. If you use the --separate flag, the manifests are written into separate files per category (e.g. `artifacts.yaml`, `init.yaml`, `node-security-profile.yaml`, etc.).
+
+
+##### Combined file example:
+```
+clab-connector generate-crs \
+  --topology-data path/to/topology-data.json \
+  --output all-crs.yaml
+```
+##### Separate files example:
+```
+clab-connector generate-crs \
+  --topology-data path/to/topology-data.json \
+  --separate \
+  --output manifests
+```
+
+
+
 ### Example Command
 
 ```
