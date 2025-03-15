@@ -37,6 +37,10 @@ class NokiaSRLinuxNode(Node):
         "24.10.2": (
             "https://github.com/nokia/srlinux-yang-models/"
             "releases/download/v24.10.2/srlinux-24.10.2-357.zip"
+        ),
+        "24.10.3": (
+            "https://github.com/nokia/srlinux-yang-models/"
+            "releases/download/v24.10.3/srlinux-24.10.3-201.zip"
         )
     }
 
