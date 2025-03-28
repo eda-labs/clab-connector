@@ -1,15 +1,10 @@
 # Containerlab EDA Connector Tool
 
-<table>
-  <tr>
-    <td><img src="docs/clab_connector.png" alt="Containerlab EDA Connector" width="60" height="60" style="width:60px; height:60px;"></td>
-    <td>
-      Integrate your <a href="https://containerlab.dev/">Containerlab</a> topology seamlessly with 
-      <a href="https://docs.eda.dev">EDA (Event-Driven Automation)</a> to streamline network automation and management.
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/clab_connector.png" alt="Containerlab EDA Connector" width="100" height="100">
+</p>
 
+Integrate your [Containerlab](https://containerlab.dev/) topology seamlessly with [EDA (Event-Driven Automation)](https://docs.eda.dev) to streamline network automation and management.
 
 
 
