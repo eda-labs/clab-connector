@@ -311,7 +311,7 @@ class EDAClient:
 
     def is_transaction_item_valid(self, item: dict) -> bool:
         logger.info("Validating transaction item")
-        resp = self.post("core/transaction/v2/validate", item)
+        resp = self.post("core/transaction/v2/validate", [item])
         if resp.status == 204:
             logger.info("Transaction item validation success.")
             return True
