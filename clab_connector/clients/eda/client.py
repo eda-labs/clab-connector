@@ -311,7 +311,25 @@ class EDAClient:
 
     def is_transaction_item_valid(self, item: dict) -> bool:
         logger.info("Validating transaction item")
-        resp = self.post("core/transaction/v1/validate", item)
+
+        # Check version to determine which endpoint to use
+        version = self.get_version()
+        if version.startswith('v'):
+            version = version[1:]  # Remove 'v' prefix
+
+        version_parts = version.split('.')
+        major = int(version_parts[0])
+        minor = int(version_parts[1]) if len(version_parts) > 1 else 0
+
+        # For version 25.4 and newer, use v2 endpoint (with list wrapping)
+        # For older versions, use v1 endpoint
+        if major > 25 or (major == 25 and minor >= 4):
+            logger.debug("Using v2 transaction validation endpoint")
+            resp = self.post("core/transaction/v2/validate", [item])
+        else:
+            logger.debug("Using v1 transaction validation endpoint")
+            resp = self.post("core/transaction/v1/validate", item)
+
         if resp.status == 204:
             logger.info("Transaction item validation success.")
             return True
