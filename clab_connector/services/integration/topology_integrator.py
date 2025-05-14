@@ -1,4 +1,4 @@
-# clab_connector/services/integration/topology_integrator.py
+# clab_connector/services/integration/topology_integrator.py (updated)
 
 import logging
 
@@ -12,6 +12,7 @@ from clab_connector.clients.kubernetes.client import (
 )
 from clab_connector.utils import helpers
 from clab_connector.utils.exceptions import EDAConnectionError, ClabConnectorError
+from clab_connector.services.integration.sros_post_integration import prepare_sros_node
 
 logger = logging.getLogger(__name__)
 
@@ -91,13 +92,16 @@ class TopologyIntegrator:
         self.create_toponodes()
         self.eda_client.commit_transaction("create nodes")
 
-        print("== Adding topolink interfaces ==")
-        self.create_topolink_interfaces()
-        self.eda_client.commit_transaction("create topolink interfaces")
+        # print("== Adding topolink interfaces ==")
+        # self.create_topolink_interfaces()
+        # self.eda_client.commit_transaction("create topolink interfaces")
 
-        print("== Creating topolinks ==")
-        self.create_topolinks()
-        self.eda_client.commit_transaction("create topolinks")
+        # print("== Creating topolinks ==")
+        # self.create_topolinks()
+        # self.eda_client.commit_transaction("create topolinks")
+
+        print("== Running post-integration steps ==")
+        self.run_post_integration()
 
         print("Done!")
 
@@ -266,3 +270,30 @@ class TopologyIntegrator:
             item = self.eda_client.add_replace_to_transaction(l_yaml)
             if not self.eda_client.is_transaction_item_valid(item):
                 raise ClabConnectorError("Validation error creating topolink")
+
+    def run_post_integration(self):
+        """
+        Run any post-integration steps required for specific node types.
+        """
+        namespace = f"clab-{self.topology.name}"
+        # Look for SROS nodes and run post-integration for them
+        for node in self.topology.nodes:
+            if node.kind == "nokia_sros":
+                logger.info(f"Running SROS post-integration for node {node.name}")
+                try:
+                    # Get normalized version from the node
+                    normalized_version = node._normalize_version(node.version)
+                    success = prepare_sros_node(
+                        node_name=node.get_node_name(self.topology),
+                        namespace=namespace,
+                        version=normalized_version,
+                        mgmt_ip=node.mgmt_ipv4,
+                        username="admin",
+                        password="admin"
+                    )
+                    if success:
+                        logger.info(f"SROS post-integration for {node.name} completed successfully")
+                    else:
+                        logger.error(f"SROS post-integration for {node.name} failed")
+                except Exception as e:
+                    logger.error(f"Error during SROS post-integration for {node.name}: {e}")
