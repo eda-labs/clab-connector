@@ -1,0 +1,29 @@
+name: eda_sros
+
+topology:
+  kinds:
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux:24.10.1
+    nokia_sros:
+      image: registry.srlinux.dev/pub/vr-sros:25.3.R2
+      type: SR-1
+      license: license.txt
+  nodes:
+    dc-gw-1:
+      kind: nokia_sros
+    dut1:
+      kind: nokia_srlinux
+      type: ixrd3l
+    dut2:
+      kind: nokia_srlinux
+      type: ixrd3l
+    dut3:
+      kind: nokia_srlinux
+      type: ixrd5
+
+  links:
+    # spine - leaf
+    - endpoints: ["dut1:e1-1", "dut3:e1-1"]
+    - endpoints: ["dut1:e1-2", "dut3:e1-2"]
+    - endpoints: ["dut2:e1-1", "dut3:e1-3"]
+    - endpoints: ["dut2:e1-2", "dut3:e1-4"]

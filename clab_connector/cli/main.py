@@ -12,7 +12,7 @@ from typing_extensions import Annotated
 # Disable urllib3 warnings (optional)
 urllib3.disable_warnings()
 
-SUPPORTED_KINDS = ["nokia_srlinux"]
+SUPPORTED_KINDS = ["nokia_srlinux", "nokia_sros"]
 
 
 class LogLevel(str, Enum):

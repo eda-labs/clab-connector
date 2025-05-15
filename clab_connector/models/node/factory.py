@@ -3,11 +3,13 @@
 import logging
 from .base import Node
 from .nokia_srl import NokiaSRLinuxNode
+from .nokia_sros import NokiaSROSNode
 
 logger = logging.getLogger(__name__)
 
 KIND_MAPPING = {
     "nokia_srlinux": NokiaSRLinuxNode,
+    "nokia_sros": NokiaSROSNode,
 }
 
 

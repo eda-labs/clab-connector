@@ -1,4 +1,4 @@
-# clab_connector/services/integration/topology_integrator.py
+# clab_connector/services/integration/topology_integrator.py (updated)
 
 import logging
 
@@ -12,6 +12,7 @@ from clab_connector.clients.kubernetes.client import (
 )
 from clab_connector.utils import helpers
 from clab_connector.utils.exceptions import EDAConnectionError, ClabConnectorError
+from clab_connector.services.integration.sros_post_integration import prepare_sros_node
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +94,22 @@ class TopologyIntegrator:
 
         print("== Adding topolink interfaces ==")
         self.create_topolink_interfaces()
-        self.eda_client.commit_transaction("create topolink interfaces")
+        # Only commit if there are transactions
+        if self.eda_client.transactions:
+            self.eda_client.commit_transaction("create topolink interfaces")
+        else:
+            print("No topolink interfaces to create, skipping.")
 
         print("== Creating topolinks ==")
         self.create_topolinks()
-        self.eda_client.commit_transaction("create topolinks")
+        # Only commit if there are transactions
+        if self.eda_client.transactions:
+            self.eda_client.commit_transaction("create topolinks")
+        else:
+            print("No topolinks to create, skipping.")
+
+        print("== Running post-integration steps ==")
+        self.run_post_integration()
 
         print("Done!")
 
@@ -120,10 +132,17 @@ class TopologyIntegrator:
         Create and bootstrap a namespace for the topology in EDA.
         """
         ns = f"clab-{self.topology.name}"
-        edactl_namespace_bootstrap(ns)
-        wait_for_namespace(ns)
-        desc = f"Containerlab {self.topology.name}: {self.topology.clab_file_path}"
-        update_namespace_description(ns, desc)
+        try:
+            edactl_namespace_bootstrap(ns)
+            wait_for_namespace(ns)
+            desc = f"Containerlab {self.topology.name}: {self.topology.clab_file_path}"
+            success = update_namespace_description(ns, desc)
+            if not success:
+                logger.warning(f"Created namespace '{ns}' but could not update its description. Continuing with integration.")
+        except Exception as e:
+            # If namespace creation itself fails, we should stop the process
+            logger.error(f"Failed to create namespace '{ns}': {e}")
+            raise
 
     def create_artifacts(self):
         """
@@ -211,21 +230,39 @@ class TopologyIntegrator:
 
     def create_node_users(self):
         """
-        Create a NodeUser resource with SSH pub keys, if any.
+        Create NodeUser resources with SSH pub keys for SRL and SROS nodes.
         """
-        data = {
+        ssh_pub_keys = getattr(self.topology, "ssh_pub_keys", [])
+        if not ssh_pub_keys:
+            logger.warning("No SSH public keys found. Proceeding with an empty key list.")
+
+        # Create SRL node user
+        srl_data = {
             "namespace": f"clab-{self.topology.name}",
             "node_user": "admin",
             "username": "admin",
             "password": "NokiaSrl1!",
-            "ssh_pub_keys": getattr(self.topology, "ssh_pub_keys", []),
+            "ssh_pub_keys": ssh_pub_keys,
+            "node_selector": "containerlab=managedSrl"
         }
-        if not data["ssh_pub_keys"]:
-            logger.warning("No SSH public keys found. Proceeding with an empty key list.")
-        node_user = helpers.render_template("node-user.j2", data)
-        item = self.eda_client.add_replace_to_transaction(node_user)
-        if not self.eda_client.is_transaction_item_valid(item):
-            raise ClabConnectorError("Validation error for node user")
+        srl_node_user = helpers.render_template("node-user.j2", srl_data)
+        item_srl = self.eda_client.add_replace_to_transaction(srl_node_user)
+        if not self.eda_client.is_transaction_item_valid(item_srl):
+            raise ClabConnectorError("Validation error for SRL node user")
+
+        # Create SROS node user
+        sros_data = {
+            "namespace": f"clab-{self.topology.name}",
+            "node_user": "admin-sros",
+            "username": "admin",
+            "password": "NokiaSros1!",
+            "ssh_pub_keys": ssh_pub_keys,
+            "node_selector": "containerlab=managedSros"
+        }
+        sros_node_user = helpers.render_template("node-user.j2", sros_data)
+        item_sros = self.eda_client.add_replace_to_transaction(sros_node_user)
+        if not self.eda_client.is_transaction_item_valid(item_sros):
+            raise ClabConnectorError("Validation error for SROS node user")
 
     def create_node_profiles(self):
         """
@@ -266,3 +303,34 @@ class TopologyIntegrator:
             item = self.eda_client.add_replace_to_transaction(l_yaml)
             if not self.eda_client.is_transaction_item_valid(item):
                 raise ClabConnectorError("Validation error creating topolink")
+
+    def run_post_integration(self):
+        """
+        Run any post-integration steps required for specific node types.
+        """
+        namespace = f"clab-{self.topology.name}"
+        # Determine if we should be quiet based on the current log level
+        quiet = logging.getLogger().getEffectiveLevel() > logging.INFO
+
+        # Look for SROS nodes and run post-integration for them
+        for node in self.topology.nodes:
+            if node.kind == "nokia_sros":
+                logger.info(f"Running SROS post-integration for node {node.name}")
+                try:
+                    # Get normalized version from the node
+                    normalized_version = node._normalize_version(node.version)
+                    success = prepare_sros_node(
+                        node_name=node.get_node_name(self.topology),
+                        namespace=namespace,
+                        version=normalized_version,
+                        mgmt_ip=node.mgmt_ipv4,
+                        username="admin",
+                        password="admin",
+                        quiet=quiet  # Pass quiet parameter
+                    )
+                    if success:
+                        logger.info(f"SROS post-integration for {node.name} completed successfully")
+                    else:
+                        logger.error(f"SROS post-integration for {node.name} failed")
+                except Exception as e:
+                    logger.error(f"Error during SROS post-integration for {node.name}: {e}")

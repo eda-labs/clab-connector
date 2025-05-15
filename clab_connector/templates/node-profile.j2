@@ -6,11 +6,19 @@ metadata:
   namespace: {{ namespace }}
 spec:
   port: {{ gnmi_port }}
-  annotate: true
+  annotate: {{ annotate | default("true") }}
   operatingSystem: {{ operating_system }}
   version: {{ sw_version }}
+{% if version_path is defined and version_path != "" %}
   versionPath: {{ version_path }}
+{% else %}
+  versionPath: ""
+{% endif %}
+{% if version_match is defined and version_match != "" %}
   versionMatch: {{ version_match }}
+{% else %}
+  versionMatch: ""
+{% endif %}
   yang: {{ yang_path }}
   nodeUser: {{ node_user }}
   onboardingPassword: {{ onboarding_password }}
@@ -18,3 +26,9 @@ spec:
   images:
   - image: fake.bin
     imageMd5: fake.bin.md5
+{% if license is defined %}
+  license: {{ license }}
+{% endif %}
+{% if llm_db is defined %}
+  llmDb: {{ llm_db }}
+{% endif %}
