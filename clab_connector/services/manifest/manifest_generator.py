@@ -83,17 +83,30 @@ class ManifestGenerator:
         self.cr_groups["node-user-group"] = [nug_yaml]
 
         # --- Node User
-        nu_yaml = helpers.render_template(
-            "node-user.j2",
-            {
-                "namespace": namespace,
-                "node_user": "admin",
-                "username": "admin",
-                "password": "NokiaSrl1!",
-                "ssh_pub_keys": self.topology.ssh_pub_keys or [],
-            },
-        )
-        self.cr_groups["node-user"] = [nu_yaml]
+        # Create SRL node user
+        srl_data = {
+            "namespace": namespace,
+            "node_user": "admin",
+            "username": "admin",
+            "password": "NokiaSrl1!",
+            "ssh_pub_keys": self.topology.ssh_pub_keys or [],
+            "node_selector": "containerlab=managedSrl"
+        }
+        srl_node_user = helpers.render_template("node-user.j2", srl_data)
+
+        # Create SROS node user
+        sros_data = {
+            "namespace": namespace,
+            "node_user": "admin-sros",
+            "username": "admin",
+            "password": "NokiaSros1!",
+            "ssh_pub_keys": self.topology.ssh_pub_keys or [],
+            "node_selector": "containerlab=managedSros"
+        }
+        sros_node_user = helpers.render_template("node-user.j2", sros_data)
+
+        # Add both node users to the manifest
+        self.cr_groups["node-user"] = [srl_node_user, sros_node_user]
 
         # --- Node Profiles
         profiles = self.topology.get_node_profiles()
