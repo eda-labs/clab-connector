@@ -41,16 +41,19 @@ class Link:
 
     def is_topolink(self):
         """
-        Check if both endpoints are EDA-supported nodes.
+        Check if both endpoints are EDA-supported nodes and neither is a nokia_sros node.
 
         Returns
         -------
         bool
-            True if both nodes support EDA, False otherwise.
+            True if both nodes support EDA and neither is nokia_sros, False otherwise.
         """
         if self.node_1 is None or not self.node_1.is_eda_supported():
             return False
         if self.node_2 is None or not self.node_2.is_eda_supported():
+            return False
+        # Skip links where either node is nokia_sros
+        if self.node_1.kind == "nokia_sros" or self.node_2.kind == "nokia_sros":
             return False
         return True
 

@@ -92,13 +92,21 @@ class TopologyIntegrator:
         self.create_toponodes()
         self.eda_client.commit_transaction("create nodes")
 
-        # print("== Adding topolink interfaces ==")
-        # self.create_topolink_interfaces()
-        # self.eda_client.commit_transaction("create topolink interfaces")
+        print("== Adding topolink interfaces ==")
+        self.create_topolink_interfaces()
+        # Only commit if there are transactions
+        if self.eda_client.transactions:
+            self.eda_client.commit_transaction("create topolink interfaces")
+        else:
+            print("No topolink interfaces to create, skipping.")
 
-        # print("== Creating topolinks ==")
-        # self.create_topolinks()
-        # self.eda_client.commit_transaction("create topolinks")
+        print("== Creating topolinks ==")
+        self.create_topolinks()
+        # Only commit if there are transactions
+        if self.eda_client.transactions:
+            self.eda_client.commit_transaction("create topolinks")
+        else:
+            print("No topolinks to create, skipping.")
 
         print("== Running post-integration steps ==")
         self.run_post_integration()
