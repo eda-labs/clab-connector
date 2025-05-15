@@ -24,6 +24,8 @@ There are two primary methods to create and experiment with network functions pr
 > **EDA Installation Mode:** This tool **requires EDA to be installed with `Simulate=False`**. Ensure that your EDA deployment is configured accordingly.
 >
 > **Hardware License:** A valid **`hardware license` for EDA version 24.12.1** is mandatory for using this connector tool.
+>
+> **Containerlab Topologies:** Your Containerlab nodes **should NOT have startup-configs defined**. Nodes with startup-configs are not EDA-ready and will not integrate properly.
 
 ## Prerequisites
 
@@ -36,6 +38,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab:**
   - Minimum required version - `v0.62.2`
+  - Nodes should not have startup-configs defined
 - **kubectl:**
   - You must have `kubectl` installed and configured to connect to the same Kubernetes cluster that is running EDA. The connector will use `kubectl apply` in the background to create the necessary `Artifact` resources.
 
@@ -72,9 +75,23 @@ Follow these steps to set up the Containerlab EDA Connector tool:
 > [!TIP]
 > Upgrade clab-connector to the latest version using `uv tool upgrade clab-connector`.
 
+### Checking Version and Upgrading
+
+To check the currently installed version of clab-connector:
+
+```
+uv tool list
+```
+
+To upgrade clab-connector to the latest version:
+
+```
+uv tool upgrade clab-connector
+```
+
 ### Alternative: Using pip
 
-If you’d rather use pip or can’t install uv:
+If you'd rather use pip or can't install uv:
 
 1. **Create & Activate a Virtual Environment after cloning**:
 
