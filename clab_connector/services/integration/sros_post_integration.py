@@ -2,12 +2,27 @@
 
 import logging
 import subprocess
-import time
 import tempfile
 import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+def execute_ssh_commands(script_path, username, mgmt_ip, node_name):
+    """
+    Execute SSH commands on the SROS node and handle output.
+    Returns True on success, False on failure.
+    """
+    ssh_cmd = f"ssh -q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {username}@{mgmt_ip} < {script_path} 2>&1 | grep -v '^\\['"
+    try:
+        output = subprocess.check_output(ssh_cmd, shell=True, stderr=subprocess.STDOUT)
+        logger.info(f"SROS node {node_name} configuration completed successfully")
+        logger.debug(f"Command output summary: {output[:500]}...")
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error during SROS configuration: {e}")
+        logger.error(f"Command error output: {e.output}")
+        return False
 
 def prepare_sros_node(node_name, namespace, version, mgmt_ip, username="admin", password="admin"):
     """
@@ -47,61 +62,77 @@ def prepare_sros_node(node_name, namespace, version, mgmt_ip, username="admin", 
 
             inner_config = match.group(1).strip()
 
-            # Wait for node to be reachable
-            logger.info(f"Waiting for {node_name} to be reachable...")
-            max_retries = 30
-            for i in range(max_retries):
+            # Transfer certificates to the node with fallback mechanism
+            logger.info(f"Attempting to transfer certificates to {node_name}")
+            cert_destination = None
+
+            # Try with cf3:/ first
+            try:
+                logger.info("Trying to transfer certificates to cf3:/")
+                subprocess.check_call([
+                    "scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+                    str(cert_path), f"{username}@{mgmt_ip}:/cf3:/"
+                ])
+
+                subprocess.check_call([
+                    "scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+                    str(key_path), f"{username}@{mgmt_ip}:/cf3:/"
+                ])
+                cert_destination = "cf3:/"
+                logger.info("Successfully transferred certificates to cf3:/")
+            except subprocess.CalledProcessError:
+                # Fall back to root path
+                logger.info("Falling back to transferring certificates to root path")
                 try:
-                    subprocess.check_call(["ping", "-c", "1", "-W", "2", mgmt_ip],
-                                         stdout=subprocess.DEVNULL)
-                    logger.info(f"Node {node_name} is reachable")
-                    break
-                except subprocess.CalledProcessError:
-                    logger.debug(f"Waiting for {node_name} to be reachable ({i+1}/{max_retries})")
-                    time.sleep(5)
-            else:
-                logger.error(f"Timed out waiting for {node_name} to be reachable")
-                return False
+                    subprocess.check_call([
+                        "scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+                        str(cert_path), f"{username}@{mgmt_ip}:/"
+                    ])
 
-            # Allow additional time for SSH to start
-            time.sleep(10)
+                    subprocess.check_call([
+                        "scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+                        str(key_path), f"{username}@{mgmt_ip}:/"
+                    ])
+                    cert_destination = "/"
+                    logger.info("Successfully transferred certificates to root path")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Failed to transfer certificates to {node_name}: {e}")
+                    return False
 
-            # Transfer certificates to the node
-            logger.info(f"Transferring certificates to {node_name}")
-            subprocess.check_call([
-                "scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
-                str(cert_path), f"{username}@{mgmt_ip}:/cf3:/"
-            ])
-
-            subprocess.check_call([
-                "scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
-                str(key_path), f"{username}@{mgmt_ip}:/cf3:/"
-            ])
-
-            # Create a simple script with all commands
+            # Create a simple script with all commands - add silent mode options
             with open(script_path, "w") as f:
-                # Certificate import commands
-                f.write("admin system security pki import type certificate input-url cf3:/edaboot.crt output-file edaboot.crt format pem\n")
-                f.write("admin system security pki import type key input-url cf3:/edaboot.key output-file edaboot.key format pem\n")
+                # Configure environment to reduce output verbosity
+                f.write("environment more false\n")  # Disable paging
+                f.write("environment print-detail false\n")  # Reduce command output detail
+                f.write("environment confirmations false\n")  # Disable confirmations
 
-                # Configure commands
+                # Certificate import commands based on where we successfully copied the files
+                if cert_destination == "cf3:/":
+                    f.write("admin system security pki import type certificate input-url cf3:/edaboot.crt output-file edaboot.crt format pem\n")
+                    f.write("admin system security pki import type key input-url cf3:/edaboot.key output-file edaboot.key format pem\n")
+                else:
+                    f.write("admin system security pki import type certificate input-url /edaboot.crt output-file edaboot.crt format pem\n")
+                    f.write("admin system security pki import type key input-url /edaboot.key output-file edaboot.key format pem\n")
+
+                # Configure commands in a less verbose way
                 f.write("configure global\n")
                 f.write(inner_config + "\n")  # Add the inner configuration directly
                 f.write("commit\n")
                 f.write("exit all\n")
 
-            # Transfer and execute the script on the SROS node
+            # Transfer and execute the script on the SROS node - use same path that worked for certificates
+            if cert_destination == "cf3:/":
+                script_dest = f"{username}@{mgmt_ip}:/cf3:/commands.txt"
+            else:
+                script_dest = f"{username}@{mgmt_ip}:/commands.txt"
+
             subprocess.check_call([
                 "scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
-                str(script_path), f"{username}@{mgmt_ip}:/cf3:/commands.txt"
+                str(script_path), script_dest
             ])
 
-            # Execute the commands
-            ssh_cmd = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {username}@{mgmt_ip} < {script_path}"
-            subprocess.check_call(ssh_cmd, shell=True)
-
-            logger.info(f"SROS node {node_name} successfully configured")
-            return True
+            # Execute the commands using helper function to reduce nesting
+            return execute_ssh_commands(script_path, username, mgmt_ip, node_name)
 
         except subprocess.CalledProcessError as e:
             logger.error(f"Error during SROS post-integration: {e}")
