@@ -105,16 +105,6 @@ class NokiaSRLinuxNode(Node):
     def get_node_profile(self, topology):
         """
         Render the NodeProfile YAML for this SR Linux node.
-
-        Parameters
-        ----------
-        topology : Topology
-            The topology object.
-
-        Returns
-        -------
-        str
-            The rendered NodeProfile YAML.
         """
         logger.info(f"Rendering node profile for {self.name}")
         artifact_name = self.get_artifact_name()
@@ -131,7 +121,7 @@ class NokiaSRLinuxNode(Node):
             "yang_path": self.YANG_PATH.format(
                 artifact_name=artifact_name, filename=filename
             ),
-            "node_user": self.SRL_USERNAME,
+            "node_user": "admin",
             "onboarding_password": self.SRL_PASSWORD,
             "onboarding_username": self.SRL_USERNAME,
             "sw_image": self.SRL_IMAGE.format(version=self.version),
@@ -142,16 +132,6 @@ class NokiaSRLinuxNode(Node):
     def get_toponode(self, topology):
         """
         Render the TopoNode YAML for this SR Linux node.
-
-        Parameters
-        ----------
-        topology : Topology
-            The topology object.
-
-        Returns
-        -------
-        str
-            The rendered TopoNode YAML.
         """
         logger.info(f"Creating toponode for {self.name}")
         role_value = "leaf"
@@ -173,6 +153,7 @@ class NokiaSRLinuxNode(Node):
             "platform": self.get_platform(),
             "sw_version": self.version,
             "mgmt_ip": self.mgmt_ipv4,
+            "containerlab_label": "managedSrl"
         }
         return helpers.render_template("toponode.j2", data)
 

@@ -215,21 +215,39 @@ class TopologyIntegrator:
 
     def create_node_users(self):
         """
-        Create a NodeUser resource with SSH pub keys, if any.
+        Create NodeUser resources with SSH pub keys for SRL and SROS nodes.
         """
-        data = {
+        ssh_pub_keys = getattr(self.topology, "ssh_pub_keys", [])
+        if not ssh_pub_keys:
+            logger.warning("No SSH public keys found. Proceeding with an empty key list.")
+
+        # Create SRL node user
+        srl_data = {
             "namespace": f"clab-{self.topology.name}",
             "node_user": "admin",
             "username": "admin",
             "password": "NokiaSrl1!",
-            "ssh_pub_keys": getattr(self.topology, "ssh_pub_keys", []),
+            "ssh_pub_keys": ssh_pub_keys,
+            "node_selector": "containerlab=managedSrl"
         }
-        if not data["ssh_pub_keys"]:
-            logger.warning("No SSH public keys found. Proceeding with an empty key list.")
-        node_user = helpers.render_template("node-user.j2", data)
-        item = self.eda_client.add_replace_to_transaction(node_user)
-        if not self.eda_client.is_transaction_item_valid(item):
-            raise ClabConnectorError("Validation error for node user")
+        srl_node_user = helpers.render_template("node-user.j2", srl_data)
+        item_srl = self.eda_client.add_replace_to_transaction(srl_node_user)
+        if not self.eda_client.is_transaction_item_valid(item_srl):
+            raise ClabConnectorError("Validation error for SRL node user")
+
+        # Create SROS node user
+        sros_data = {
+            "namespace": f"clab-{self.topology.name}",
+            "node_user": "admin-sros",
+            "username": "admin",
+            "password": "NokiaSros1!",
+            "ssh_pub_keys": ssh_pub_keys,
+            "node_selector": "containerlab=managedSros"
+        }
+        sros_node_user = helpers.render_template("node-user.j2", sros_data)
+        item_sros = self.eda_client.add_replace_to_transaction(sros_node_user)
+        if not self.eda_client.is_transaction_item_valid(item_sros):
+            raise ClabConnectorError("Validation error for SROS node user")
 
     def create_node_profiles(self):
         """

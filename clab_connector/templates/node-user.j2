@@ -10,7 +10,7 @@ spec:
     - groups:
         - sudo
       nodeSelector:
-        - containerlab=managed
+        - {{ node_selector }}
   sshPublicKeys:
   {%- if ssh_pub_keys and ssh_pub_keys|length > 0 %}
   {% for key in ssh_pub_keys %}

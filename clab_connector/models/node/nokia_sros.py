@@ -102,10 +102,9 @@ class NokiaSROSNode(Node):
                 artifact_name=artifact_name, filename=filename
             ),
             "annotate": "false",
-            "node_user": self.SROS_USERNAME,
-            "onboarding_password": "NokiaSros1!",  # Initial password
-            "onboarding_username": "admin",  # Initial username
-            # SROS-specific fields
+            "node_user": "admin-sros",
+            "onboarding_password": "NokiaSros1!",
+            "onboarding_username": "admin",
             "license": f"sros-ghcr-{normalized_version}-dummy-license",
             "llm_db": self.LLM_DB_PATH.format(
                 version=normalized_version, version_short=version_short
@@ -135,6 +134,7 @@ class NokiaSROSNode(Node):
             "platform": self.get_platform(),
             "sw_version": normalized_version,  # Use normalized version consistently
             "mgmt_ip": self.mgmt_ipv4,
+            "containerlab_label": "managedSros"  # Added this line
         }
         return helpers.render_template("toponode.j2", data)
 
