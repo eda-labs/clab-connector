@@ -276,6 +276,9 @@ class TopologyIntegrator:
         Run any post-integration steps required for specific node types.
         """
         namespace = f"clab-{self.topology.name}"
+        # Determine if we should be quiet based on the current log level
+        quiet = logging.getLogger().getEffectiveLevel() > logging.INFO
+
         # Look for SROS nodes and run post-integration for them
         for node in self.topology.nodes:
             if node.kind == "nokia_sros":
@@ -289,7 +292,8 @@ class TopologyIntegrator:
                         version=normalized_version,
                         mgmt_ip=node.mgmt_ipv4,
                         username="admin",
-                        password="admin"
+                        password="admin",
+                        quiet=quiet  # Pass quiet parameter
                     )
                     if success:
                         logger.info(f"SROS post-integration for {node.name} completed successfully")
