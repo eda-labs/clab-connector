@@ -132,10 +132,17 @@ class TopologyIntegrator:
         Create and bootstrap a namespace for the topology in EDA.
         """
         ns = f"clab-{self.topology.name}"
-        edactl_namespace_bootstrap(ns)
-        wait_for_namespace(ns)
-        desc = f"Containerlab {self.topology.name}: {self.topology.clab_file_path}"
-        update_namespace_description(ns, desc)
+        try:
+            edactl_namespace_bootstrap(ns)
+            wait_for_namespace(ns)
+            desc = f"Containerlab {self.topology.name}: {self.topology.clab_file_path}"
+            success = update_namespace_description(ns, desc)
+            if not success:
+                logger.warning(f"Created namespace '{ns}' but could not update its description. Continuing with integration.")
+        except Exception as e:
+            # If namespace creation itself fails, we should stop the process
+            logger.error(f"Failed to create namespace '{ns}': {e}")
+            raise
 
     def create_artifacts(self):
         """

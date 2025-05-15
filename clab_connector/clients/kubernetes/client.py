@@ -267,10 +267,11 @@ def wait_for_namespace(
     raise RuntimeError(f"Timed out waiting for namespace {namespace}")
 
 
-def update_namespace_description(namespace: str, description: str) -> None:
+def update_namespace_description(namespace: str, description: str, max_retries: int = 5, retry_delay: int = 2) -> bool:
     """
     Patch a namespace's description. For EDA, this may be a custom CRD
     (group=core.eda.nokia.com, version=v1, plural=namespaces).
+    Handles 404 errors with retries if the namespace is not yet available.
 
     Parameters
     ----------
@@ -278,11 +279,15 @@ def update_namespace_description(namespace: str, description: str) -> None:
         The namespace to patch.
     description : str
         The new description.
+    max_retries : int
+        Maximum number of retry attempts.
+    retry_delay : int
+        Delay in seconds between retries.
 
-    Raises
-    ------
-    ApiException
-        If the patch fails.
+    Returns
+    -------
+    bool
+        True if successful, False if couldn't update after retries.
     """
     crd_api = client.CustomObjectsApi()
     group = "core.eda.nokia.com"
@@ -291,19 +296,41 @@ def update_namespace_description(namespace: str, description: str) -> None:
 
     patch_body = {"spec": {"description": description}}
 
+    # Check if namespace exists in Kubernetes first
+    v1 = client.CoreV1Api()
     try:
-        resp = crd_api.patch_namespaced_custom_object(
-            group=group,
-            version=version,
-            namespace="eda-system",  # If it's a cluster-scoped CRD, use patch_cluster_custom_object
-            plural=plural,
-            name=namespace,
-            body=patch_body,
-        )
-        logger.info(f"Namespace '{namespace}' patched with description. resp={resp}")
+        v1.read_namespace(name=namespace)
     except ApiException as exc:
-        logger.error(f"Failed to patch namespace '{namespace}': {exc}")
-        raise
+        if exc.status == 404:
+            logger.warning(f"Kubernetes namespace '{namespace}' does not exist. Cannot update EDA description.")
+            return False
+        else:
+            logger.error(f"Error checking namespace '{namespace}': {exc}")
+            raise
+
+    # Try to update the EDA namespace description with retries
+    for attempt in range(max_retries):
+        try:
+            resp = crd_api.patch_namespaced_custom_object(
+                group=group,
+                version=version,
+                namespace="eda-system",
+                plural=plural,
+                name=namespace,
+                body=patch_body,
+            )
+            logger.info(f"Namespace '{namespace}' patched with description. resp={resp}")
+            return True
+        except ApiException as exc:
+            if exc.status == 404:
+                logger.info(f"EDA namespace '{namespace}' not found (attempt {attempt+1}/{max_retries}). Retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+            else:
+                logger.error(f"Failed to patch namespace '{namespace}': {exc}")
+                raise
+
+    logger.warning(f"Could not update description for namespace '{namespace}' after {max_retries} attempts.")
+    return False
 
 
 def edactl_revert_commit(commit_hash: str) -> bool:
