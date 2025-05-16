@@ -117,7 +117,7 @@ class NokiaSRLinuxNode(Node):
             "gnmi_port": self.GNMI_PORT,
             "operating_system": self.EDA_OPERATING_SYSTEM,
             "version_path": self.VERSION_PATH,
-            "version_match": "v{}.*".format(self.version.replace(".", "\.")),
+            "version_match": "v{}.*".format(self.version.replace(".", "\\.")),
             "yang_path": self.YANG_PATH.format(
                 artifact_name=artifact_name, filename=filename
             ),
