@@ -191,7 +191,7 @@ class NokiaSROSNode(Node):
         Render the TopoNode YAML for this SROS node.
         """
         logger.info(f"Creating toponode for {self.name}")
-        role_value = "dcgw"
+        role_value = "backbone"
 
         # Ensure all values are lowercase and valid
         node_name = self.get_node_name(topology)
@@ -319,15 +319,8 @@ class NokiaSROSNode(Node):
         node_name = self.get_node_name(topology)
         eda_ifname = self.get_interface_name_for_kind(ifname)
 
-        # Convert to a resource-friendly name
-        # We'll use dashes instead of slashes but keep the structure
-        # For resource names, we can simplify by just removing 'ethernet-' prefix
-        if eda_ifname.startswith('ethernet-'):
-            resource_name = eda_ifname[9:]  # Remove 'ethernet-' prefix
-        else:
-            resource_name = eda_ifname
-
-        return f"{node_name}-{resource_name}"
+        # No longer strip out the 'ethernet-' prefix to maintain consistency with SR Linux
+        return f"{node_name}-{eda_ifname}"
 
     def get_topolink_interface(self, topology, ifname, other_node):
         """
