@@ -10,6 +10,14 @@ metadata:
     containerlab: {{ containerlab_label }}
   namespace: {{ namespace }}
 spec:
+  {% if components %}
+  component:
+    {% for component in components %}
+    - kind: {{ component.kind }}
+      slot: '{{ component.slot }}'
+      type: {{ component.type }}
+    {% endfor %}
+  {% endif %}
   nodeProfile: {{ node_profile }}
   operatingSystem: {{ kind }}
   platform: {{ platform }}

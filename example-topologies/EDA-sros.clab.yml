@@ -11,19 +11,17 @@ topology:
   nodes:
     dc-gw-1:
       kind: nokia_sros
-    dut1:
-      kind: nokia_srlinux
-      type: ixrd3l
-    dut2:
-      kind: nokia_srlinux
-      type: ixrd3l
-    dut3:
+    spine1:
       kind: nokia_srlinux
       type: ixrd5
+    leaf1:
+      kind: nokia_srlinux
+      type: ixrd3l
+    leaf2:
+      kind: nokia_srlinux
+      type: ixrd3l
 
   links:
-    # spine - leaf
-    - endpoints: ["dut1:e1-1", "dut3:e1-1"]
-    - endpoints: ["dut1:e1-2", "dut3:e1-2"]
-    - endpoints: ["dut2:e1-1", "dut3:e1-3"]
-    - endpoints: ["dut2:e1-2", "dut3:e1-4"]
+    - endpoints: ["spine1:e1-1", "leaf1:e1-33"]
+    - endpoints: ["spine1:e1-2", "leaf2:e1-34"]
+    - endpoints: ["spine1:e1-3", "dc-gw-1:1/1/3"]
