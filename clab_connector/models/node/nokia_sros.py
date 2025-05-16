@@ -33,6 +33,80 @@ class NokiaSROSNode(Node):
         ),
     }
 
+    # Map of node types to their line card and MDA components
+    SROS_COMPONENTS = {
+        "sr-1": {
+            "lineCard": {"slot": "1", "type": "iom-1"},
+            "mda": {"slot": "1-a", "type": "me12-100gb-qsfp28"},
+            "connectors": 12,  # Number of connectors
+        },
+        "sr-1s": {
+            "lineCard": {"slot": "1", "type": "xcm-1s"},
+            "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
+            "connectors": 36,
+        },
+        "sr-2s": {
+            "lineCard": {"slot": "1", "type": "xcm-2s"},
+            "mda": {"slot": "1-a", "type": "ms8-100gb-sfpdd+2-100gb-qsfp28"},
+            "connectors": 10,
+        },
+        "sr-7s": {
+            "lineCard": {"slot": "1", "type": "xcm-7s"},
+            "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
+            "connectors": 36,
+        },
+    }
+
+    def _get_components(self):
+        """
+        Generate component information based on the node type.
+
+        Returns
+        -------
+        list
+            A list of component dictionaries for the TopoNode resource.
+        """
+        # Default to empty component list
+        components = []
+
+        # Normalize node type for lookup
+        node_type = self.node_type.lower() if self.node_type else ""
+
+        # Check if node type is in the mapping
+        if node_type in self.SROS_COMPONENTS:
+            # Get component info for this node type
+            component_info = self.SROS_COMPONENTS[node_type]
+
+            # Add line card component
+            if "lineCard" in component_info:
+                lc = component_info["lineCard"]
+                components.append({
+                    "kind": "lineCard",
+                    "slot": lc["slot"],
+                    "type": lc["type"]
+                })
+
+            # Add MDA component
+            if "mda" in component_info:
+                mda = component_info["mda"]
+                components.append({
+                    "kind": "mda",
+                    "slot": mda["slot"],
+                    "type": mda["type"]
+                })
+
+            # Add connector components
+            if "connectors" in component_info:
+                num_connectors = component_info["connectors"]
+                for i in range(1, num_connectors + 1):
+                    components.append({
+                        "kind": "connector",
+                        "slot": f"1-a-{i}",
+                        "type": "c1-100g"  # Default connector type
+                    })
+
+        return components
+
     def get_default_node_type(self):
         """
         Return the default node type for an SROS node.
@@ -124,6 +198,9 @@ class NokiaSROSNode(Node):
         topo_name = topology.get_eda_safe_name()
         normalized_version = self._normalize_version(self.version)
 
+        # Generate component information based on node type
+        components = self._get_components()
+
         data = {
             "namespace": f"clab-{topology.name}",
             "node_name": node_name,
@@ -132,21 +209,125 @@ class NokiaSROSNode(Node):
             "node_profile": self.get_profile_name(topology),
             "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
-            "sw_version": normalized_version,  # Use normalized version consistently
+            "sw_version": normalized_version,
             "mgmt_ip": self.mgmt_ipv4,
-            "containerlab_label": "managedSros"  # Added this line
+            "containerlab_label": "managedSros",
+            "components": components  # Add component information
         }
         return helpers.render_template("toponode.j2", data)
 
     def get_interface_name_for_kind(self, ifname):
         """
-        Convert a containerlab interface name to an SROS style interface.
+        Convert a containerlab interface name to an SR OS EDA-compatible interface name.
+
+        Supports all SR OS interface naming conventions:
+        - 1/1/1 → ethernet-1-a-1 (first linecard, MDA 'a', port 1)
+        - 2/2/1 → ethernet-2-b-1 (second linecard, MDA 'b', port 1)
+        - 1/1/c1/1 → ethernet-1-1-1 (breakout port with implicit MDA)
+        - 1/1/c2/1 → ethernet-1-a-2-1 (breakout port with explicit MDA 'a')
+        - 1/x1/1/1 → ethernet-1-1-a-1 (XIOM MDA)
+        - lo0 → loopback-0
+        - lag-10 → lag-10
+        - eth3 → ethernet-1-a-3-1 (containerlab format)
+        - e1-1 → ethernet-1-a-1-1 (containerlab format)
         """
-        pattern = re.compile(r"^e(\d+)-(\d+)$")
-        match = pattern.match(ifname)
+        # Handle native SR OS port format with slashes: "1/1/1"
+        slot_mda_port = re.compile(r"^(\d+)/(\d+)/(\d+)$")
+        match = slot_mda_port.match(ifname)
         if match:
-            return f"{match.group(1)}/1/{match.group(2)}"
+            slot = match.group(1)
+            mda_num = int(match.group(2))
+            port = match.group(3)
+
+            # Convert MDA number to letter (1→'a', 2→'b', etc.)
+            mda_letter = chr(96 + mda_num)  # ASCII 'a' is 97
+            return f"ethernet-{slot}-{mda_letter}-{port}-1"
+
+        # Handle breakout ports with implicit MDA: "1/1/c1/1"
+        breakout_implicit = re.compile(r"^(\d+)/(\d+)/c(\d+)/(\d+)$")
+        match = breakout_implicit.match(ifname)
+        if match and match.group(2) == "1":  # Check for implicit MDA (1)
+            slot = match.group(1)
+            channel = match.group(3)
+            port = match.group(4)
+            return f"ethernet-{slot}-{channel}-{port}"
+
+        # Handle breakout ports with explicit MDA: "1/1/c2/1"
+        breakout_explicit = re.compile(r"^(\d+)/(\d+)/c(\d+)/(\d+)$")
+        match = breakout_explicit.match(ifname)
+        if match:
+            slot = match.group(1)
+            mda_num = int(match.group(2))
+            channel = match.group(3)
+            port = match.group(4)
+
+            # Convert MDA number to letter
+            mda_letter = chr(96 + mda_num)  # ASCII 'a' is 97
+            return f"ethernet-{slot}-{mda_letter}-{channel}-{port}"
+
+        # Handle XIOM MDA: "1/x1/1/1"
+        xiom = re.compile(r"^(\d+)/x(\d+)/(\d+)/(\d+)$")
+        match = xiom.match(ifname)
+        if match:
+            slot = match.group(1)
+            xiom_id = match.group(2)
+            mda_num = int(match.group(3))
+            port = match.group(4)
+
+            # Convert MDA number to letter
+            mda_letter = chr(96 + mda_num)  # ASCII 'a' is 97
+            return f"ethernet-{slot}-{xiom_id}-{mda_letter}-{port}"
+
+        # Handle ethX format (commonly used in containerlab for SR OS)
+        eth_pattern = re.compile(r"^eth(\d+)$")
+        match = eth_pattern.match(ifname)
+        if match:
+            port_num = match.group(1)
+            # Map to ethernet-1-a-{port}-1 format with connector
+            return f"ethernet-1-a-{port_num}-1"
+
+        # Handle standard containerlab eX-Y format
+        e_pattern = re.compile(r"^e(\d+)-(\d+)$")
+        match = e_pattern.match(ifname)
+        if match:
+            slot = match.group(1)
+            port = match.group(2)
+            # Add MDA 'a' and connector number
+            return f"ethernet-{slot}-a-{port}-1"
+
+        # Handle loopback interfaces
+        lo_pattern = re.compile(r"^lo(\d+)$")
+        match = lo_pattern.match(ifname)
+        if match:
+            return f"loopback-{match.group(1)}"  # Fixed: using match instead of lo_match
+
+        # Handle LAG interfaces (already named correctly)
+        lag_pattern = re.compile(r"^lag-\d+$")
+        if lag_pattern.match(ifname):
+            return ifname
+
+        # If not matching any pattern, return the original
         return ifname
+
+    def get_topolink_interface_name(self, topology, ifname):
+        """
+        Generate a unique interface resource name for a link in EDA.
+        Creates a valid Kubernetes resource name based on the EDA interface format.
+
+        This normalizes complex interface names into valid resource names.
+        """
+        node_name = self.get_node_name(topology)
+        eda_ifname = self.get_interface_name_for_kind(ifname)
+
+        # Convert to a resource-friendly name
+        # We'll use dashes instead of slashes but keep the structure
+        # For resource names, we can simplify by just removing 'ethernet-' prefix
+        if eda_ifname.startswith('ethernet-'):
+            resource_name = eda_ifname[9:]  # Remove 'ethernet-' prefix
+        else:
+            resource_name = eda_ifname
+
+        return f"{node_name}-{resource_name}"
 
     def get_topolink_interface(self, topology, ifname, other_node):
         """
