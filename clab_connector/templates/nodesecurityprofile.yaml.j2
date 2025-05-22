@@ -5,7 +5,8 @@ metadata:
   namespace: {{ namespace }}
 spec:
   nodeSelector:
-    - eda.nokia.com/security-profile=managed
+    - eda.nokia.com/security-profile=managed,containerlab=managedSrl
+    - eda.nokia.com/security-profile=managed,containerlab=managedSros
   tls:
     csrParams:
       certificateValidity: 2160h
