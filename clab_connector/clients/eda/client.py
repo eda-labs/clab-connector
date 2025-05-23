@@ -86,20 +86,20 @@ class EDAClient:
         If kc_secret is not provided, fetch it using kc_user/kc_password in realm='master'.
         """
         if not self.kc_secret:
-            logger.info(
+            logger.debug(
                 "No kc_secret provided; retrieving it from Keycloak master realm."
             )
             self.kc_secret = self._fetch_client_secret_via_admin()
             logger.info("Successfully retrieved EDA client secret from Keycloak.")
 
-        logger.info(
+        logger.debug(
             "Acquiring user access token via Keycloak resource-owner flow (realm=eda)."
         )
         self.access_token = self._fetch_user_token(self.kc_secret)
         if not self.access_token:
             raise EDAConnectionError("Could not retrieve an access token for EDA.")
 
-        logger.info("Keycloak-based login successful (realm=eda).")
+        logger.debug("Keycloak-based login successful (realm=eda).")
 
     def _fetch_client_secret_via_admin(self) -> str:
         """
@@ -228,12 +228,12 @@ class EDAClient:
 
     def get(self, api_path: str, requires_auth: bool = True):
         url = f"{self.url}/{api_path}"
-        logger.info(f"GET {url}")
+        logger.debug(f"GET {url}")
         return self.http.request("GET", url, headers=self.get_headers(requires_auth))
 
     def post(self, api_path: str, payload: dict, requires_auth: bool = True):
         url = f"{self.url}/{api_path}"
-        logger.info(f"POST {url}")
+        logger.debug(f"POST {url}")
         body = json.dumps(payload).encode("utf-8")
         return self.http.request(
             "POST", url, headers=self.get_headers(requires_auth), body=body
@@ -252,7 +252,7 @@ class EDAClient:
         if self.version is not None:
             return self.version
 
-        logger.info("Retrieving EDA version")
+        logger.debug("Retrieving EDA version")
         resp = self.get("core/about/version")
         if resp.status != 200:
             raise EDAConnectionError(f"Version check failed: {resp.data.decode()}")
@@ -260,7 +260,7 @@ class EDAClient:
         data = json.loads(resp.data.decode("utf-8"))
         raw_ver = data["eda"]["version"]
         self.version = raw_ver.split("-")[0]
-        logger.info(f"EDA version: {self.version}")
+        logger.debug(f"EDA version: {self.version}")
         return self.version
 
     def is_authenticated(self) -> bool:
@@ -310,7 +310,7 @@ class EDAClient:
         )
 
     def is_transaction_item_valid(self, item: dict) -> bool:
-        logger.info("Validating transaction item")
+        logger.debug("Validating transaction item")
 
         # Check version to determine which endpoint to use
         version = self.get_version()
@@ -331,7 +331,7 @@ class EDAClient:
             resp = self.post("core/transaction/v1/validate", item)
 
         if resp.status == 204:
-            logger.info("Transaction item validation success.")
+            logger.debug("Transaction item validation success.")
             return True
 
         data = json.loads(resp.data.decode("utf-8"))

@@ -106,7 +106,7 @@ class NokiaSRLinuxNode(Node):
         """
         Render the NodeProfile YAML for this SR Linux node.
         """
-        logger.info(f"Rendering node profile for {self.name}")
+        logger.debug(f"Rendering node profile for {self.name}")
         artifact_name = self.get_artifact_name()
         filename = f"srlinux-{self.version}.zip"
 
@@ -195,7 +195,7 @@ class NokiaSRLinuxNode(Node):
         str
             The rendered Interface CR YAML.
         """
-        logger.info(f"Creating topolink interface for {self.name}")
+        logger.debug(f"Creating topolink interface for {self.name}")
         role = "interSwitch"
         if other_node is None or not other_node.is_eda_supported():
             role = "edge"

@@ -37,11 +37,11 @@ class TopologyRemover:
         """
         self.topology = parse_topology_file(str(topology_file))
 
-        print("== Removing namespace ==")
+        logger.info("== Removing namespace ==")
         self.remove_namespace()
         self.eda_client.commit_transaction("remove namespace")
 
-        print("Done!")
+        logger.info("Done!")
 
     def remove_namespace(self):
         """

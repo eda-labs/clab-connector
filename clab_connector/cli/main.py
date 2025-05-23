@@ -101,7 +101,7 @@ def integrate_cmd(
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
     log_level: LogLevel = typer.Option(
-        LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
+        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
     ),
     log_file: Optional[str] = typer.Option(
         None, "--log-file", "-f", help="Optional log file path"
@@ -208,7 +208,7 @@ def remove_cmd(
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
     log_level: LogLevel = typer.Option(
-        LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
+        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
     ),
     log_file: Optional[str] = typer.Option(
         None, "--log-file", "-f", help="Optional log file path"
@@ -272,7 +272,7 @@ def export_lab_cmd(
         None, "--output", "-o", help="Output .clab.yaml file path"
     ),
     log_level: LogLevel = typer.Option(
-        LogLevel.WARNING, "--log-level", help="Logging level"
+        LogLevel.INFO, "--log-level", help="Logging level"
     ),
     log_file: Optional[str] = typer.Option(
         None, "--log-file", help="Optional log file path"
@@ -330,7 +330,7 @@ def generate_crs_cmd(
         False, "--separate", help="Generate separate YAML files for each CR instead of one combined file"
     ),
     log_level: LogLevel = typer.Option(
-        LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
+        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
     ),
     log_file: Optional[str] = typer.Option(
         None, "--log-file", "-f", help="Optional log file path"

@@ -1,4 +1,7 @@
+import logging
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 class YAMLProcessor:
@@ -35,7 +38,7 @@ class YAMLProcessor:
             return data
 
         except yaml.YAMLError as e:
-            print(f"Error loading YAML: {str(e)}")
+            logger.error(f"Error loading YAML: {str(e)}")
             raise
 
     def save_yaml(self, data, output_file, flow_style=None):
@@ -54,8 +57,8 @@ class YAMLProcessor:
                 else:
                     yaml.dump(data, file, default_flow_style=False, sort_keys=False)
 
-            print(f"YAML file saved as '{output_file}'.")
+            logger.info(f"YAML file saved as '{output_file}'.")
 
         except IOError as e:
-            print(f"Error saving YAML file: {str(e)}")
+            logger.error(f"Error saving YAML file: {str(e)}")
             raise

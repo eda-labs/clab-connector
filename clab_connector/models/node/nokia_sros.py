@@ -156,7 +156,7 @@ class NokiaSROSNode(Node):
         """
         Render the NodeProfile YAML for this SROS node.
         """
-        logger.info(f"Rendering node profile for {self.name}")
+        logger.debug(f"Rendering node profile for {self.name}")
         artifact_name = self.get_artifact_name()
         normalized_version = self._normalize_version(self.version)
         filename = f"sros-{normalized_version}.zip"
@@ -326,7 +326,7 @@ class NokiaSROSNode(Node):
         """
         Render the Interface CR YAML for an SROS link endpoint.
         """
-        logger.info(f"Creating topolink interface for {self.name}")
+        logger.debug(f"Creating topolink interface for {self.name}")
         role = "interSwitch"
         if other_node is None or not other_node.is_eda_supported():
             role = "edge"

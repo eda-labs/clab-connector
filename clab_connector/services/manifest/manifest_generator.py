@@ -163,7 +163,7 @@ class ManifestGenerator:
                     f.write(combined)
                 logger.info(f"Combined manifest written to {self.output}")
             else:
-                print(combined)
+                logger.info("\n" + combined)
         else:
             # Separate files per category: self.output must be a directory.
             output_dir = self.output or "manifests"

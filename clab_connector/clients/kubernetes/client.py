@@ -318,7 +318,7 @@ def update_namespace_description(namespace: str, description: str, max_retries: 
                 name=namespace,
                 body=patch_body,
             )
-            logger.info(f"Namespace '{namespace}' patched with description. resp={resp}")
+            logger.debug(f"Namespace '{namespace}' patched with description. resp={resp}")
             return True
         except ApiException as exc:
             if exc.status == 404:

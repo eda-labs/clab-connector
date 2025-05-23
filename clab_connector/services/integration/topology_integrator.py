@@ -74,55 +74,55 @@ class TopologyIntegrator:
         self.topology = parse_topology_file(str(topology_file))
         self.topology.check_connectivity()
 
-        print("== Running pre-checks ==")
+        logger.info("== Running pre-checks ==")
         self.prechecks()
 
-        print("== Creating namespace ==")
+        logger.info("== Creating namespace ==")
         self.create_namespace()
 
-        print("== Creating artifacts ==")
+        logger.info("== Creating artifacts ==")
         self.create_artifacts()
 
-        print("== Creating init ==")
+        logger.info("== Creating init ==")
         self.create_init()
         self.eda_client.commit_transaction("create init (bootstrap)")
 
-        print("== Creating node security profile ==")
+        logger.info("== Creating node security profile ==")
         self.create_node_security_profile()
 
-        print("== Creating node users ==")
+        logger.info("== Creating node users ==")
         self.create_node_user_groups()
         self.create_node_users()
         self.eda_client.commit_transaction("create node users and groups")
 
-        print("== Creating node profiles ==")
+        logger.info("== Creating node profiles ==")
         self.create_node_profiles()
         self.eda_client.commit_transaction("create node profiles")
 
-        print("== Onboarding nodes ==")
+        logger.info("== Onboarding nodes ==")
         self.create_toponodes()
         self.eda_client.commit_transaction("create nodes")
 
-        print("== Adding topolink interfaces ==")
+        logger.info("== Adding topolink interfaces ==")
         self.create_topolink_interfaces(skip_edge_intfs)
         # Only commit if there are transactions
         if self.eda_client.transactions:
             self.eda_client.commit_transaction("create topolink interfaces")
         else:
-            print("No topolink interfaces to create, skipping.")
+            logger.info("No topolink interfaces to create, skipping.")
 
-        print("== Creating topolinks ==")
+        logger.info("== Creating topolinks ==")
         self.create_topolinks(skip_edge_intfs)
         # Only commit if there are transactions
         if self.eda_client.transactions:
             self.eda_client.commit_transaction("create topolinks")
         else:
-            print("No topolinks to create, skipping.")
+            logger.info("No topolinks to create, skipping.")
 
-        print("== Running post-integration steps ==")
+        logger.info("== Running post-integration steps ==")
         self.run_post_integration()
 
-        print("Done!")
+        logger.info("Done!")
 
     def prechecks(self):
         """

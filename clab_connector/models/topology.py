@@ -281,5 +281,5 @@ def parse_topology_file(path: str) -> Topology:
     original = topo.name
     topo.name = topo.get_eda_safe_name()
     if topo.name != original:
-        logger.info(f"Renamed topology '{original}' -> '{topo.name}' for EDA safety")
+        logger.debug(f"Renamed topology '{original}' -> '{topo.name}' for EDA safety")
     return topo
