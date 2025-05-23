@@ -149,7 +149,7 @@ clab-connector integrate \
 
 
 > [!NOTE]
-> When SR Linux and SR OS nodes are onboarded, the connector creates the `admin` user with default passwords of `NokiaSrl1!` for SR Linux and NokiaSros1!` for SROS.
+> When SR Linux and SR OS nodes are onboarded, the connector creates the `admin` user with default passwords of `NokiaSrl1!` for SR Linux and `NokiaSros1!` for SROS.
 
 #### Remove Containerlab Integration from EDA
 
