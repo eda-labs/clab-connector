@@ -2,8 +2,9 @@
 
 import logging
 import os
-import sys
 import json
+
+from clab_connector.utils.exceptions import TopologyFileError
 
 from clab_connector.models.node.factory import create_node
 from clab_connector.models.node.base import Node
@@ -190,7 +191,7 @@ def parse_topology_file(path: str) -> Topology:
 
     Raises
     ------
-    SystemExit
+    TopologyFileError
         If the file does not exist or cannot be parsed.
     ValueError
         If the file is not recognized as a containerlab topology.
@@ -198,14 +199,17 @@ def parse_topology_file(path: str) -> Topology:
     logger.info(f"Parsing topology file '{path}'")
     if not os.path.isfile(path):
         logger.critical(f"Topology file '{path}' does not exist!")
-        sys.exit(1)
+        raise TopologyFileError(f"Topology file '{path}' does not exist!")
 
     try:
         with open(path, "r") as f:
             data = json.load(f)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
         logger.critical(f"File '{path}' is not valid JSON.")
-        sys.exit(1)
+        raise TopologyFileError(f"File '{path}' is not valid JSON.") from e
+    except OSError as e:
+        logger.critical(f"Failed to read topology file '{path}': {e}")
+        raise TopologyFileError(f"Failed to read topology file '{path}': {e}") from e
 
     if data.get("type") != "clab":
         raise ValueError("Not a valid containerlab topology file (missing 'type=clab')")

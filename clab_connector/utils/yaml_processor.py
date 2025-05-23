@@ -1,5 +1,4 @@
 import yaml
-import sys
 
 
 class YAMLProcessor:
@@ -37,7 +36,7 @@ class YAMLProcessor:
 
         except yaml.YAMLError as e:
             print(f"Error loading YAML: {str(e)}")
-            sys.exit(1)
+            raise
 
     def save_yaml(self, data, output_file, flow_style=None):
         try:
@@ -59,4 +58,4 @@ class YAMLProcessor:
 
         except IOError as e:
             print(f"Error saving YAML file: {str(e)}")
-            sys.exit(1)
+            raise
