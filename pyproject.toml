@@ -25,7 +25,7 @@ dependencies = [
     "requests==2.32.3",
     "typer==0.15.4",
     "urllib3==2.4.0",
-    "click==8.1.8",
+    "click==8.2.0",
 ]
 
 [project.scripts]
