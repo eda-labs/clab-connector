@@ -120,15 +120,36 @@ The tool offers two primary subcommands: `integrate` and `remove`.
 
 #### Integrate Containerlab with EDA
 
-To integrate your Containerlab topology with EDA you need to get a path to the `topology-data.json` file created by Containerlab when it deploys the lab. This file is located in the Containerlab's Lab Directory as described in the [documentation](https://containerlab.dev/manual/conf-artifacts/). With the path to the topology data file is known, you can use the following command to integrate the Containerlab topology with EDA:
+To integrate your Containerlab topology with EDA you need the path to the
+`topology-data.json` file created by Containerlab when it deploys the lab. This
+file resides in the Containerlab Lab Directory as described in the
+[documentation](https://containerlab.dev/manual/conf-artifacts/). Once you have
+the path, run the following command:
 
 ```
 clab-connector integrate \
---topology-data path/to/topology-data.json \
---eda-url https://eda.example.com \
---eda-user youruser \
---eda-password yourpassword \
+  --topology-data path/to/topology-data.json \
+  --eda-url https://eda.example.com \
+  --eda-user youruser \
+  --eda-password yourpassword
 ```
+| Option                  | Required | Default | Description
+|-------------------------|----------|---------|-------------------------------------------------------|
+| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file      |
+| `--eda-url`, `-e`       | Yes      | None    | EDA deployment hostname or IP address                 |
+| `--eda-user`            | No       | admin   | EDA username                                          |
+| `--eda-password`        | No       | admin   | EDA password                                          |
+| `--kc-user`             | No       | admin   | Keycloak master realm admin user                      |
+| `--kc-password`         | No       | admin   | Keycloak master realm admin password                  |
+| `--kc-secret`           | No       | None    | Use given EDA client secret and skip Keycloak flow    |
+| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)     |
+| `--log-file`, `-f`      | No       | None    | Optional log file path                                |
+| `--verify`              | No       | False   | Enable certificate verification for EDA               |
+| `--skip-edge-intfs`     | No       | False   | Skip creation of edge links and their interfaces      |
+
+
+> [!NOTE]
+> When SR Linux and SR OS nodes are onboarded, the connector creates the `admin` user with default passwords of `NokiaSrl1!` for SR Linux and `NokiaSros1!` for SROS.
 
 #### Remove Containerlab Integration from EDA
 
@@ -141,16 +162,19 @@ clab-connector remove \
     --eda-user youruser \
     --eda-password yourpassword
 ```
+| Option                  | Required | Default | Description
+|-------------------------|----------|---------|-------------------------------------------------------|
+| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file      |
+| `--eda-url`, `-e`       | Yes      | None    | EDA deployment hostname or IP address                 |
+| `--eda-user`            | No       | admin   | EDA username                                          |
+| `--eda-password`        | No       | admin   | EDA password                                          |
+| `--kc-user`             | No       | admin   | Keycloak master realm admin user                      |
+| `--kc-password`         | No       | admin   | Keycloak master realm admin password                  |
+| `--kc-secret`           | No       | None    | Use given EDA client secret and skip Keycloak flow    |
+| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)     |
+| `--log-file`, `-f`      | No       | None    | Optional log file path                                |
+| `--verify`              | No       | False   | Enable certificate verification for EDA               |
 
-| Option              | Required | Default   | Description                                                            |
-|---------------------|----------|-----------|------------------------------------------------------------------------|
-| `--topology-data`, `-t` | Yes      | None      | Path to the Containerlab topology data JSON file                        |
-| `--eda-url`, `-e`   | Yes      | None      | EDA deployment hostname or IP address                                   |
-| `--eda-user`        | No       | admin     | EDA username                                                            |
-| `--eda-password`    | No       | admin     | EDA password                                                            |
-| `--log-level`, `-l` | No       | WARNING   | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                       |
-| `--log-file`        | No       | False     | Optional log file path                                                  |
-| `--verify`          | No       | False     | Enable certificate verification for EDA                                 |
 
 
 #### Export a lab from EDA to Containerlab
@@ -164,11 +188,12 @@ clab-connector export-lab \
 |---------------------|----------|-----------|------------------------------------------------------------------------|
 | `--namespace`, `-n` | Yes      | None      | Namespace in which the lab is deployed in EDA                          |
 | `--output`, `-o`    | No       | None      | Output .clab.yaml file path                                            |
-| `--log-level`, `-l` | No       | WARNING   | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                      |
-| `--log-file`        | No       | False     | Optional log file path                                                 |
+| `--log-level`, `-l` | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                      |
+| `--log-file`        | No       | None     | Optional log file path                                                 |
 
 #### Generate CR YAML Manifests
 The `generate-crs` command allows you to generate all the CR YAML manifests that would be applied to EDA—grouped by category. By default all manifests are concatenated into a single file. If you use the --separate flag, the manifests are written into separate files per category (e.g. `artifacts.yaml`, `init.yaml`, `node-security-profile.yaml`, etc.).
+You can also use `--skip-edge-intfs` to omit edge link resources and their interfaces.
 
 
 ##### Combined file example:
@@ -184,6 +209,14 @@ clab-connector generate-crs \
   --separate \
   --output manifests
 ```
+| Option                  | Required | Default | Description
+|-------------------------|----------|---------|-------------------------------------------------------|
+| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file      |
+| `--output`, `-o`        | No       | None    | Output file path or directory                          |
+| `--separate`            | No       | False   | Generate separate YAML files for each CR               |
+| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)     |
+| `--log-file`, `-f`      | No       | None    | Optional log file path                                |
+| `--skip-edge-intfs`     | No       | False   | Skip creation of edge links and their interfaces      |
 
 
 

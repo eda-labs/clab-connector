@@ -4,6 +4,7 @@ import logging
 
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.clients.eda.client import EDAClient
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)
 
@@ -37,18 +38,18 @@ class TopologyRemover:
         """
         self.topology = parse_topology_file(str(topology_file))
 
-        print("== Removing namespace ==")
+        logger.info("== Removing namespace ==")
         self.remove_namespace()
         self.eda_client.commit_transaction("remove namespace")
 
-        print("Done!")
+        logger.info("Done!")
 
     def remove_namespace(self):
         """
         Delete the EDA namespace corresponding to this topology.
         """
         ns = f"clab-{self.topology.name}"
-        logger.info(f"Removing namespace {ns}")
+        logger.info(f"{SUBSTEP_INDENT}Removing namespace {ns}")
         self.eda_client.add_delete_to_transaction(
             namespace="", kind="Namespace", name=ns
         )

@@ -2,10 +2,12 @@
 
 import logging
 import os
-import sys
 import json
 
+from clab_connector.utils.exceptions import TopologyFileError
+
 from clab_connector.models.node.factory import create_node
+from clab_connector.models.node.base import Node
 from clab_connector.models.link import create_link
 
 logger = logging.getLogger(__name__)
@@ -115,9 +117,14 @@ class Topology:
                 tnodes.append(tn)
         return tnodes
 
-    def get_topolinks(self):
-        """
-        Generate TopoLink YAML for all EDA-supported links.
+    def get_topolinks(self, skip_edge_links: bool = False):
+        """Generate TopoLink YAML for all EDA-supported links.
+
+        Parameters
+        ----------
+        skip_edge_links : bool, optional
+            When True, omit TopoLink resources for edge links (links with only
+            one EDA supported endpoint). Defaults to False.
 
         Returns
         -------
@@ -126,15 +133,23 @@ class Topology:
         """
         links = []
         for ln in self.links:
-            if ln.is_topolink():
+            if skip_edge_links and ln.is_edge_link():
+                continue
+            if ln.is_topolink() or ln.is_edge_link():
                 link_yaml = ln.get_topolink_yaml(self)
                 if link_yaml:
                     links.append(link_yaml)
         return links
 
-    def get_topolink_interfaces(self):
+    def get_topolink_interfaces(self, skip_edge_link_interfaces: bool = False):
         """
         Generate Interface YAML for each link endpoint (if EDA-supported).
+
+        Parameters
+        ----------
+        skip_edge_link_interfaces : bool, optional
+            When True, interface resources for edge links (links where only one
+            side is EDA-supported) are omitted. Defaults to False.
 
         Returns
         -------
@@ -143,13 +158,20 @@ class Topology:
         """
         interfaces = []
         for ln in self.links:
-            if ln.is_topolink():
-                intf1 = ln.node_1.get_topolink_interface(self, ln.intf_1, ln.node_2)
-                intf2 = ln.node_2.get_topolink_interface(self, ln.intf_2, ln.node_1)
-                if intf1:
-                    interfaces.append(intf1)
-                if intf2:
-                    interfaces.append(intf2)
+            is_edge = ln.is_edge_link()
+            for node, ifname, peer in (
+                (ln.node_1, ln.intf_1, ln.node_2),
+                (ln.node_2, ln.intf_2, ln.node_1),
+            ):
+                if node is None or not node.is_eda_supported():
+                    continue
+                if skip_edge_link_interfaces and is_edge and (
+                    peer is None or not peer.is_eda_supported()
+                ):
+                    continue
+                intf_yaml = node.get_topolink_interface(self, ifname, peer)
+                if intf_yaml:
+                    interfaces.append(intf_yaml)
         return interfaces
 
 
@@ -169,7 +191,7 @@ def parse_topology_file(path: str) -> Topology:
 
     Raises
     ------
-    SystemExit
+    TopologyFileError
         If the file does not exist or cannot be parsed.
     ValueError
         If the file is not recognized as a containerlab topology.
@@ -177,14 +199,17 @@ def parse_topology_file(path: str) -> Topology:
     logger.info(f"Parsing topology file '{path}'")
     if not os.path.isfile(path):
         logger.critical(f"Topology file '{path}' does not exist!")
-        sys.exit(1)
+        raise TopologyFileError(f"Topology file '{path}' does not exist!")
 
     try:
         with open(path, "r") as f:
             data = json.load(f)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
         logger.critical(f"File '{path}' is not valid JSON.")
-        sys.exit(1)
+        raise TopologyFileError(f"File '{path}' is not valid JSON.") from e
+    except OSError as e:
+        logger.critical(f"Failed to read topology file '{path}': {e}")
+        raise TopologyFileError(f"Failed to read topology file '{path}': {e}") from e
 
     if data.get("type") != "clab":
         raise ValueError("Not a valid containerlab topology file (missing 'type=clab')")
@@ -199,7 +224,8 @@ def parse_topology_file(path: str) -> Topology:
         file_path = data["nodes"][first_key]["labels"].get("clab-topo-file", "")
 
     # Create node objects
-    node_objects = []
+    node_objects = []  # only nodes supported by EDA
+    all_nodes = {}
     for node_name, node_data in data["nodes"].items():
         image = node_data.get("image")
         version = None
@@ -212,23 +238,36 @@ def parse_topology_file(path: str) -> Topology:
             "mgmt_ipv4": node_data.get("mgmt-ipv4-address"),
         }
         node_obj = create_node(node_name, config)
-        if node_obj:
+        if node_obj is None:
+            node_obj = Node(
+                name=node_name,
+                kind=node_data["kind"],
+                node_type=config.get("type"),
+                version=version,
+                mgmt_ipv4=node_data.get("mgmt-ipv4-address"),
+            )
+        if node_obj.is_eda_supported():
             node_objects.append(node_obj)
+        all_nodes[node_name] = node_obj
 
     # Create link objects
     link_objects = []
     for link_info in data["links"]:
-        a_node = link_info["a"]["node"]
-        z_node = link_info["z"]["node"]
-        if any(n.name == a_node for n in node_objects) and any(
-            n.name == z_node for n in node_objects
-        ):
-            endpoints = [
-                f"{a_node}:{link_info['a']['interface']}",
-                f"{z_node}:{link_info['z']['interface']}",
-            ]
-            ln = create_link(endpoints, node_objects)
-            link_objects.append(ln)
+        a_name = link_info["a"]["node"]
+        z_name = link_info["z"]["node"]
+        if a_name not in all_nodes or z_name not in all_nodes:
+            continue
+        node_a = all_nodes[a_name]
+        node_z = all_nodes[z_name]
+        # Only consider links where at least one endpoint is EDA-supported
+        if not (node_a.is_eda_supported() or node_z.is_eda_supported()):
+            continue
+        endpoints = [
+            f"{a_name}:{link_info['a']['interface']}",
+            f"{z_name}:{link_info['z']['interface']}",
+        ]
+        ln = create_link(endpoints, list(all_nodes.values()))
+        link_objects.append(ln)
 
     topo = Topology(
         name=name,
@@ -242,5 +281,5 @@ def parse_topology_file(path: str) -> Topology:
     original = topo.name
     topo.name = topo.get_eda_safe_name()
     if topo.name != original:
-        logger.info(f"Renamed topology '{original}' -> '{topo.name}' for EDA safety")
+        logger.debug(f"Renamed topology '{original}' -> '{topo.name}' for EDA safety")
     return topo

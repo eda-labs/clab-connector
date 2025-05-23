@@ -2,6 +2,8 @@
 
 import logging
 
+from clab_connector.utils.constants import SUBSTEP_INDENT
+
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.clients.eda.client import EDAClient
 from clab_connector.clients.kubernetes.client import (
@@ -31,7 +33,15 @@ class TopologyIntegrator:
         self.eda_client = eda_client
         self.topology = None
 
-    def run(self, topology_file, eda_url, eda_user, eda_password, verify):
+    def run(
+        self,
+        topology_file,
+        eda_url,
+        eda_user,
+        eda_password,
+        verify,
+        skip_edge_intfs: bool = False,
+    ):
         """
         Parse the topology, run connectivity checks, and create EDA resources.
 
@@ -47,6 +57,9 @@ class TopologyIntegrator:
             EDA password.
         verify : bool
             Certificate verification flag.
+        skip_edge_intfs : bool
+            When True, omit edge link resources and their interfaces from the
+            integration.
 
         Returns
         -------
@@ -61,57 +74,59 @@ class TopologyIntegrator:
         """
         logger.info("Parsing topology for integration")
         self.topology = parse_topology_file(str(topology_file))
-        self.topology.check_connectivity()
 
-        print("== Running pre-checks ==")
+        logger.info("== Running pre-checks ==")
         self.prechecks()
 
-        print("== Creating namespace ==")
+        # Verify connectivity to each node's management interface
+        self.topology.check_connectivity()
+
+        logger.info("== Creating namespace ==")
         self.create_namespace()
 
-        print("== Creating artifacts ==")
+        logger.info("== Creating artifacts ==")
         self.create_artifacts()
 
-        print("== Creating init ==")
+        logger.info("== Creating init ==")
         self.create_init()
         self.eda_client.commit_transaction("create init (bootstrap)")
 
-        print("== Creating node security profile ==")
+        logger.info("== Creating node security profile ==")
         self.create_node_security_profile()
 
-        print("== Creating node users ==")
+        logger.info("== Creating node users ==")
         self.create_node_user_groups()
         self.create_node_users()
         self.eda_client.commit_transaction("create node users and groups")
 
-        print("== Creating node profiles ==")
+        logger.info("== Creating node profiles ==")
         self.create_node_profiles()
         self.eda_client.commit_transaction("create node profiles")
 
-        print("== Onboarding nodes ==")
+        logger.info("== Onboarding nodes ==")
         self.create_toponodes()
         self.eda_client.commit_transaction("create nodes")
 
-        print("== Adding topolink interfaces ==")
-        self.create_topolink_interfaces()
+        logger.info("== Adding topolink interfaces ==")
+        self.create_topolink_interfaces(skip_edge_intfs)
         # Only commit if there are transactions
         if self.eda_client.transactions:
             self.eda_client.commit_transaction("create topolink interfaces")
         else:
-            print("No topolink interfaces to create, skipping.")
+            logger.info(f"{SUBSTEP_INDENT}No topolink interfaces to create, skipping.")
 
-        print("== Creating topolinks ==")
-        self.create_topolinks()
+        logger.info("== Creating topolinks ==")
+        self.create_topolinks(skip_edge_intfs)
         # Only commit if there are transactions
         if self.eda_client.transactions:
             self.eda_client.commit_transaction("create topolinks")
         else:
-            print("No topolinks to create, skipping.")
+            logger.info(f"{SUBSTEP_INDENT}No topolinks to create, skipping.")
 
-        print("== Running post-integration steps ==")
+        logger.info("== Running post-integration steps ==")
         self.run_post_integration()
 
-        print("Done!")
+        logger.info("Done!")
 
     def prechecks(self):
         """
@@ -138,7 +153,9 @@ class TopologyIntegrator:
             desc = f"Containerlab {self.topology.name}: {self.topology.clab_file_path}"
             success = update_namespace_description(ns, desc)
             if not success:
-                logger.warning(f"Created namespace '{ns}' but could not update its description. Continuing with integration.")
+                logger.warning(
+                    f"{SUBSTEP_INDENT}Created namespace '{ns}' but could not update its description. Continuing with integration."
+                )
         except Exception as e:
             # If namespace creation itself fails, we should stop the process
             logger.error(f"Failed to create namespace '{ns}': {e}")
@@ -150,14 +167,16 @@ class TopologyIntegrator:
 
         Skips creation if already exists or no artifact data is available.
         """
-        logger.info("Creating artifacts for nodes that need them")
+        logger.info(f"{SUBSTEP_INDENT}Creating artifacts for nodes that need them")
         nodes_by_artifact = {}
         for node in self.topology.nodes:
             if not node.needs_artifact():
                 continue
             artifact_name, filename, download_url = node.get_artifact_info()
             if not artifact_name or not filename or not download_url:
-                logger.warning(f"No artifact info for node {node.name}; skipping.")
+                logger.warning(
+                    f"{SUBSTEP_INDENT}No artifact info for node {node.name}; skipping."
+                )
                 continue
             if artifact_name not in nodes_by_artifact:
                 nodes_by_artifact[artifact_name] = {
@@ -171,25 +190,27 @@ class TopologyIntegrator:
         for artifact_name, info in nodes_by_artifact.items():
             first_node = info["nodes"][0]
             logger.info(
-                f"Creating YANG artifact for node: {first_node} (version={info['version']})"
+                f"{SUBSTEP_INDENT}Creating YANG artifact for node: {first_node} (version={info['version']})"
             )
             artifact_yaml = self.topology.nodes[0].get_artifact_yaml(
                 artifact_name, info["filename"], info["download_url"]
             )
             if not artifact_yaml:
-                logger.warning(f"Could not generate artifact YAML for {first_node}")
+                logger.warning(
+                    f"{SUBSTEP_INDENT}Could not generate artifact YAML for {first_node}"
+                )
                 continue
             try:
                 apply_manifest(artifact_yaml, namespace="eda-system")
-                logger.info(f"Artifact '{artifact_name}' created.")
+                logger.info(f"{SUBSTEP_INDENT}Artifact '{artifact_name}' created.")
                 other_nodes = info["nodes"][1:]
                 if other_nodes:
                     logger.info(
-                        f"Using same artifact for nodes: {', '.join(other_nodes)}"
+                        f"{SUBSTEP_INDENT}Using same artifact for nodes: {', '.join(other_nodes)}"
                     )
             except RuntimeError as ex:
                 if "AlreadyExists" in str(ex):
-                    logger.info(f"Artifact '{artifact_name}' already exists.")
+                    logger.info(f"{SUBSTEP_INDENT}Artifact '{artifact_name}' already exists.")
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 
@@ -211,10 +232,10 @@ class TopologyIntegrator:
         yaml_str = helpers.render_template("nodesecurityprofile.yaml.j2", data)
         try:
             apply_manifest(yaml_str, namespace=f"clab-{self.topology.name}")
-            logger.info("Node security profile created.")
+            logger.info(f"{SUBSTEP_INDENT}Node security profile created.")
         except RuntimeError as ex:
             if "AlreadyExists" in str(ex):
-                logger.info("Node security profile already exists, skipping.")
+                logger.info(f"{SUBSTEP_INDENT}Node security profile already exists, skipping.")
             else:
                 raise
 
@@ -234,7 +255,9 @@ class TopologyIntegrator:
         """
         ssh_pub_keys = getattr(self.topology, "ssh_pub_keys", [])
         if not ssh_pub_keys:
-            logger.warning("No SSH public keys found. Proceeding with an empty key list.")
+            logger.warning(
+                f"{SUBSTEP_INDENT}No SSH public keys found. Proceeding with an empty key list."
+            )
 
         # Create SRL node user
         srl_data = {
@@ -284,21 +307,27 @@ class TopologyIntegrator:
             if not self.eda_client.is_transaction_item_valid(item):
                 raise ClabConnectorError("Validation error creating toponode")
 
-    def create_topolink_interfaces(self):
+    def create_topolink_interfaces(self, skip_edge_intfs: bool = False):
         """
         Create Interface resources for each link endpoint in the topology.
         """
-        interfaces = self.topology.get_topolink_interfaces()
+        interfaces = self.topology.get_topolink_interfaces(
+            skip_edge_link_interfaces=skip_edge_intfs
+        )
         for intf_yaml in interfaces:
             item = self.eda_client.add_replace_to_transaction(intf_yaml)
             if not self.eda_client.is_transaction_item_valid(item):
                 raise ClabConnectorError("Validation error creating topolink interface")
 
-    def create_topolinks(self):
+    def create_topolinks(self, skip_edge_links: bool = False):
+        """Create TopoLink resources for each EDA-supported link in the topology.
+
+        Parameters
+        ----------
+        skip_edge_links : bool, optional
+            When True, omit TopoLink resources for edge links. Defaults to False.
         """
-        Create TopoLink resources for each EDA-supported link in the topology.
-        """
-        links = self.topology.get_topolinks()
+        links = self.topology.get_topolinks(skip_edge_links=skip_edge_links)
         for l_yaml in links:
             item = self.eda_client.add_replace_to_transaction(l_yaml)
             if not self.eda_client.is_transaction_item_valid(item):
@@ -315,7 +344,7 @@ class TopologyIntegrator:
         # Look for SROS nodes and run post-integration for them
         for node in self.topology.nodes:
             if node.kind == "nokia_sros":
-                logger.info(f"Running SROS post-integration for node {node.name}")
+                logger.info(f"{SUBSTEP_INDENT}Running SROS post-integration for node {node.name}")
                 try:
                     # Get normalized version from the node
                     normalized_version = node._normalize_version(node.version)
@@ -329,7 +358,7 @@ class TopologyIntegrator:
                         quiet=quiet  # Pass quiet parameter
                     )
                     if success:
-                        logger.info(f"SROS post-integration for {node.name} completed successfully")
+                        logger.info(f"{SUBSTEP_INDENT}SROS post-integration for {node.name} completed successfully")
                     else:
                         logger.error(f"SROS post-integration for {node.name} failed")
                 except Exception as e:

@@ -101,12 +101,17 @@ def integrate_cmd(
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
     log_level: LogLevel = typer.Option(
-        LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
+        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
     ),
     log_file: Optional[str] = typer.Option(
         None, "--log-file", "-f", help="Optional log file path"
     ),
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
+    skip_edge_intfs: bool = typer.Option(
+        False,
+        "--skip-edge-intfs",
+        help="Skip creation of edge links and their interfaces",
+    ),
 ):
     """
     CLI command to integrate a containerlab topology with EDA.
@@ -136,6 +141,7 @@ def integrate_cmd(
     args.kc_password = kc_password
     args.kc_secret = kc_secret
     args.verify = verify
+    args.skip_edge_intfs = skip_edge_intfs
 
     def execute_integration(a):
         eda_client = EDAClient(
@@ -155,6 +161,7 @@ def integrate_cmd(
             eda_user=a.eda_user,
             eda_password=a.eda_password,
             verify=a.verify,
+            skip_edge_intfs=a.skip_edge_intfs,
         )
 
     try:
@@ -201,7 +208,7 @@ def remove_cmd(
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
     log_level: LogLevel = typer.Option(
-        LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
+        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
     ),
     log_file: Optional[str] = typer.Option(
         None, "--log-file", "-f", help="Optional log file path"
@@ -211,15 +218,12 @@ def remove_cmd(
     """
     CLI command to remove EDA integration (delete the namespace).
     """
-    import logging
     from clab_connector.utils.logging_config import setup_logging
     from clab_connector.clients.eda.client import EDAClient
     from clab_connector.services.removal.topology_remover import TopologyRemover
 
     # Set up logging
     setup_logging(log_level.value, log_file)
-    logger = logging.getLogger(__name__)
-
     class Args:
         pass
 
@@ -268,7 +272,7 @@ def export_lab_cmd(
         None, "--output", "-o", help="Output .clab.yaml file path"
     ),
     log_level: LogLevel = typer.Option(
-        LogLevel.WARNING, "--log-level", help="Logging level"
+        LogLevel.INFO, "--log-level", help="Logging level"
     ),
     log_file: Optional[str] = typer.Option(
         None, "--log-file", help="Optional log file path"
@@ -326,10 +330,15 @@ def generate_crs_cmd(
         False, "--separate", help="Generate separate YAML files for each CR instead of one combined file"
     ),
     log_level: LogLevel = typer.Option(
-        LogLevel.WARNING, "--log-level", "-l", help="Set logging level"
+        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
     ),
     log_file: Optional[str] = typer.Option(
         None, "--log-file", "-f", help="Optional log file path"
+    ),
+    skip_edge_intfs: bool = typer.Option(
+        False,
+        "--skip-edge-intfs",
+        help="Skip creation of edge links and their interfaces",
     ),
 ):
     """
@@ -340,15 +349,18 @@ def generate_crs_cmd(
     The manifests can be written as one combined YAML file (default) or as separate files
     (if --separate is specified).
     """
-    import logging
     from clab_connector.services.manifest.manifest_generator import ManifestGenerator
     from clab_connector.utils.logging_config import setup_logging
 
     setup_logging(log_level.value, log_file)
-    logger = logging.getLogger(__name__)
 
     try:
-        generator = ManifestGenerator(str(topology_data), output=output_file, separate=separate)
+        generator = ManifestGenerator(
+            str(topology_data),
+            output=output_file,
+            separate=separate,
+            skip_edge_intfs=skip_edge_intfs,
+        )
         generator.generate()
         generator.output_manifests()
     except Exception as e:

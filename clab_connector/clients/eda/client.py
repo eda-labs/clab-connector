@@ -16,6 +16,8 @@ We support two flows:
 import json
 import logging
 import yaml
+
+from clab_connector.utils.constants import SUBSTEP_INDENT
 from urllib.parse import urlencode
 
 from clab_connector.clients.eda.http_client import create_pool_manager
@@ -86,20 +88,20 @@ class EDAClient:
         If kc_secret is not provided, fetch it using kc_user/kc_password in realm='master'.
         """
         if not self.kc_secret:
-            logger.info(
+            logger.debug(
                 "No kc_secret provided; retrieving it from Keycloak master realm."
             )
             self.kc_secret = self._fetch_client_secret_via_admin()
-            logger.info("Successfully retrieved EDA client secret from Keycloak.")
+            logger.info(f"{SUBSTEP_INDENT}Successfully retrieved EDA client secret from Keycloak.")
 
-        logger.info(
+        logger.debug(
             "Acquiring user access token via Keycloak resource-owner flow (realm=eda)."
         )
         self.access_token = self._fetch_user_token(self.kc_secret)
         if not self.access_token:
             raise EDAConnectionError("Could not retrieve an access token for EDA.")
 
-        logger.info("Keycloak-based login successful (realm=eda).")
+        logger.debug("Keycloak-based login successful (realm=eda).")
 
     def _fetch_client_secret_via_admin(self) -> str:
         """
@@ -228,19 +230,19 @@ class EDAClient:
 
     def get(self, api_path: str, requires_auth: bool = True):
         url = f"{self.url}/{api_path}"
-        logger.info(f"GET {url}")
+        logger.debug(f"GET {url}")
         return self.http.request("GET", url, headers=self.get_headers(requires_auth))
 
     def post(self, api_path: str, payload: dict, requires_auth: bool = True):
         url = f"{self.url}/{api_path}"
-        logger.info(f"POST {url}")
+        logger.debug(f"POST {url}")
         body = json.dumps(payload).encode("utf-8")
         return self.http.request(
             "POST", url, headers=self.get_headers(requires_auth), body=body
         )
 
     def is_up(self) -> bool:
-        logger.info("Checking EDA health")
+        logger.info(f"{SUBSTEP_INDENT}Checking EDA health")
         resp = self.get("core/about/health", requires_auth=False)
         if resp.status != 200:
             return False
@@ -252,7 +254,7 @@ class EDAClient:
         if self.version is not None:
             return self.version
 
-        logger.info("Retrieving EDA version")
+        logger.debug("Retrieving EDA version")
         resp = self.get("core/about/version")
         if resp.status != 200:
             raise EDAConnectionError(f"Version check failed: {resp.data.decode()}")
@@ -260,7 +262,7 @@ class EDAClient:
         data = json.loads(resp.data.decode("utf-8"))
         raw_ver = data["eda"]["version"]
         self.version = raw_ver.split("-")[0]
-        logger.info(f"EDA version: {self.version}")
+        logger.debug(f"EDA version: {self.version}")
         return self.version
 
     def is_authenticated(self) -> bool:
@@ -310,7 +312,7 @@ class EDAClient:
         )
 
     def is_transaction_item_valid(self, item: dict) -> bool:
-        logger.info("Validating transaction item")
+        logger.debug("Validating transaction item")
 
         # Check version to determine which endpoint to use
         version = self.get_version()
@@ -331,11 +333,11 @@ class EDAClient:
             resp = self.post("core/transaction/v1/validate", item)
 
         if resp.status == 204:
-            logger.info("Transaction item validation success.")
+            logger.debug("Transaction item validation success.")
             return True
 
         data = json.loads(resp.data.decode("utf-8"))
-        logger.warning(f"Validation error: {data}")
+        logger.warning(f"{SUBSTEP_INDENT}Validation error: {data}")
         return False
 
     def commit_transaction(
@@ -353,7 +355,7 @@ class EDAClient:
             "crs": self.transactions,
         }
         logger.info(
-            f"Committing transaction: {description}, {len(self.transactions)} items"
+            f"{SUBSTEP_INDENT}Committing transaction: {description}, {len(self.transactions)} items"
         )
         resp = self.post("core/transaction/v1", payload)
         if resp.status != 200:
@@ -366,7 +368,7 @@ class EDAClient:
         if not tx_id:
             raise EDAConnectionError(f"No transaction ID in response: {data}")
 
-        logger.info(f"Waiting for transaction {tx_id} to complete...")
+        logger.info(f"{SUBSTEP_INDENT}Waiting for transaction {tx_id} to complete...")
         details_path = f"core/transaction/v1/details/{tx_id}?waitForComplete=true&failOnErrors=true"
         details_resp = self.get(details_path)
         if details_resp.status != 200:
@@ -379,6 +381,6 @@ class EDAClient:
             logger.error(f"Transaction commit failed: {details}")
             raise EDAConnectionError(f"Transaction commit failed: {details}")
 
-        logger.info("Commit successful.")
+        logger.info(f"{SUBSTEP_INDENT}Commit successful.")
         self.transactions = []
         return tx_id

@@ -3,6 +3,7 @@ import re
 
 from .base import Node
 from clab_connector.utils import helpers
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +157,7 @@ class NokiaSROSNode(Node):
         """
         Render the NodeProfile YAML for this SROS node.
         """
-        logger.info(f"Rendering node profile for {self.name}")
+        logger.debug(f"Rendering node profile for {self.name}")
         artifact_name = self.get_artifact_name()
         normalized_version = self._normalize_version(self.version)
         filename = f"sros-{normalized_version}.zip"
@@ -190,7 +191,7 @@ class NokiaSROSNode(Node):
         """
         Render the TopoNode YAML for this SROS node.
         """
-        logger.info(f"Creating toponode for {self.name}")
+        logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
         role_value = "backbone"
 
         # Ensure all values are lowercase and valid
@@ -326,16 +327,19 @@ class NokiaSROSNode(Node):
         """
         Render the Interface CR YAML for an SROS link endpoint.
         """
-        logger.info(f"Creating topolink interface for {self.name}")
+        logger.debug(f"{SUBSTEP_INDENT}Creating topolink interface for {self.name}")
+        role = "interSwitch"
+        if other_node is None or not other_node.is_eda_supported():
+            role = "edge"
         data = {
             "namespace": f"clab-{topology.name}",
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
-            "label_value": "interSwitch",
+            "label_value": role,
             "encap_type": "'null'",
             "node_name": self.get_node_name(topology),
             "interface": self.get_interface_name_for_kind(ifname),
-            "description": f"inter-switch link to {other_node.get_node_name(topology)}",
+            "description": f"{role} link to {other_node.get_node_name(topology)}",
         }
         return helpers.render_template("interface.j2", data)
 
@@ -359,7 +363,7 @@ class NokiaSROSNode(Node):
         normalized_version = self._normalize_version(self.version)
         # Check if we have a supported schema for this normalized version
         if normalized_version not in self.SUPPORTED_SCHEMA_PROFILES:
-            logger.warning(f"No schema profile for version {normalized_version}")
+            logger.warning(f"{SUBSTEP_INDENT}No schema profile for version {normalized_version}")
             return (None, None, None)
 
         artifact_name = self.get_artifact_name()

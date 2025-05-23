@@ -5,9 +5,9 @@ import re
 
 from .base import Node
 from clab_connector.utils import helpers
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)
-
 
 class NokiaSRLinuxNode(Node):
     """
@@ -106,7 +106,7 @@ class NokiaSRLinuxNode(Node):
         """
         Render the NodeProfile YAML for this SR Linux node.
         """
-        logger.info(f"Rendering node profile for {self.name}")
+        logger.debug(f"Rendering node profile for {self.name}")
         artifact_name = self.get_artifact_name()
         filename = f"srlinux-{self.version}.zip"
 
@@ -133,7 +133,7 @@ class NokiaSRLinuxNode(Node):
         """
         Render the TopoNode YAML for this SR Linux node.
         """
-        logger.info(f"Creating toponode for {self.name}")
+        logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
         role_value = "leaf"
         nl = self.name.lower()
         if "spine" in nl:
@@ -195,16 +195,19 @@ class NokiaSRLinuxNode(Node):
         str
             The rendered Interface CR YAML.
         """
-        logger.info(f"Creating topolink interface for {self.name}")
+        logger.debug(f"{SUBSTEP_INDENT}Creating topolink interface for {self.name}")
+        role = "interSwitch"
+        if other_node is None or not other_node.is_eda_supported():
+            role = "edge"
         data = {
             "namespace": f"clab-{topology.name}",
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
-            "label_value": "interSwitch",
+            "label_value": role,
             "encap_type": "'null'",
             "node_name": self.get_node_name(topology),
             "interface": self.get_interface_name_for_kind(ifname),
-            "description": f"inter-switch link to {other_node.get_node_name(topology)}",
+            "description": f"{role} link to {other_node.get_node_name(topology)}",
         }
         return helpers.render_template("interface.j2", data)
 
@@ -240,7 +243,7 @@ class NokiaSRLinuxNode(Node):
             (artifact_name, filename, download_url)
         """
         if self.version not in self.SUPPORTED_SCHEMA_PROFILES:
-            logger.warning(f"No schema profile for version {self.version}")
+            logger.warning(f"{SUBSTEP_INDENT}No schema profile for version {self.version}")
             return (None, None, None)
         artifact_name = self.get_artifact_name()
         filename = f"srlinux-{self.version}.zip"

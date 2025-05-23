@@ -15,3 +15,9 @@ class EDAConnectionError(ClabConnectorError):
     """
 
     pass
+
+
+class TopologyFileError(ClabConnectorError):
+    """Raised when a topology file is missing or invalid."""
+
+    pass

@@ -58,7 +58,7 @@ class Node:
         """
         logger.debug(f"Pinging node '{self.name}' IP {self.mgmt_ipv4}")
         if ping_from_bsvr(self.mgmt_ipv4):
-            logger.info(f"Ping to '{self.name}' ({self.mgmt_ipv4}) successful")
+            logger.debug(f"Ping to '{self.name}' ({self.mgmt_ipv4}) successful")
             return True
         else:
             msg = f"Ping to '{self.name}' ({self.mgmt_ipv4}) failed"

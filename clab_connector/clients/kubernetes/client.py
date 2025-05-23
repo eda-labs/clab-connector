@@ -11,6 +11,8 @@ from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 from kubernetes.utils import create_from_yaml
 
+from clab_connector.utils.constants import SUBSTEP_INDENT
+
 logger = logging.getLogger(__name__)
 
 # Attempt to load config:
@@ -101,13 +103,13 @@ def ping_from_bsvr(target_ip: str) -> bool:
         )
         # A quick check for "1 packets transmitted, 1 received"
         if "1 packets transmitted, 1 received" in resp:
-            logger.info(f"Ping from bsvr to {target_ip} succeeded")
+            logger.info(f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} succeeded")
             return True
         else:
-            logger.error(f"Ping from bsvr to {target_ip} failed:\n{resp}")
+            logger.error(f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} failed:\n{resp}")
             return False
     except ApiException as exc:
-        logger.error(f"API error during ping: {exc}")
+        logger.error(f"{SUBSTEP_INDENT}API error during ping: {exc}")
         return False
 
 
@@ -160,16 +162,19 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
                 )
             else:
                 # For core resources
-                v1 = client.CoreV1Api()
                 create_from_yaml(
                     k8s_client=client.ApiClient(),
                     yaml_file=yaml.dump(manifest),
                     namespace=namespace,
                 )
-            logger.info(f"Successfully applied {kind} to namespace '{namespace}'")
+            logger.info(
+                f"{SUBSTEP_INDENT}Successfully applied {kind} to namespace '{namespace}'"
+            )
         except ApiException as e:
             if e.status == 409:  # Already exists
-                logger.info(f"{kind} already exists in namespace '{namespace}'")
+                logger.info(
+                    f"{SUBSTEP_INDENT}{kind} already exists in namespace '{namespace}'"
+                )
             else:
                 raise
 
@@ -208,16 +213,22 @@ def edactl_namespace_bootstrap(namespace: str) -> Optional[int]:
             tty=False,
         )
         if "already exists" in resp:
-            logger.info(f"Namespace {namespace} already exists, skipping bootstrap.")
+            logger.info(
+                f"{SUBSTEP_INDENT}Namespace {namespace} already exists, skipping bootstrap."
+            )
             return None
 
         match = re.search(r"Transaction (\d+)", resp)
         if match:
             tx_id = int(match.group(1))
-            logger.info(f"Created namespace {namespace} (Transaction: {tx_id})")
+            logger.info(
+                f"{SUBSTEP_INDENT}Created namespace {namespace} (Transaction: {tx_id})"
+            )
             return tx_id
 
-        logger.info(f"Created namespace {namespace}, no transaction ID found.")
+        logger.info(
+            f"{SUBSTEP_INDENT}Created namespace {namespace}, no transaction ID found."
+        )
         return None
     except ApiException as exc:
         logger.error(f"Failed to bootstrap namespace {namespace}: {exc}")
@@ -253,7 +264,9 @@ def wait_for_namespace(
     for attempt in range(max_retries):
         try:
             v1.read_namespace(name=namespace)
-            logger.info(f"Namespace {namespace} is available")
+            logger.info(
+                f"{SUBSTEP_INDENT}Namespace {namespace} is available"
+            )
             return True
         except ApiException as exc:
             if exc.status == 404:
@@ -302,7 +315,9 @@ def update_namespace_description(namespace: str, description: str, max_retries: 
         v1.read_namespace(name=namespace)
     except ApiException as exc:
         if exc.status == 404:
-            logger.warning(f"Kubernetes namespace '{namespace}' does not exist. Cannot update EDA description.")
+            logger.warning(
+                f"{SUBSTEP_INDENT}Kubernetes namespace '{namespace}' does not exist. Cannot update EDA description."
+            )
             return False
         else:
             logger.error(f"Error checking namespace '{namespace}': {exc}")
@@ -319,17 +334,21 @@ def update_namespace_description(namespace: str, description: str, max_retries: 
                 name=namespace,
                 body=patch_body,
             )
-            logger.info(f"Namespace '{namespace}' patched with description. resp={resp}")
+            logger.debug(f"Namespace '{namespace}' patched with description. resp={resp}")
             return True
         except ApiException as exc:
             if exc.status == 404:
-                logger.info(f"EDA namespace '{namespace}' not found (attempt {attempt+1}/{max_retries}). Retrying in {retry_delay}s...")
+                logger.info(
+                    f"{SUBSTEP_INDENT}EDA namespace '{namespace}' not found (attempt {attempt+1}/{max_retries}). Retrying in {retry_delay}s..."
+                )
                 time.sleep(retry_delay)
             else:
                 logger.error(f"Failed to patch namespace '{namespace}': {exc}")
                 raise
 
-    logger.warning(f"Could not update description for namespace '{namespace}' after {max_retries} attempts.")
+    logger.warning(
+        f"{SUBSTEP_INDENT}Could not update description for namespace '{namespace}' after {max_retries} attempts."
+    )
     return False
 
 
