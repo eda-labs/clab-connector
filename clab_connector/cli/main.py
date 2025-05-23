@@ -107,6 +107,11 @@ def integrate_cmd(
         None, "--log-file", "-f", help="Optional log file path"
     ),
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
+    skip_edge_intfs: bool = typer.Option(
+        False,
+        "--skip-edge-intfs",
+        help="Skip creation of edge links and their interfaces",
+    ),
 ):
     """
     CLI command to integrate a containerlab topology with EDA.
@@ -136,6 +141,7 @@ def integrate_cmd(
     args.kc_password = kc_password
     args.kc_secret = kc_secret
     args.verify = verify
+    args.skip_edge_intfs = skip_edge_intfs
 
     def execute_integration(a):
         eda_client = EDAClient(
@@ -155,6 +161,7 @@ def integrate_cmd(
             eda_user=a.eda_user,
             eda_password=a.eda_password,
             verify=a.verify,
+            skip_edge_intfs=a.skip_edge_intfs,
         )
 
     try:
@@ -328,6 +335,11 @@ def generate_crs_cmd(
     log_file: Optional[str] = typer.Option(
         None, "--log-file", "-f", help="Optional log file path"
     ),
+    skip_edge_intfs: bool = typer.Option(
+        False,
+        "--skip-edge-intfs",
+        help="Skip creation of edge links and their interfaces",
+    ),
 ):
     """
     Generate the CR YAML manifests (artifacts, init, node security profile,
@@ -343,7 +355,12 @@ def generate_crs_cmd(
     setup_logging(log_level.value, log_file)
 
     try:
-        generator = ManifestGenerator(str(topology_data), output=output_file, separate=separate)
+        generator = ManifestGenerator(
+            str(topology_data),
+            output=output_file,
+            separate=separate,
+            skip_edge_intfs=skip_edge_intfs,
+        )
         generator.generate()
         generator.output_manifests()
     except Exception as e:

@@ -116,9 +116,14 @@ class Topology:
                 tnodes.append(tn)
         return tnodes
 
-    def get_topolinks(self):
-        """
-        Generate TopoLink YAML for all EDA-supported links.
+    def get_topolinks(self, skip_edge_links: bool = False):
+        """Generate TopoLink YAML for all EDA-supported links.
+
+        Parameters
+        ----------
+        skip_edge_links : bool, optional
+            When True, omit TopoLink resources for edge links (links with only
+            one EDA supported endpoint). Defaults to False.
 
         Returns
         -------
@@ -127,15 +132,23 @@ class Topology:
         """
         links = []
         for ln in self.links:
+            if skip_edge_links and ln.is_edge_link():
+                continue
             if ln.is_topolink() or ln.is_edge_link():
                 link_yaml = ln.get_topolink_yaml(self)
                 if link_yaml:
                     links.append(link_yaml)
         return links
 
-    def get_topolink_interfaces(self):
+    def get_topolink_interfaces(self, skip_edge_link_interfaces: bool = False):
         """
         Generate Interface YAML for each link endpoint (if EDA-supported).
+
+        Parameters
+        ----------
+        skip_edge_link_interfaces : bool, optional
+            When True, interface resources for edge links (links where only one
+            side is EDA-supported) are omitted. Defaults to False.
 
         Returns
         -------
@@ -144,11 +157,16 @@ class Topology:
         """
         interfaces = []
         for ln in self.links:
+            is_edge = ln.is_edge_link()
             for node, ifname, peer in (
                 (ln.node_1, ln.intf_1, ln.node_2),
                 (ln.node_2, ln.intf_2, ln.node_1),
             ):
                 if node is None or not node.is_eda_supported():
+                    continue
+                if skip_edge_link_interfaces and is_edge and (
+                    peer is None or not peer.is_eda_supported()
+                ):
                     continue
                 intf_yaml = node.get_topolink_interface(self, ifname, peer)
                 if intf_yaml:

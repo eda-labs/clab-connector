@@ -25,7 +25,13 @@ class ManifestGenerator:
     (e.g. artifacts.yaml, init.yaml, etc.). Otherwise all CRs are concatenated into one YAML file.
     """
 
-    def __init__(self, topology_file: str, output: str = None, separate: bool = False):
+    def __init__(
+        self,
+        topology_file: str,
+        output: str = None,
+        separate: bool = False,
+        skip_edge_intfs: bool = False,
+    ):
         """
         Parameters
         ----------
@@ -37,10 +43,14 @@ class ManifestGenerator:
         separate : bool
             If True, generate separate YAML files per CR category.
             Otherwise, generate one combined YAML file.
+        skip_edge_intfs : bool
+            When True, omit edge link resources and their interfaces from the
+            generated manifests.
         """
         self.topology_file = topology_file
         self.output = output
         self.separate = separate
+        self.skip_edge_intfs = skip_edge_intfs
         self.topology = None
         # Dictionary mapping category name to a list of YAML document strings.
         self.cr_groups = {}
@@ -119,12 +129,16 @@ class ManifestGenerator:
             self.cr_groups["toponodes"] = list(toponodes)
 
         # --- Topolink Interfaces
-        intfs = self.topology.get_topolink_interfaces()
+        intfs = self.topology.get_topolink_interfaces(
+            skip_edge_link_interfaces=self.skip_edge_intfs
+        )
         if intfs:
             self.cr_groups["topolink-interfaces"] = list(intfs)
 
         # --- Topolinks
-        links = self.topology.get_topolinks()
+        links = self.topology.get_topolinks(
+            skip_edge_links=self.skip_edge_intfs
+        )
         if links:
             self.cr_groups["topolinks"] = list(links)
 

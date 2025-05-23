@@ -31,7 +31,15 @@ class TopologyIntegrator:
         self.eda_client = eda_client
         self.topology = None
 
-    def run(self, topology_file, eda_url, eda_user, eda_password, verify):
+    def run(
+        self,
+        topology_file,
+        eda_url,
+        eda_user,
+        eda_password,
+        verify,
+        skip_edge_intfs: bool = False,
+    ):
         """
         Parse the topology, run connectivity checks, and create EDA resources.
 
@@ -47,6 +55,9 @@ class TopologyIntegrator:
             EDA password.
         verify : bool
             Certificate verification flag.
+        skip_edge_intfs : bool
+            When True, omit edge link resources and their interfaces from the
+            integration.
 
         Returns
         -------
@@ -93,7 +104,7 @@ class TopologyIntegrator:
         self.eda_client.commit_transaction("create nodes")
 
         print("== Adding topolink interfaces ==")
-        self.create_topolink_interfaces()
+        self.create_topolink_interfaces(skip_edge_intfs)
         # Only commit if there are transactions
         if self.eda_client.transactions:
             self.eda_client.commit_transaction("create topolink interfaces")
@@ -101,7 +112,7 @@ class TopologyIntegrator:
             print("No topolink interfaces to create, skipping.")
 
         print("== Creating topolinks ==")
-        self.create_topolinks()
+        self.create_topolinks(skip_edge_intfs)
         # Only commit if there are transactions
         if self.eda_client.transactions:
             self.eda_client.commit_transaction("create topolinks")
@@ -284,21 +295,27 @@ class TopologyIntegrator:
             if not self.eda_client.is_transaction_item_valid(item):
                 raise ClabConnectorError("Validation error creating toponode")
 
-    def create_topolink_interfaces(self):
+    def create_topolink_interfaces(self, skip_edge_intfs: bool = False):
         """
         Create Interface resources for each link endpoint in the topology.
         """
-        interfaces = self.topology.get_topolink_interfaces()
+        interfaces = self.topology.get_topolink_interfaces(
+            skip_edge_link_interfaces=skip_edge_intfs
+        )
         for intf_yaml in interfaces:
             item = self.eda_client.add_replace_to_transaction(intf_yaml)
             if not self.eda_client.is_transaction_item_valid(item):
                 raise ClabConnectorError("Validation error creating topolink interface")
 
-    def create_topolinks(self):
+    def create_topolinks(self, skip_edge_links: bool = False):
+        """Create TopoLink resources for each EDA-supported link in the topology.
+
+        Parameters
+        ----------
+        skip_edge_links : bool, optional
+            When True, omit TopoLink resources for edge links. Defaults to False.
         """
-        Create TopoLink resources for each EDA-supported link in the topology.
-        """
-        links = self.topology.get_topolinks()
+        links = self.topology.get_topolinks(skip_edge_links=skip_edge_links)
         for l_yaml in links:
             item = self.eda_client.add_replace_to_transaction(l_yaml)
             if not self.eda_client.is_transaction_item_valid(item):
