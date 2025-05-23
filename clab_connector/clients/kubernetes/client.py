@@ -13,6 +13,9 @@ from kubernetes.utils import create_from_yaml
 
 logger = logging.getLogger(__name__)
 
+# Prefix used for log messages that denote actions within a main step
+SUBSTEP_INDENT = "    "
+
 # Attempt to load config:
 # 1) If in a Kubernetes pod, load in-cluster config
 # 2) Otherwise load local kube config
@@ -101,13 +104,13 @@ def ping_from_bsvr(target_ip: str) -> bool:
         )
         # A quick check for "1 packets transmitted, 1 received"
         if "1 packets transmitted, 1 received" in resp:
-            logger.info(f"Ping from bsvr to {target_ip} succeeded")
+            logger.info(f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} succeeded")
             return True
         else:
-            logger.error(f"Ping from bsvr to {target_ip} failed:\n{resp}")
+            logger.error(f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} failed:\n{resp}")
             return False
     except ApiException as exc:
-        logger.error(f"API error during ping: {exc}")
+        logger.error(f"{SUBSTEP_INDENT}API error during ping: {exc}")
         return False
 
 
@@ -165,10 +168,14 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
                     yaml_file=yaml.dump(manifest),
                     namespace=namespace,
                 )
-            logger.info(f"Successfully applied {kind} to namespace '{namespace}'")
+            logger.info(
+                f"{SUBSTEP_INDENT}Successfully applied {kind} to namespace '{namespace}'"
+            )
         except ApiException as e:
             if e.status == 409:  # Already exists
-                logger.info(f"{kind} already exists in namespace '{namespace}'")
+                logger.info(
+                    f"{SUBSTEP_INDENT}{kind} already exists in namespace '{namespace}'"
+                )
             else:
                 raise
 
@@ -207,16 +214,22 @@ def edactl_namespace_bootstrap(namespace: str) -> Optional[int]:
             tty=False,
         )
         if "already exists" in resp:
-            logger.info(f"Namespace {namespace} already exists, skipping bootstrap.")
+            logger.info(
+                f"{SUBSTEP_INDENT}Namespace {namespace} already exists, skipping bootstrap."
+            )
             return None
 
         match = re.search(r"Transaction (\d+)", resp)
         if match:
             tx_id = int(match.group(1))
-            logger.info(f"Created namespace {namespace} (Transaction: {tx_id})")
+            logger.info(
+                f"{SUBSTEP_INDENT}Created namespace {namespace} (Transaction: {tx_id})"
+            )
             return tx_id
 
-        logger.info(f"Created namespace {namespace}, no transaction ID found.")
+        logger.info(
+            f"{SUBSTEP_INDENT}Created namespace {namespace}, no transaction ID found."
+        )
         return None
     except ApiException as exc:
         logger.error(f"Failed to bootstrap namespace {namespace}: {exc}")
@@ -252,7 +265,9 @@ def wait_for_namespace(
     for attempt in range(max_retries):
         try:
             v1.read_namespace(name=namespace)
-            logger.info(f"Namespace {namespace} is available")
+            logger.info(
+                f"{SUBSTEP_INDENT}Namespace {namespace} is available"
+            )
             return True
         except ApiException as exc:
             if exc.status == 404:

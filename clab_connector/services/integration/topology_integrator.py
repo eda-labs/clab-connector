@@ -2,6 +2,9 @@
 
 import logging
 
+# Prefix used for log messages that denote actions within a main step
+SUBSTEP_INDENT = "    "
+
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.clients.eda.client import EDAClient
 from clab_connector.clients.kubernetes.client import (
@@ -72,10 +75,12 @@ class TopologyIntegrator:
         """
         logger.info("Parsing topology for integration")
         self.topology = parse_topology_file(str(topology_file))
-        self.topology.check_connectivity()
 
         logger.info("== Running pre-checks ==")
         self.prechecks()
+
+        # Verify connectivity to each node's management interface
+        self.topology.check_connectivity()
 
         logger.info("== Creating namespace ==")
         self.create_namespace()
@@ -109,7 +114,7 @@ class TopologyIntegrator:
         if self.eda_client.transactions:
             self.eda_client.commit_transaction("create topolink interfaces")
         else:
-            logger.info("No topolink interfaces to create, skipping.")
+            logger.info(f"{SUBSTEP_INDENT}No topolink interfaces to create, skipping.")
 
         logger.info("== Creating topolinks ==")
         self.create_topolinks(skip_edge_intfs)
@@ -117,7 +122,7 @@ class TopologyIntegrator:
         if self.eda_client.transactions:
             self.eda_client.commit_transaction("create topolinks")
         else:
-            logger.info("No topolinks to create, skipping.")
+            logger.info(f"{SUBSTEP_INDENT}No topolinks to create, skipping.")
 
         logger.info("== Running post-integration steps ==")
         self.run_post_integration()
@@ -161,7 +166,7 @@ class TopologyIntegrator:
 
         Skips creation if already exists or no artifact data is available.
         """
-        logger.info("Creating artifacts for nodes that need them")
+        logger.info(f"{SUBSTEP_INDENT}Creating artifacts for nodes that need them")
         nodes_by_artifact = {}
         for node in self.topology.nodes:
             if not node.needs_artifact():
@@ -182,7 +187,7 @@ class TopologyIntegrator:
         for artifact_name, info in nodes_by_artifact.items():
             first_node = info["nodes"][0]
             logger.info(
-                f"Creating YANG artifact for node: {first_node} (version={info['version']})"
+                f"{SUBSTEP_INDENT}Creating YANG artifact for node: {first_node} (version={info['version']})"
             )
             artifact_yaml = self.topology.nodes[0].get_artifact_yaml(
                 artifact_name, info["filename"], info["download_url"]
@@ -192,15 +197,15 @@ class TopologyIntegrator:
                 continue
             try:
                 apply_manifest(artifact_yaml, namespace="eda-system")
-                logger.info(f"Artifact '{artifact_name}' created.")
+                logger.info(f"{SUBSTEP_INDENT}Artifact '{artifact_name}' created.")
                 other_nodes = info["nodes"][1:]
                 if other_nodes:
                     logger.info(
-                        f"Using same artifact for nodes: {', '.join(other_nodes)}"
+                        f"{SUBSTEP_INDENT}Using same artifact for nodes: {', '.join(other_nodes)}"
                     )
             except RuntimeError as ex:
                 if "AlreadyExists" in str(ex):
-                    logger.info(f"Artifact '{artifact_name}' already exists.")
+                    logger.info(f"{SUBSTEP_INDENT}Artifact '{artifact_name}' already exists.")
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 
@@ -222,10 +227,10 @@ class TopologyIntegrator:
         yaml_str = helpers.render_template("nodesecurityprofile.yaml.j2", data)
         try:
             apply_manifest(yaml_str, namespace=f"clab-{self.topology.name}")
-            logger.info("Node security profile created.")
+            logger.info(f"{SUBSTEP_INDENT}Node security profile created.")
         except RuntimeError as ex:
             if "AlreadyExists" in str(ex):
-                logger.info("Node security profile already exists, skipping.")
+                logger.info(f"{SUBSTEP_INDENT}Node security profile already exists, skipping.")
             else:
                 raise
 
@@ -332,7 +337,7 @@ class TopologyIntegrator:
         # Look for SROS nodes and run post-integration for them
         for node in self.topology.nodes:
             if node.kind == "nokia_sros":
-                logger.info(f"Running SROS post-integration for node {node.name}")
+                logger.info(f"{SUBSTEP_INDENT}Running SROS post-integration for node {node.name}")
                 try:
                     # Get normalized version from the node
                     normalized_version = node._normalize_version(node.version)
@@ -346,7 +351,7 @@ class TopologyIntegrator:
                         quiet=quiet  # Pass quiet parameter
                     )
                     if success:
-                        logger.info(f"SROS post-integration for {node.name} completed successfully")
+                        logger.info(f"{SUBSTEP_INDENT}SROS post-integration for {node.name} completed successfully")
                     else:
                         logger.error(f"SROS post-integration for {node.name} failed")
                 except Exception as e:

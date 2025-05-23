@@ -15,6 +15,9 @@ We support two flows:
 
 import json
 import logging
+
+# Prefix for log messages that indicate actions within a main step
+SUBSTEP_INDENT = "    "
 import yaml
 from urllib.parse import urlencode
 
@@ -90,7 +93,7 @@ class EDAClient:
                 "No kc_secret provided; retrieving it from Keycloak master realm."
             )
             self.kc_secret = self._fetch_client_secret_via_admin()
-            logger.info("Successfully retrieved EDA client secret from Keycloak.")
+            logger.info(f"{SUBSTEP_INDENT}Successfully retrieved EDA client secret from Keycloak.")
 
         logger.debug(
             "Acquiring user access token via Keycloak resource-owner flow (realm=eda)."
@@ -240,7 +243,7 @@ class EDAClient:
         )
 
     def is_up(self) -> bool:
-        logger.info("Checking EDA health")
+        logger.info(f"{SUBSTEP_INDENT}Checking EDA health")
         resp = self.get("core/about/health", requires_auth=False)
         if resp.status != 200:
             return False
@@ -353,7 +356,7 @@ class EDAClient:
             "crs": self.transactions,
         }
         logger.info(
-            f"Committing transaction: {description}, {len(self.transactions)} items"
+            f"{SUBSTEP_INDENT}Committing transaction: {description}, {len(self.transactions)} items"
         )
         resp = self.post("core/transaction/v1", payload)
         if resp.status != 200:
@@ -366,7 +369,7 @@ class EDAClient:
         if not tx_id:
             raise EDAConnectionError(f"No transaction ID in response: {data}")
 
-        logger.info(f"Waiting for transaction {tx_id} to complete...")
+        logger.info(f"{SUBSTEP_INDENT}Waiting for transaction {tx_id} to complete...")
         details_path = f"core/transaction/v1/details/{tx_id}?waitForComplete=true&failOnErrors=true"
         details_resp = self.get(details_path)
         if details_resp.status != 200:
@@ -379,6 +382,6 @@ class EDAClient:
             logger.error(f"Transaction commit failed: {details}")
             raise EDAConnectionError(f"Transaction commit failed: {details}")
 
-        logger.info("Commit successful.")
+        logger.info(f"{SUBSTEP_INDENT}Commit successful.")
         self.transactions = []
         return tx_id

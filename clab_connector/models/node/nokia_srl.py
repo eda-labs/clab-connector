@@ -7,7 +7,7 @@ from .base import Node
 from clab_connector.utils import helpers
 
 logger = logging.getLogger(__name__)
-
+SUBSTEP_INDENT = "    "
 
 class NokiaSRLinuxNode(Node):
     """
@@ -133,7 +133,7 @@ class NokiaSRLinuxNode(Node):
         """
         Render the TopoNode YAML for this SR Linux node.
         """
-        logger.info(f"Creating toponode for {self.name}")
+        logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
         role_value = "leaf"
         nl = self.name.lower()
         if "spine" in nl:
@@ -195,7 +195,7 @@ class NokiaSRLinuxNode(Node):
         str
             The rendered Interface CR YAML.
         """
-        logger.debug(f"Creating topolink interface for {self.name}")
+        logger.debug(f"{SUBSTEP_INDENT}Creating topolink interface for {self.name}")
         role = "interSwitch"
         if other_node is None or not other_node.is_eda_supported():
             role = "edge"
@@ -243,7 +243,7 @@ class NokiaSRLinuxNode(Node):
             (artifact_name, filename, download_url)
         """
         if self.version not in self.SUPPORTED_SCHEMA_PROFILES:
-            logger.warning(f"No schema profile for version {self.version}")
+            logger.warning(f"{SUBSTEP_INDENT}No schema profile for version {self.version}")
             return (None, None, None)
         artifact_name = self.get_artifact_name()
         filename = f"srlinux-{self.version}.zip"
