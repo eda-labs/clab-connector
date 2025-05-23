@@ -2,8 +2,7 @@
 
 import logging
 
-# Prefix used for log messages that denote actions within a main step
-SUBSTEP_INDENT = "    "
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.clients.eda.client import EDAClient
@@ -154,7 +153,9 @@ class TopologyIntegrator:
             desc = f"Containerlab {self.topology.name}: {self.topology.clab_file_path}"
             success = update_namespace_description(ns, desc)
             if not success:
-                logger.warning(f"Created namespace '{ns}' but could not update its description. Continuing with integration.")
+                logger.warning(
+                    f"{SUBSTEP_INDENT}Created namespace '{ns}' but could not update its description. Continuing with integration."
+                )
         except Exception as e:
             # If namespace creation itself fails, we should stop the process
             logger.error(f"Failed to create namespace '{ns}': {e}")
@@ -173,7 +174,9 @@ class TopologyIntegrator:
                 continue
             artifact_name, filename, download_url = node.get_artifact_info()
             if not artifact_name or not filename or not download_url:
-                logger.warning(f"No artifact info for node {node.name}; skipping.")
+                logger.warning(
+                    f"{SUBSTEP_INDENT}No artifact info for node {node.name}; skipping."
+                )
                 continue
             if artifact_name not in nodes_by_artifact:
                 nodes_by_artifact[artifact_name] = {
@@ -193,7 +196,9 @@ class TopologyIntegrator:
                 artifact_name, info["filename"], info["download_url"]
             )
             if not artifact_yaml:
-                logger.warning(f"Could not generate artifact YAML for {first_node}")
+                logger.warning(
+                    f"{SUBSTEP_INDENT}Could not generate artifact YAML for {first_node}"
+                )
                 continue
             try:
                 apply_manifest(artifact_yaml, namespace="eda-system")
@@ -250,7 +255,9 @@ class TopologyIntegrator:
         """
         ssh_pub_keys = getattr(self.topology, "ssh_pub_keys", [])
         if not ssh_pub_keys:
-            logger.warning("No SSH public keys found. Proceeding with an empty key list.")
+            logger.warning(
+                f"{SUBSTEP_INDENT}No SSH public keys found. Proceeding with an empty key list."
+            )
 
         # Create SRL node user
         srl_data = {

@@ -7,6 +7,7 @@ from clab_connector.clients.kubernetes.client import (
     list_topolinks_in_namespace,
 )
 from clab_connector.utils.yaml_processor import YAMLProcessor
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
 
 class TopologyExporter:
@@ -86,7 +87,9 @@ class TopologyExporter:
                 try:
                     ips.append(IPv4Address(mgmt_ip))
                 except ValueError:
-                    self.logger.warning(f"Invalid IP address found: {mgmt_ip}")
+                    self.logger.warning(
+                        f"{SUBSTEP_INDENT}Invalid IP address found: {mgmt_ip}"
+                    )
         return ips
 
     def _derive_mgmt_subnet(self, mgmt_ips):
@@ -95,7 +98,9 @@ class TopologyExporter:
         If none, fallback to '172.80.80.0/24'.
         """
         if not mgmt_ips:
-            self.logger.warning("No valid management IPs found, using default subnet")
+            self.logger.warning(
+                f"{SUBSTEP_INDENT}No valid management IPs found, using default subnet"
+            )
             return "172.80.80.0/24"
 
         min_ip = min(mgmt_ips)
@@ -125,7 +130,9 @@ class TopologyExporter:
 
         node_name = meta.get("name")
         if not node_name:
-            self.logger.warning("Node item missing metadata.name, skipping.")
+            self.logger.warning(
+                f"{SUBSTEP_INDENT}Node item missing metadata.name, skipping."
+            )
             return None, None
 
         operating_system = (
@@ -144,7 +151,9 @@ class TopologyExporter:
             mgmt_ip = node_details.split(":")[0]
 
         if not mgmt_ip:
-            self.logger.warning(f"No mgmt IP found for node '{node_name}', skipping.")
+            self.logger.warning(
+                f"{SUBSTEP_INDENT}No mgmt IP found for node '{node_name}', skipping."
+            )
             return None, None
 
         # guess 'nokia_srlinux' if operating_system is 'srl*'
@@ -183,7 +192,7 @@ class TopologyExporter:
                 )
             else:
                 self.logger.warning(
-                    f"Incomplete link entry in {link_name}, skipping that entry."
+                    f"{SUBSTEP_INDENT}Incomplete link entry in {link_name}, skipping that entry."
                 )
 
     def _write_clab_yaml(self, clab_data):
@@ -193,7 +202,9 @@ class TopologyExporter:
         processor = YAMLProcessor()
         try:
             processor.save_yaml(clab_data, self.output_file)
-            self.logger.info(f"Exported containerlab file: {self.output_file}")
+            self.logger.info(
+                f"{SUBSTEP_INDENT}Exported containerlab file: {self.output_file}"
+            )
         except IOError as e:
             self.logger.error(f"Failed to write containerlab file: {e}")
             raise

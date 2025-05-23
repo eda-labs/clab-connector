@@ -11,10 +11,9 @@ from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 from kubernetes.utils import create_from_yaml
 
-logger = logging.getLogger(__name__)
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
-# Prefix used for log messages that denote actions within a main step
-SUBSTEP_INDENT = "    "
+logger = logging.getLogger(__name__)
 
 # Attempt to load config:
 # 1) If in a Kubernetes pod, load in-cluster config
@@ -316,7 +315,9 @@ def update_namespace_description(namespace: str, description: str, max_retries: 
         v1.read_namespace(name=namespace)
     except ApiException as exc:
         if exc.status == 404:
-            logger.warning(f"Kubernetes namespace '{namespace}' does not exist. Cannot update EDA description.")
+            logger.warning(
+                f"{SUBSTEP_INDENT}Kubernetes namespace '{namespace}' does not exist. Cannot update EDA description."
+            )
             return False
         else:
             logger.error(f"Error checking namespace '{namespace}': {exc}")
@@ -337,13 +338,17 @@ def update_namespace_description(namespace: str, description: str, max_retries: 
             return True
         except ApiException as exc:
             if exc.status == 404:
-                logger.info(f"EDA namespace '{namespace}' not found (attempt {attempt+1}/{max_retries}). Retrying in {retry_delay}s...")
+                logger.info(
+                    f"{SUBSTEP_INDENT}EDA namespace '{namespace}' not found (attempt {attempt+1}/{max_retries}). Retrying in {retry_delay}s..."
+                )
                 time.sleep(retry_delay)
             else:
                 logger.error(f"Failed to patch namespace '{namespace}': {exc}")
                 raise
 
-    logger.warning(f"Could not update description for namespace '{namespace}' after {max_retries} attempts.")
+    logger.warning(
+        f"{SUBSTEP_INDENT}Could not update description for namespace '{namespace}' after {max_retries} attempts."
+    )
     return False
 
 

@@ -4,6 +4,7 @@ import os
 import logging
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.utils import helpers
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,9 @@ class ManifestGenerator:
                 continue
             artifact_name, filename, download_url = node.get_artifact_info()
             if not artifact_name or not filename or not download_url:
-                logger.warning(f"No artifact info for node {node.name}; skipping.")
+                logger.warning(
+                    f"{SUBSTEP_INDENT}No artifact info for node {node.name}; skipping."
+                )
                 continue
             if artifact_name in seen_artifacts:
                 continue
@@ -147,7 +150,7 @@ class ManifestGenerator:
     def output_manifests(self):
         """Output the generated CR YAML documents either as one combined file or as separate files per category."""
         if not self.cr_groups:
-            logger.warning("No manifests were generated.")
+            logger.warning(f"{SUBSTEP_INDENT}No manifests were generated.")
             return
 
         if not self.separate:
@@ -161,7 +164,9 @@ class ManifestGenerator:
             if self.output:
                 with open(self.output, "w") as f:
                     f.write(combined)
-                logger.info(f"Combined manifest written to {self.output}")
+                logger.info(
+                    f"{SUBSTEP_INDENT}Combined manifest written to {self.output}"
+                )
             else:
                 logger.info("\n" + combined)
         else:
@@ -173,4 +178,6 @@ class ManifestGenerator:
                 file_path = os.path.join(output_dir, f"{category}.yaml")
                 with open(file_path, "w") as f:
                     f.write(combined)
-                logger.info(f"Manifest for '{category}' written to {file_path}")
+                logger.info(
+                    f"{SUBSTEP_INDENT}Manifest for '{category}' written to {file_path}"
+                )

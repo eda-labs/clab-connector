@@ -15,10 +15,9 @@ We support two flows:
 
 import json
 import logging
-
-# Prefix for log messages that indicate actions within a main step
-SUBSTEP_INDENT = "    "
 import yaml
+
+from clab_connector.utils.constants import SUBSTEP_INDENT
 from urllib.parse import urlencode
 
 from clab_connector.clients.eda.http_client import create_pool_manager
@@ -338,7 +337,7 @@ class EDAClient:
             return True
 
         data = json.loads(resp.data.decode("utf-8"))
-        logger.warning(f"Validation error: {data}")
+        logger.warning(f"{SUBSTEP_INDENT}Validation error: {data}")
         return False
 
     def commit_transaction(

@@ -1,6 +1,8 @@
 import logging
 import yaml
 
+from clab_connector.utils.constants import SUBSTEP_INDENT
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +59,7 @@ class YAMLProcessor:
                 else:
                     yaml.dump(data, file, default_flow_style=False, sort_keys=False)
 
-            logger.info(f"YAML file saved as '{output_file}'.")
+            logger.info(f"{SUBSTEP_INDENT}YAML file saved as '{output_file}'.")
 
         except IOError as e:
             logger.error(f"Error saving YAML file: {str(e)}")

@@ -3,6 +3,7 @@ import re
 
 from .base import Node
 from clab_connector.utils import helpers
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +191,7 @@ class NokiaSROSNode(Node):
         """
         Render the TopoNode YAML for this SROS node.
         """
-        logger.info(f"Creating toponode for {self.name}")
+        logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
         role_value = "backbone"
 
         # Ensure all values are lowercase and valid
@@ -326,7 +327,7 @@ class NokiaSROSNode(Node):
         """
         Render the Interface CR YAML for an SROS link endpoint.
         """
-        logger.debug(f"Creating topolink interface for {self.name}")
+        logger.debug(f"{SUBSTEP_INDENT}Creating topolink interface for {self.name}")
         role = "interSwitch"
         if other_node is None or not other_node.is_eda_supported():
             role = "edge"
@@ -362,7 +363,7 @@ class NokiaSROSNode(Node):
         normalized_version = self._normalize_version(self.version)
         # Check if we have a supported schema for this normalized version
         if normalized_version not in self.SUPPORTED_SCHEMA_PROFILES:
-            logger.warning(f"No schema profile for version {normalized_version}")
+            logger.warning(f"{SUBSTEP_INDENT}No schema profile for version {normalized_version}")
             return (None, None, None)
 
         artifact_name = self.get_artifact_name()

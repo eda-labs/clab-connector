@@ -5,9 +5,9 @@ import re
 
 from .base import Node
 from clab_connector.utils import helpers
+from clab_connector.utils.constants import SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)
-SUBSTEP_INDENT = "    "
 
 class NokiaSRLinuxNode(Node):
     """
