@@ -327,15 +327,18 @@ class NokiaSROSNode(Node):
         Render the Interface CR YAML for an SROS link endpoint.
         """
         logger.info(f"Creating topolink interface for {self.name}")
+        role = "interSwitch"
+        if other_node is None or not other_node.is_eda_supported():
+            role = "edge"
         data = {
             "namespace": f"clab-{topology.name}",
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
-            "label_value": "interSwitch",
+            "label_value": role,
             "encap_type": "'null'",
             "node_name": self.get_node_name(topology),
             "interface": self.get_interface_name_for_kind(ifname),
-            "description": f"inter-switch link to {other_node.get_node_name(topology)}",
+            "description": f"{role} link to {other_node.get_node_name(topology)}",
         }
         return helpers.render_template("interface.j2", data)
 

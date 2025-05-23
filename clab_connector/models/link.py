@@ -54,6 +54,16 @@ class Link:
             return False
         return True
 
+    def is_edge_link(self):
+        """Check if exactly one endpoint is EDA-supported and the other is a linux node."""
+        if not self.node_1 or not self.node_2:
+            return False
+        if self.node_1.is_eda_supported() and self.node_2.kind == "linux":
+            return True
+        if self.node_2.is_eda_supported() and self.node_1.kind == "linux":
+            return True
+        return False
+
     def get_link_name(self, topology):
         """
         Create a unique name for the link resource.
@@ -84,11 +94,15 @@ class Link:
         str or None
             The rendered TopoLink CR YAML, or None if not EDA-supported.
         """
-        if not self.is_topolink():
+        if self.is_topolink():
+            role = "interSwitch"
+        elif self.is_edge_link():
+            role = "edge"
+        else:
             return None
         data = {
             "namespace": f"clab-{topology.name}",
-            "link_role": "interSwitch",
+            "link_role": role,
             "link_name": self.get_link_name(topology),
             "local_node": self.node_1.get_node_name(topology),
             "local_interface": self.node_1.get_interface_name_for_kind(self.intf_1),

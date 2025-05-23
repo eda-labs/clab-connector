@@ -160,7 +160,6 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
                 )
             else:
                 # For core resources
-                v1 = client.CoreV1Api()
                 create_from_yaml(
                     k8s_client=client.ApiClient(),
                     yaml_file=yaml.dump(manifest),

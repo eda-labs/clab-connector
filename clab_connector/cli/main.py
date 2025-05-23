@@ -211,15 +211,12 @@ def remove_cmd(
     """
     CLI command to remove EDA integration (delete the namespace).
     """
-    import logging
     from clab_connector.utils.logging_config import setup_logging
     from clab_connector.clients.eda.client import EDAClient
     from clab_connector.services.removal.topology_remover import TopologyRemover
 
     # Set up logging
     setup_logging(log_level.value, log_file)
-    logger = logging.getLogger(__name__)
-
     class Args:
         pass
 
@@ -340,12 +337,10 @@ def generate_crs_cmd(
     The manifests can be written as one combined YAML file (default) or as separate files
     (if --separate is specified).
     """
-    import logging
     from clab_connector.services.manifest.manifest_generator import ManifestGenerator
     from clab_connector.utils.logging_config import setup_logging
 
     setup_logging(log_level.value, log_file)
-    logger = logging.getLogger(__name__)
 
     try:
         generator = ManifestGenerator(str(topology_data), output=output_file, separate=separate)

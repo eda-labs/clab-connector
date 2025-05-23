@@ -1,29 +1,27 @@
 name: eda_tiny
 
-mgmt:
-  network: eda_tiny_mgmt
-  ipv4-subnet: 10.58.2.0/24
-
 topology:
   kinds:
     nokia_srlinux:
-      image: ghcr.io/nokia/srlinux:24.10.1
+      image: ghcr.io/nokia/srlinux:25.3.1
   nodes:
     dut1:
       kind: nokia_srlinux
       type: ixrd3l
-      mgmt-ipv4: 10.58.2.130
     dut2:
       kind: nokia_srlinux
       type: ixrd3l
-      mgmt-ipv4: 10.58.2.131
     dut3:
       kind: nokia_srlinux
       type: ixrd5
-      mgmt-ipv4: 10.58.2.132
+    client1:
+      kind: linux
+      image: ghcr.io/srl-labs/network-multitool
+
   links:
     # spine - leaf
-    - endpoints: ["dut1:e1-1", "dut3:e1-1"]
-    - endpoints: ["dut1:e1-2", "dut3:e1-2"]
-    - endpoints: ["dut2:e1-1", "dut3:e1-3"]
-    - endpoints: ["dut2:e1-2", "dut3:e1-4"]
+    - endpoints: [ "dut1:e1-1", "dut3:e1-1" ]
+    - endpoints: [ "dut1:e1-2", "dut3:e1-2" ]
+    - endpoints: [ "dut2:e1-1", "dut3:e1-3" ]
+    - endpoints: [ "dut2:e1-2", "dut3:e1-4" ]
+    - endpoints: [ "dut3:e1-5", "client1:eth1" ]
