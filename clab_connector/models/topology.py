@@ -4,7 +4,7 @@ import logging
 import os
 import json
 
-from clab_connector.utils.exceptions import TopologyFileError
+from clab_connector.utils.exceptions import ClabConnectorError, TopologyFileError
 
 from clab_connector.models.node.factory import create_node
 from clab_connector.models.node.base import Node
@@ -247,6 +247,8 @@ def parse_topology_file(path: str) -> Topology:
                 mgmt_ipv4=node_data.get("mgmt-ipv4-address"),
             )
         if node_obj.is_eda_supported():
+            if not node_obj.version:
+                raise ClabConnectorError(f"Node {node_name} is missing a version")
             node_objects.append(node_obj)
         all_nodes[node_name] = node_obj
 

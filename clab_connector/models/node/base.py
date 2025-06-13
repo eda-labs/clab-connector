@@ -4,6 +4,7 @@ import logging
 
 from clab_connector.utils import helpers
 from clab_connector.clients.kubernetes.client import ping_from_bsvr
+from clab_connector.utils.exceptions import ClabConnectorError
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,11 @@ class Node:
         self.node_type = node_type or self.get_default_node_type()
         self.version = version
         self.mgmt_ipv4 = mgmt_ipv4
+
+    def _require_version(self):
+        """Raise an error if the node has no software version defined."""
+        if not self.version:
+            raise ClabConnectorError(f"Node {self.name} is missing a version")
 
     def __repr__(self):
         """

@@ -100,6 +100,7 @@ class NokiaSRLinuxNode(Node):
         str
             The NodeProfile name for EDA.
         """
+        self._require_version()
         return f"{topology.get_eda_safe_name()}-{self.NODE_TYPE}-{self.version}"
 
     def get_node_profile(self, topology):
@@ -107,6 +108,7 @@ class NokiaSRLinuxNode(Node):
         Render the NodeProfile YAML for this SR Linux node.
         """
         logger.debug(f"Rendering node profile for {self.name}")
+        self._require_version()
         artifact_name = self.get_artifact_name()
         filename = f"srlinux-{self.version}.zip"
 
@@ -134,6 +136,7 @@ class NokiaSRLinuxNode(Node):
         Render the TopoNode YAML for this SR Linux node.
         """
         logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
+        self._require_version()
         role_value = "leaf"
         nl = self.name.lower()
         if "spine" in nl:

@@ -138,7 +138,8 @@ class NokiaSROSNode(Node):
         """
         Normalize version string to ensure consistent format between TopoNode and NodeProfile.
         """
-        # Convert to lowercase for consistent handling
+        if not version:
+            self._require_version()
         normalized = version.lower()
         return normalized
 
@@ -149,6 +150,7 @@ class NokiaSROSNode(Node):
         and includes the topology name to ensure uniqueness.
         """
         # Convert version to lowercase to comply with K8s naming rules
+        self._require_version()
         normalized_version = self._normalize_version(self.version)
         # Include the topology name in the profile name for uniqueness
         return f"{topology.get_eda_safe_name()}-sros-{normalized_version}"
@@ -158,6 +160,7 @@ class NokiaSROSNode(Node):
         Render the NodeProfile YAML for this SROS node.
         """
         logger.debug(f"Rendering node profile for {self.name}")
+        self._require_version()
         artifact_name = self.get_artifact_name()
         normalized_version = self._normalize_version(self.version)
         filename = f"sros-{normalized_version}.zip"
@@ -192,6 +195,7 @@ class NokiaSROSNode(Node):
         Render the TopoNode YAML for this SROS node.
         """
         logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
+        self._require_version()
         role_value = "backbone"
 
         # Ensure all values are lowercase and valid
