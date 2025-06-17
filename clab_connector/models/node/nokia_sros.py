@@ -28,6 +28,10 @@ class NokiaSROSNode(Node):
     EDA_OPERATING_SYSTEM = "sros"
 
     SUPPORTED_SCHEMA_PROFILES = {
+        "24.10.r4": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-v24.10.r4/sros-24.10.r4.zip"
+        ),
         "25.3.r2": (
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-v25.3.r2/sros-25.3.r2.zip"
