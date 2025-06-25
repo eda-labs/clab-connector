@@ -76,6 +76,8 @@ class NokiaSRLinuxNode(Node):
         str
             The platform name (e.g. '7220 IXR-D3L').
         """
+        if self.node_type and self.node_type.lower() == "ixsa1":
+            return "7215 IXS-A1"
         t = self.node_type.replace("ixr", "")
         return f"7220 IXR-{t.upper()}"
 
