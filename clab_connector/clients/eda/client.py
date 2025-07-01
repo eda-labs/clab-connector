@@ -323,9 +323,11 @@ class EDAClient:
         major = int(version_parts[0])
         minor = int(version_parts[1]) if len(version_parts) > 1 else 0
 
-        # For version 25.4 and newer, use v2 endpoint (with list wrapping)
-        # For older versions, use v1 endpoint
-        if major > 25 or (major == 25 and minor >= 4):
+        # Use the v2 validation endpoint by default. Versions older than
+        # 25.4 still require the v1 endpoint. Beta builds report version
+        # 0.0 and should always use the latest (v2) endpoint.
+
+        if (major > 25 or (major == 25 and minor >= 4) or (major == 0 and minor == 0)):
             logger.debug("Using v2 transaction validation endpoint")
             resp = self.post("core/transaction/v2/validate", [item])
         else:
