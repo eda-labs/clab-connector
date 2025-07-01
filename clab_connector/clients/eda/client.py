@@ -349,6 +349,15 @@ class EDAClient:
         resultType: str = "normal",
         retain: bool = True,
     ) -> str:
+        version = self.get_version()
+        logger.debug(f"EDA version for transaction: {version}")
+
+        if version.startswith("v"):
+            version = version[1:]
+
+        parts = version.split(".")
+        major = int(parts[0]) if parts[0].isdigit() else 0
+
         payload = {
             "description": description,
             "dryrun": dryrun,
@@ -359,7 +368,12 @@ class EDAClient:
         logger.info(
             f"{SUBSTEP_INDENT}Committing transaction: {description}, {len(self.transactions)} items"
         )
-        resp = self.post("core/transaction/v1", payload)
+        if major == 24:
+            logger.debug("Using v1 transaction commit endpoint")
+            resp = self.post("core/transaction/v1", payload)
+        else:
+            logger.debug("Using v2 transaction commit endpoint")
+            resp = self.post("core/transaction/v2", payload)
         if resp.status != 200:
             raise EDAConnectionError(
                 f"Transaction request failed: {resp.data.decode()}"
@@ -371,7 +385,12 @@ class EDAClient:
             raise EDAConnectionError(f"No transaction ID in response: {data}")
 
         logger.info(f"{SUBSTEP_INDENT}Waiting for transaction {tx_id} to complete...")
-        details_path = f"core/transaction/v1/details/{tx_id}?waitForComplete=true&failOnErrors=true"
+        if major == 24:
+            details_path = (
+                f"core/transaction/v1/details/{tx_id}?waitForComplete=true&failOnErrors=true"
+            )
+        else:
+            details_path = f"core/transaction/v2/result/summary/{tx_id}"
         details_resp = self.get(details_path)
         if details_resp.status != 200:
             raise EDAConnectionError(
