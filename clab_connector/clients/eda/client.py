@@ -92,7 +92,9 @@ class EDAClient:
                 "No kc_secret provided; retrieving it from Keycloak master realm."
             )
             self.kc_secret = self._fetch_client_secret_via_admin()
-            logger.info(f"{SUBSTEP_INDENT}Successfully retrieved EDA client secret from Keycloak.")
+            logger.info(
+                f"{SUBSTEP_INDENT}Successfully retrieved EDA client secret from Keycloak."
+            )
 
         logger.debug(
             "Acquiring user access token via Keycloak resource-owner flow (realm=eda)."
@@ -314,25 +316,23 @@ class EDAClient:
     def is_transaction_item_valid(self, item: dict) -> bool:
         logger.debug("Validating transaction item")
 
-        # Check version to determine which endpoint to use
+        # Determine which validation endpoint to use based on the EDA version
         version = self.get_version()
-        if version.startswith('v'):
-            version = version[1:]  # Remove 'v' prefix
+        logger.debug(f"EDA version for validation: {version}")
 
-        version_parts = version.split('.')
-        major = int(version_parts[0])
-        minor = int(version_parts[1]) if len(version_parts) > 1 else 0
+        if version.startswith("v"):
+            version = version[1:]
 
-        # Use the v2 validation endpoint by default. Versions older than
-        # 25.4 still require the v1 endpoint. Beta builds report version
-        # 0.0 and should always use the latest (v2) endpoint.
+        parts = version.split(".")
+        major = int(parts[0]) if parts[0].isdigit() else 0
 
-        if (major > 25 or (major == 25 and minor >= 4) or (major == 0 and minor == 0)):
-            logger.debug("Using v2 transaction validation endpoint")
-            resp = self.post("core/transaction/v2/validate", [item])
-        else:
+        # v2 is the default. Only 24.x releases still use the v1 endpoint.
+        if major == 24:
             logger.debug("Using v1 transaction validation endpoint")
             resp = self.post("core/transaction/v1/validate", item)
+        else:
+            logger.debug("Using v2 transaction validation endpoint")
+            resp = self.post("core/transaction/v2/validate", [item])
 
         if resp.status == 204:
             logger.debug("Transaction item validation success.")
