@@ -13,7 +13,7 @@ dependencies = [
     "certifi==2025.6.15",
     "cffi==1.17.1",
     "charset-normalizer==3.4.2",
-    "cryptography==45.0.4",
+    "cryptography==45.0.5",
     "idna==3.10",
     "jinja2==3.1.6",
     "kubernetes==33.1.0",
