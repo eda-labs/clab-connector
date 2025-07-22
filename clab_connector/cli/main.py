@@ -451,7 +451,6 @@ def check_sync_cmd(
     Check the synchronization status of nodes in EDA.
     """
     import logging
-    import json
     from clab_connector.utils.logging_config import setup_logging
     from clab_connector.services.status.node_sync_checker import NodeSyncChecker
     from clab_connector.models.topology import parse_topology_file
@@ -503,15 +502,15 @@ def check_sync_cmd(
                 available_namespaces = sync_checker.list_available_namespaces()
                 if available_namespaces:
                     suggested_namespace = sync_checker.suggest_correct_namespace(namespace)
-                    rprint(f"\n[yellow]Warning: All nodes are unknown. This might indicate the wrong namespace.[/yellow]")
+                    rprint("\n[yellow]Warning: All nodes are unknown. This might indicate the wrong namespace.[/yellow]")
                     rprint(f"Current namespace: [dim]{namespace}[/dim]")
                     rprint(f"Available clab namespaces: [dim]{', '.join(available_namespaces)}[/dim]")
                     if suggested_namespace and suggested_namespace != namespace:
                         rprint(f"Suggested namespace: [green]{suggested_namespace}[/green]")
                         rprint(f"\nTry: [dim]clab-connector check-sync -t {topology_data} -e {eda_url} --namespace {suggested_namespace}[/dim]")
                 else:
-                    rprint(f"\n[yellow]Warning: All nodes are unknown and no clab namespaces found via EDA API.[/yellow]")
-                    rprint(f"Check if the EDA connection is working and the namespace exists.")
+                    rprint("\n[yellow]Warning: All nodes are unknown and no clab namespaces found via EDA API.[/yellow]")
+                    rprint("Check if the EDA connection is working and the namespace exists.")
             
             # Set exit code based on status
             if summary['error_nodes'] > 0:
@@ -523,234 +522,7 @@ def check_sync_cmd(
         rprint(f"[red]Error: {str(e)}[/red]")
         raise typer.Exit(code=1)
 
-@app.command(
-    name="health-check",
-    help="Check health of EDA connectivity and services"
-)
-def health_check_cmd(
-    eda_url: Annotated[
-        str,
-        typer.Option(
-            "--eda-url",
-            "-e",
-            help="EDA deployment URL (hostname or IP)",
-            shell_complete=complete_eda_url,
-        ),
-    ],
-    eda_user: str = typer.Option(
-        "admin", "--eda-user", help="EDA username (realm='eda')"
-    ),
-    eda_password: str = typer.Option(
-        "admin", "--eda-password", help="EDA user password (realm='eda')"
-    ),
-    kc_user: str = typer.Option(
-        "admin", "--kc-user", help="Keycloak master realm admin user (default: admin)"
-    ),
-    kc_password: str = typer.Option(
-        "admin",
-        "--kc-password",
-        help="Keycloak master realm admin password (default: admin)",
-    ),
-    kc_secret: Optional[str] = typer.Option(
-        None,
-        "--kc-secret",
-        help="If given, use this as the EDA client secret and skip Keycloak admin flow",
-    ),
-    log_level: LogLevel = typer.Option(
-        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
-    ),
-    log_file: Optional[str] = typer.Option(
-        None, "--log-file", "-f", help="Optional log file path"
-    ),
-    verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
-):
-    """
-    Check the health of EDA connectivity and services.
-    """
-    import logging
-    from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.services.health.health_checker import HealthChecker, HealthStatus
-    from clab_connector.cli.common import create_eda_client
 
-    # Set up logging
-    setup_logging(log_level.value, log_file)
-    logger = logging.getLogger(__name__)
-
-    try:
-        # Create EDA client
-        eda_client = create_eda_client(
-            eda_url=eda_url,
-            eda_user=eda_user,
-            eda_password=eda_password,
-            kc_secret=kc_secret,
-            kc_user=kc_user,
-            kc_password=kc_password,
-            verify=verify
-        )
-
-        # Create health checker
-        health_checker = HealthChecker(eda_client)
-        
-        # Run health checks
-        results = health_checker.run_full_health_check()
-        overall_status = health_checker.get_overall_health_status(results)
-        
-        # Print results
-        rprint(f"\n[bold]EDA Health Check Results[/bold]")
-        rprint(f"Overall Status: ", end="")
-        
-        if overall_status == HealthStatus.HEALTHY:
-            rprint("[green]HEALTHY[/green]")
-        elif overall_status == HealthStatus.DEGRADED:
-            rprint("[yellow]DEGRADED[/yellow]")
-        elif overall_status == HealthStatus.UNHEALTHY:
-            rprint("[red]UNHEALTHY[/red]")
-        else:
-            rprint("[dim]UNKNOWN[/dim]")
-        
-        rprint("\n[bold]Component Details:[/bold]")
-        for check_name, result in results.items():
-            status_color = {
-                HealthStatus.HEALTHY: "green",
-                HealthStatus.DEGRADED: "yellow", 
-                HealthStatus.UNHEALTHY: "red",
-                HealthStatus.UNKNOWN: "dim"
-            }.get(result.status, "dim")
-            
-            rprint(f"  {result.name}: [{status_color}]{result.status.value.upper()}[/{status_color}] - {result.message}")
-            
-            if result.details:
-                for key, value in result.details.items():
-                    rprint(f"    {key}: {value}")
-        
-        # Set exit code based on overall health
-        if overall_status == HealthStatus.UNHEALTHY:
-            raise typer.Exit(code=1)
-        elif overall_status == HealthStatus.DEGRADED:
-            raise typer.Exit(code=2)
-
-    except Exception as e:
-        rprint(f"[red]Error during health check: {str(e)}[/red]")
-        raise typer.Exit(code=1)
-
-@app.command(
-    name="debug-eda", 
-    help="Debug EDA connectivity and list available resources"
-)
-def debug_eda_cmd(
-    eda_url: Annotated[
-        str,
-        typer.Option(
-            "--eda-url",
-            "-e",
-            help="EDA deployment URL (hostname or IP)",
-            shell_complete=complete_eda_url,
-        ),
-    ],
-    eda_user: str = typer.Option(
-        "admin", "--eda-user", help="EDA username (realm='eda')"
-    ),
-    eda_password: str = typer.Option(
-        "admin", "--eda-password", help="EDA user password (realm='eda')"
-    ),
-    kc_user: str = typer.Option(
-        "admin", "--kc-user", help="Keycloak master realm admin user (default: admin)"
-    ),
-    kc_password: str = typer.Option(
-        "admin",
-        "--kc-password",
-        help="Keycloak master realm admin password (default: admin)",
-    ),
-    kc_secret: Optional[str] = typer.Option(
-        None,
-        "--kc-secret",
-        help="If given, use this as the EDA client secret and skip Keycloak admin flow",
-    ),
-    namespace: Optional[str] = typer.Option(
-        None, "--namespace", help="Check specific namespace for TopoNodes"
-    ),
-    log_level: LogLevel = typer.Option(
-        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
-    ),
-    log_file: Optional[str] = typer.Option(
-        None, "--log-file", "-f", help="Optional log file path"
-    ),
-    verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
-):
-    """
-    Debug EDA connectivity and list available resources.
-    """
-    import logging
-    from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.services.status.node_sync_checker import NodeSyncChecker
-    from clab_connector.cli.common import create_eda_client
-
-    # Set up logging
-    setup_logging(log_level.value, log_file)
-    logger = logging.getLogger(__name__)
-
-    try:
-        # Create EDA client
-        eda_client = create_eda_client(
-            eda_url=eda_url,
-            eda_user=eda_user,
-            eda_password=eda_password,
-            kc_secret=kc_secret,
-            kc_user=kc_user,
-            kc_password=kc_password,
-            verify=verify
-        )
-
-        rprint(f"[bold]EDA Debug Information[/bold]")
-        rprint(f"EDA URL: {eda_url}")
-        
-        # Test basic connectivity
-        try:
-            # Try to get EDA version or basic info
-            response = eda_client.get("health")
-            if response.status == 200:
-                rprint(f"✅ EDA API connectivity: [green]OK[/green]")
-            else:
-                rprint(f"⚠️  EDA API connectivity: [yellow]HTTP {response.status}[/yellow]")
-        except Exception as e:
-            rprint(f"❌ EDA API connectivity: [red]Failed - {e}[/red]")
-        
-        # List available namespaces
-        sync_checker = NodeSyncChecker(eda_client, namespace or "default")
-        available_namespaces = sync_checker.list_available_namespaces()
-        
-        if available_namespaces:
-            rprint(f"\n[bold]Available clab namespaces ({len(available_namespaces)}):[/bold]")
-            for ns in available_namespaces:
-                rprint(f"  • {ns}")
-        else:
-            rprint(f"\n[yellow]No clab namespaces found[/yellow]")
-            
-        # If specific namespace provided, check TopoNodes
-        if namespace:
-            rprint(f"\n[bold]Checking namespace: {namespace}[/bold]")
-            sync_checker = NodeSyncChecker(eda_client, namespace)
-            toponodes = sync_checker.list_toponodes_in_namespace()
-            
-            if toponodes:
-                rprint(f"Found {len(toponodes)} TopoNodes:")
-                for node in toponodes[:20]:  # Show first 20
-                    rprint(f"  • {node}")
-                if len(toponodes) > 20:
-                    rprint(f"  ... and {len(toponodes) - 20} more")
-            else:
-                rprint(f"[yellow]No TopoNodes found in namespace {namespace}[/yellow]")
-                
-                # Check namespace status
-                namespace_info = sync_checker.check_namespace_and_resources()
-                if not namespace_info.get("namespace_exists", False):
-                    rprint(f"[red]Namespace {namespace} does not exist[/red]")
-                else:
-                    rprint(f"[yellow]Namespace {namespace} exists but contains no TopoNodes[/yellow]")
-
-    except Exception as e:
-        rprint(f"[red]Error: {str(e)}[/red]")
-        raise typer.Exit(code=1)
 
 if __name__ == "__main__":
     app()
