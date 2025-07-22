@@ -177,6 +177,34 @@ clab-connector remove \
 
 
 
+#### Check Synchronization Status
+
+The `check-sync` command allows you to check the synchronization status of your nodes in EDA. It provides a detailed view of which nodes are ready, which are still syncing, and which ones have errors:
+
+```
+clab-connector check-sync \
+  --topology-data path/to/topology-data.json \
+  --eda-url https://eda.example.com \
+  --verbose
+```
+
+| Option                | Required | Default | Description                                                 |
+|----------------------|----------|---------|-------------------------------------------------------------|
+| `--topology-data`, `-t` | Yes    | None    | Path to the Containerlab topology data JSON file            |
+| `--eda-url`, `-e`     | Yes      | None    | EDA deployment hostname or IP address                       |
+| `--eda-user`          | No       | admin   | EDA username                                                |
+| `--eda-password`      | No       | admin   | EDA password                                                |
+| `--kc-user`           | No       | admin   | Keycloak master realm admin user                            |
+| `--kc-password`       | No       | admin   | Keycloak master realm admin password                        |
+| `--kc-secret`         | No       | None    | Use given EDA client secret and skip Keycloak flow          |
+| `--namespace`         | No       | None    | Override the namespace (instead of deriving from topology)   |
+| `--verbose`, `-v`     | No       | False   | Show detailed information about node status and API sources  |
+| `--wait`              | No       | False   | Wait for all nodes to be ready                              |
+| `--timeout`           | No       | 90      | Timeout in seconds when waiting for nodes to be ready       |
+| `--log-level`, `-l`   | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)           |
+| `--log-file`, `-f`    | No       | None    | Optional log file path                                      |
+| `--verify`            | No       | False   | Enable certificate verification for EDA                     |
+
 #### Export a lab from EDA to Containerlab
 
 ```
@@ -248,3 +276,4 @@ Contributions are welcome! Please fork the repository and submit a pull request 
 
 - [Containerlab](https://containerlab.dev/) for providing an excellent network emulation platform.
 - [EDA (Event-Driven Automation)](https://docs.eda.dev/) for the robust automation capabilities.
+

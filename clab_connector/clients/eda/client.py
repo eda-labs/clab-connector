@@ -239,8 +239,20 @@ class EDAClient:
         url = f"{self.url}/{api_path}"
         logger.debug(f"POST {url}")
         body = json.dumps(payload).encode("utf-8")
+        headers = self.get_headers(requires_auth)
+        headers["Content-Type"] = "application/json"
         return self.http.request(
-            "POST", url, headers=self.get_headers(requires_auth), body=body
+            "POST", url, headers=headers, body=body
+        )
+
+    def patch(self, api_path: str, payload: str, requires_auth: bool = True):
+        url = f"{self.url}/{api_path}"
+        logger.debug(f"PATCH {url}")
+        body = payload.encode("utf-8")
+        headers = self.get_headers(requires_auth)
+        headers["Content-Type"] = "application/json"
+        return self.http.request(
+            "PATCH", url, headers=headers, body=body
         )
 
     def is_up(self) -> bool:
