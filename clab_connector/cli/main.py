@@ -487,7 +487,7 @@ def check_sync_cmd(
         # Check if any nodes are found and suggest alternatives if not
         if wait:
             logger.info(f"Waiting for {len(node_names)} nodes to be ready (timeout: {timeout}s)")
-            success = sync_checker.wait_for_nodes_ready(node_names, timeout=timeout, verbose=verbose)
+            success = sync_checker.wait_for_nodes_ready(node_names, timeout=timeout, verbose=verbose, use_log_view=False)
             if not success:
                 raise typer.Exit(code=1)
         else:

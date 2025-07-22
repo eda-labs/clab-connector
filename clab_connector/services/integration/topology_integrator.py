@@ -428,13 +428,10 @@ class TopologyIntegrator:
         namespace = f"clab-{self.topology.name}"
         node_names = [node.get_node_name(self.topology) for node in self.topology.nodes]
         
-        logger.info(f"{SUBSTEP_INDENT}Checking synchronization for {len(node_names)} nodes...")
-        
         sync_checker = NodeSyncChecker(self.eda_client, namespace)
         
         # Simple wait for nodes to be ready
-        logger.info(f"{SUBSTEP_INDENT}Waiting for nodes to synchronize (timeout: {self.sync_timeout}s)...")
-        if sync_checker.wait_for_nodes_ready(node_names, timeout=self.sync_timeout):
+        if sync_checker.wait_for_nodes_ready(node_names, timeout=self.sync_timeout, use_log_view=True):
             logger.info(f"{SUBSTEP_INDENT}All nodes synchronized successfully!")
         else:
             # Just report the final status without retrying

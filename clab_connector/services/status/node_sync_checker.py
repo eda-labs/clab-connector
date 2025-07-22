@@ -286,19 +286,93 @@ class NodeSyncChecker:
         node_names: List[str], 
         timeout: int = 90,
         check_interval: int = 10,
-        verbose: bool = False
+        verbose: bool = False,
+        use_log_view: bool = True
     ) -> bool:
         """
-        Wait for all nodes to reach ready status with dynamic table updates.
+        Wait for all nodes to reach ready status.
         
         Args:
             node_names: List of node names to check
             timeout: Maximum time to wait in seconds
             check_interval: Time between checks in seconds
             verbose: If True, display verbose status information
+            use_log_view: If True, use log messages instead of table (for integration)
             
         Returns:
             True if all nodes are ready, False if timeout or errors
+        """
+        if use_log_view:
+            return self._wait_for_nodes_ready_log_view(node_names, timeout, check_interval)
+        else:
+            return self._wait_for_nodes_ready_table_view(node_names, timeout, check_interval, verbose)
+    
+    def _wait_for_nodes_ready_log_view(
+        self,
+        node_names: List[str],
+        timeout: int = 90,
+        check_interval: int = 10
+    ) -> bool:
+        """
+        Wait for nodes to be ready using log messages (for integration).
+        """
+        logger.info(f"Waiting for {len(node_names)} nodes to synchronize...")
+        
+        start_time = time.time()
+        previous_statuses = {}
+        nodes_reported_ready = set()
+        
+        while time.time() - start_time < timeout:
+            elapsed_time = time.time() - start_time
+            
+            # Check all nodes
+            statuses = self.check_all_nodes_status(node_names)
+            
+            # Report changes in status
+            for status in statuses:
+                prev_status = previous_statuses.get(status.name)
+                
+                # Report when a node becomes ready for the first time
+                if status.is_ready() and status.name not in nodes_reported_ready:
+                    logger.info(f"  ✓ Node {status.name} is ready")
+                    nodes_reported_ready.add(status.name)
+                # Report when status changes (except to ready which is already reported)
+                elif prev_status and prev_status.status != status.status and not status.is_ready():
+                    if status.status == NodeSyncStatus.SYNCING:
+                        logger.info(f"  • Node {status.name} is syncing...")
+                    elif status.status == NodeSyncStatus.ERROR:
+                        logger.error(f"  ✗ Node {status.name} error: {status.error_message}")
+                    elif status.status == NodeSyncStatus.PENDING:
+                        logger.info(f"  • Node {status.name} is pending...")
+                
+                previous_statuses[status.name] = status
+            
+            # Check if all nodes are ready
+            ready_nodes = [s for s in statuses if s.is_ready()]
+            
+            if len(ready_nodes) == len(node_names):
+                return True
+            
+            # Check timeout
+            remaining = timeout - elapsed_time
+            if remaining <= 0:
+                break
+            
+            # Wait for next check
+            time.sleep(min(check_interval, remaining))
+        
+        # Timeout reached
+        return False
+    
+    def _wait_for_nodes_ready_table_view(
+        self,
+        node_names: List[str],
+        timeout: int = 90,
+        check_interval: int = 10,
+        verbose: bool = False
+    ) -> bool:
+        """
+        Wait for nodes to be ready using table view (for check-sync command).
         """
         logger.info(f"Waiting for {len(node_names)} nodes to be ready (timeout: {timeout}s)\n")
         
