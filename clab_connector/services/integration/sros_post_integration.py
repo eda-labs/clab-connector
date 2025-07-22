@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""
-sros_post_integration.py – SROS post-integration helpers
-"""
+"""sros_post_integration.py - SROS post-integration helpers"""
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
-import socket
 import subprocess
 import tempfile
+import time
 from pathlib import Path
-from typing import List, Optional
 
 import paramiko
 
 logger = logging.getLogger(__name__)
+
 
 # --------------------------------------------------------------------------- #
 # SSH helpers                                                                 #
@@ -23,9 +22,9 @@ logger = logging.getLogger(__name__)
 def verify_ssh_credentials(
     mgmt_ip: str,
     username: str,
-    passwords: List[str],
+    passwords: list[str],
     quiet: bool = False,
-) -> Optional[str]:
+) -> str | None:
     """
     Return the first password that opens an SSH session, else None.
     """
@@ -60,14 +59,12 @@ def verify_ssh_credentials(
         except paramiko.AuthenticationException:
             if not quiet:
                 logger.debug("Password '%s' rejected for %s", pw, mgmt_ip)
-        except (paramiko.SSHException, socket.timeout, socket.error) as e:
+        except (TimeoutError, OSError, paramiko.SSHException) as e:
             if not quiet:
                 logger.debug("SSH connection problem with %s: %s", mgmt_ip, e)
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 client.close()
-            except Exception:
-                pass
 
     return None
 
@@ -85,9 +82,7 @@ def transfer_file(
     """
     try:
         if not quiet:
-            logger.debug(
-                "SCP %s → %s@%s:%s", src_path, username, mgmt_ip, dest_path
-            )
+            logger.debug("SCP %s → %s@%s:%s", src_path, username, mgmt_ip, dest_path)
 
         transport = paramiko.Transport((mgmt_ip, 22))
         transport.connect(username=username, password=password)
@@ -133,7 +128,6 @@ def execute_ssh_commands(
 
         for cmd in commands:
             if cmd.strip() == "commit":
-                import time
                 time.sleep(2)  # Wait 2 seconds before sending commit
 
             chan.send(cmd + "\n")
@@ -173,7 +167,7 @@ def prepare_sros_node(
     version: str,
     mgmt_ip: str,
     username: str = "admin",
-    password: Optional[str] = None,
+    password: str | None = None,
     quiet: bool = False,
 ) -> bool:
     """
@@ -190,16 +184,16 @@ def prepare_sros_node(
 
     # Proceed with original logic if admin:admin works
     # 1. determine password list (keep provided one first if present)
-    pwd_list: List[str] = []
+    pwd_list: list[str] = []
     if password:
         pwd_list.append(password)
     pwd_list.append("admin")
 
-    logger.info("Verifying SSH credentials for %s …", node_name)
+    logger.info("Verifying SSH credentials for %s ...", node_name)
     working_pw = verify_ssh_credentials(mgmt_ip, username, pwd_list, quiet)
 
     if not working_pw:
-        logger.error("No valid password found – aborting")
+        logger.error("No valid password found - aborting")
         return False
 
     # 2. create temp artefacts
@@ -253,8 +247,11 @@ def prepare_sros_node(
             logger.info("Copying certificates to device …")
             dest_root = None
             for root in ("cf3:/", "/"):
-                if transfer_file(cert_p, root + "edaboot.crt", username, mgmt_ip, working_pw, quiet) and \
-                   transfer_file(key_p,  root + "edaboot.key", username, mgmt_ip, working_pw, quiet):
+                if transfer_file(
+                    cert_p, root + "edaboot.crt", username, mgmt_ip, working_pw, quiet
+                ) and transfer_file(
+                    key_p, root + "edaboot.key", username, mgmt_ip, working_pw, quiet
+                ):
                     dest_root = root
                     break
             if not dest_root:
@@ -286,7 +283,12 @@ def prepare_sros_node(
                 script_p, username, mgmt_ip, node_name, working_pw, quiet
             )
 
-        except (subprocess.CalledProcessError, FileNotFoundError, ValueError, RuntimeError) as e:
+        except (
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+            ValueError,
+            RuntimeError,
+        ) as e:
             logger.error("Post-integration failed: %s", e)
             return False
         except Exception as e:

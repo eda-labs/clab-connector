@@ -1,21 +1,21 @@
 # clab_connector/services/integration/topology_integrator.py (updated)
 
 import logging
+import time
 
-from clab_connector.utils.constants import SUBSTEP_INDENT
-
-from clab_connector.models.topology import parse_topology_file
 from clab_connector.clients.eda.client import EDAClient
 from clab_connector.clients.kubernetes.client import (
     apply_manifest,
     edactl_namespace_bootstrap,
-    wait_for_namespace,
     update_namespace_description,
+    wait_for_namespace,
 )
-from clab_connector.utils import helpers
-from clab_connector.utils.exceptions import EDAConnectionError, ClabConnectorError
+from clab_connector.models.topology import parse_topology_file
 from clab_connector.services.integration.sros_post_integration import prepare_sros_node
 from clab_connector.services.status.node_sync_checker import NodeSyncChecker
+from clab_connector.utils import helpers
+from clab_connector.utils.constants import SUBSTEP_INDENT
+from clab_connector.utils.exceptions import ClabConnectorError, EDAConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,12 @@ class TopologyIntegrator:
         A connected EDAClient used to submit resources to the EDA cluster.
     """
 
-    def __init__(self, eda_client: EDAClient, enable_sync_checking: bool = True, sync_timeout: int = 90):
+    def __init__(
+        self,
+        eda_client: EDAClient,
+        enable_sync_checking: bool = True,
+        sync_timeout: int = 90,
+    ):
         self.eda_client = eda_client
         self.topology = None
         self.enable_sync_checking = enable_sync_checking
@@ -39,10 +44,6 @@ class TopologyIntegrator:
     def run(
         self,
         topology_file,
-        eda_url,
-        eda_user,
-        eda_password,
-        verify,
         skip_edge_intfs: bool = False,
     ):
         """
@@ -52,14 +53,6 @@ class TopologyIntegrator:
         ----------
         topology_file : str or Path
             Path to the containerlab topology JSON file.
-        eda_url : str
-            EDA hostname/IP.
-        eda_user : str
-            EDA username.
-        eda_password : str
-            EDA password.
-        verify : bool
-            Certificate verification flag.
         skip_edge_intfs : bool
             When True, omit edge link resources and their interfaces from the
             integration.
@@ -218,7 +211,9 @@ class TopologyIntegrator:
                     )
             except RuntimeError as ex:
                 if "AlreadyExists" in str(ex):
-                    logger.info(f"{SUBSTEP_INDENT}Artifact '{artifact_name}' already exists.")
+                    logger.info(
+                        f"{SUBSTEP_INDENT}Artifact '{artifact_name}' already exists."
+                    )
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 
@@ -247,7 +242,9 @@ class TopologyIntegrator:
             logger.info(f"{SUBSTEP_INDENT}Node security profile created.")
         except RuntimeError as ex:
             if "AlreadyExists" in str(ex):
-                logger.info(f"{SUBSTEP_INDENT}Node security profile already exists, skipping.")
+                logger.info(
+                    f"{SUBSTEP_INDENT}Node security profile already exists, skipping."
+                )
             else:
                 raise
 
@@ -278,7 +275,7 @@ class TopologyIntegrator:
             "username": "admin",
             "password": "NokiaSrl1!",
             "ssh_pub_keys": ssh_pub_keys,
-            "node_selector": "containerlab=managedSrl"
+            "node_selector": "containerlab=managedSrl",
         }
         srl_node_user = helpers.render_template("node-user.j2", srl_data)
         item_srl = self.eda_client.add_replace_to_transaction(srl_node_user)
@@ -292,7 +289,7 @@ class TopologyIntegrator:
             "username": "admin",
             "password": "NokiaSros1!",
             "ssh_pub_keys": ssh_pub_keys,
-            "node_selector": "containerlab=managedSros"
+            "node_selector": "containerlab=managedSros",
         }
         sros_node_user = helpers.render_template("node-user.j2", sros_data)
         item_sros = self.eda_client.add_replace_to_transaction(sros_node_user)
@@ -310,50 +307,55 @@ class TopologyIntegrator:
                 raise ClabConnectorError("Validation error creating node profile")
 
     def create_toponodes(self):
-        """
-        Create TopoNode resources for each node in batches to smooth the integration.
-        """
-        import time
-        
+        """Create TopoNode resources for each node in batches."""
+
         tnodes = self.topology.get_toponodes()
         if not tnodes:
             logger.info(f"{SUBSTEP_INDENT}No TopoNodes to create")
             return
-        
+
         # Process nodes in smaller batches to avoid overwhelming EDA
         batch_size = 3  # Process 3 nodes at a time
         batch_delay = 2  # Wait 2 seconds between batches
-        
-        logger.info(f"{SUBSTEP_INDENT}Creating {len(tnodes)} TopoNodes in batches of {batch_size}")
-        
+
+        logger.info(
+            f"{SUBSTEP_INDENT}Creating {len(tnodes)} TopoNodes in batches of {batch_size}"
+        )
+
         for i in range(0, len(tnodes), batch_size):
-            batch = tnodes[i:i + batch_size]
+            batch = tnodes[i : i + batch_size]
             batch_num = (i // batch_size) + 1
             total_batches = (len(tnodes) + batch_size - 1) // batch_size
-            
-            logger.info(f"{SUBSTEP_INDENT}Processing batch {batch_num}/{total_batches} ({len(batch)} nodes)...")
-            
+
+            logger.info(
+                f"{SUBSTEP_INDENT}Processing batch {batch_num}/{total_batches} ({len(batch)} nodes)..."
+            )
+
             # Clear any existing transactions for this batch
-            if hasattr(self.eda_client, 'transactions'):
+            if hasattr(self.eda_client, "transactions"):
                 self.eda_client.transactions = []
-            
+
             # Add nodes in this batch to transaction
             for node_yaml in batch:
                 item = self.eda_client.add_replace_to_transaction(node_yaml)
                 if not self.eda_client.is_transaction_item_valid(item):
                     raise ClabConnectorError("Validation error creating toponode")
-            
+
             # Commit this batch
             try:
                 self.commit_transaction(f"create nodes batch {batch_num}")
-                logger.info(f"{SUBSTEP_INDENT}Batch {batch_num}/{total_batches} committed successfully")
+                logger.info(
+                    f"{SUBSTEP_INDENT}Batch {batch_num}/{total_batches} committed successfully"
+                )
             except Exception as e:
                 logger.error(f"Failed to commit batch {batch_num}/{total_batches}: {e}")
                 raise
-            
+
             # Wait between batches (except for the last batch)
             if i + batch_size < len(tnodes):
-                logger.debug(f"{SUBSTEP_INDENT}Waiting {batch_delay}s before next batch...")
+                logger.debug(
+                    f"{SUBSTEP_INDENT}Waiting {batch_delay}s before next batch..."
+                )
                 time.sleep(batch_delay)
 
     def create_topolink_interfaces(self, skip_edge_intfs: bool = False):
@@ -391,7 +393,7 @@ class TopologyIntegrator:
             mgmt_ip=node.mgmt_ipv4,
             username="admin",
             password="admin",
-            quiet=quiet
+            quiet=quiet,
         )
 
     def run_post_integration(self):
@@ -405,7 +407,9 @@ class TopologyIntegrator:
         # Look for SROS nodes and run post-integration for them
         for node in self.topology.nodes:
             if node.kind == "nokia_sros":
-                logger.info(f"{SUBSTEP_INDENT}Running SROS post-integration for node {node.name}")
+                logger.info(
+                    f"{SUBSTEP_INDENT}Running SROS post-integration for node {node.name}"
+                )
                 try:
                     # Get normalized version from the node
                     normalized_version = node._normalize_version(node.version)
@@ -413,46 +417,54 @@ class TopologyIntegrator:
                         node, namespace, normalized_version, quiet
                     )
                     if success:
-                        logger.info(f"{SUBSTEP_INDENT}SROS post-integration for {node.name} completed successfully")
+                        logger.info(
+                            f"{SUBSTEP_INDENT}SROS post-integration for {node.name} completed successfully"
+                        )
                     else:
                         logger.error(f"SROS post-integration for {node.name} failed")
                 except Exception as e:
-                    logger.error(f"Error during SROS post-integration for {node.name}: {e}")
+                    logger.error(
+                        f"Error during SROS post-integration for {node.name}: {e}"
+                    )
 
     def check_node_synchronization(self):
         """Check that all nodes are properly synchronized in EDA (simplified, no retries)"""
         if not self.topology or not self.topology.nodes:
             logger.warning("No nodes to check for synchronization")
             return
-        
+
         namespace = f"clab-{self.topology.name}"
         node_names = [node.get_node_name(self.topology) for node in self.topology.nodes]
-        
+
         sync_checker = NodeSyncChecker(self.eda_client, namespace)
-        
+
         # Simple wait for nodes to be ready
-        if sync_checker.wait_for_nodes_ready(node_names, timeout=self.sync_timeout, use_log_view=True):
+        if sync_checker.wait_for_nodes_ready(
+            node_names, timeout=self.sync_timeout, use_log_view=True
+        ):
             logger.info(f"{SUBSTEP_INDENT}All nodes synchronized successfully!")
         else:
             # Just report the final status without retrying
             final_summary = sync_checker.get_sync_summary(node_names)
-            logger.info(f"Node synchronization completed:")
-            logger.info(f"  Ready: {final_summary['ready_nodes']}/{final_summary['total_nodes']}")
-            if final_summary['error_nodes'] > 0:
+            logger.info("Node synchronization completed:")
+            logger.info(
+                f"  Ready: {final_summary['ready_nodes']}/{final_summary['total_nodes']}"
+            )
+            if final_summary["error_nodes"] > 0:
                 logger.info(f"  Errors: {final_summary['error_nodes']}")
-            if final_summary['pending_nodes'] > 0:
-                logger.info(f"  Pending: {final_summary['pending_nodes']}")  
-            if final_summary['unknown_nodes'] > 0:
+            if final_summary["pending_nodes"] > 0:
+                logger.info(f"  Pending: {final_summary['pending_nodes']}")
+            if final_summary["unknown_nodes"] > 0:
                 logger.info(f"  Unknown: {final_summary['unknown_nodes']}")
-            if final_summary['syncing_nodes'] > 0:
+            if final_summary["syncing_nodes"] > 0:
                 logger.info(f"  Syncing: {final_summary['syncing_nodes']}")
-            
+
             # Log details for non-ready nodes
-            for node_name, details in final_summary['node_details'].items():
-                if details['status'] != 'ready':
+            for node_name, details in final_summary["node_details"].items():
+                if details["status"] != "ready":
                     status_msg = f"  {node_name}: {details['status']}"
-                    if details.get('error_message'):
+                    if details.get("error_message"):
                         status_msg += f" - {details['error_message']}"
                     logger.info(status_msg)
-        
+
         logger.info("Continuing with topology integration...")

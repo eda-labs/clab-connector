@@ -87,30 +87,28 @@ class NokiaSROSNode(Node):
             # Add line card component
             if "lineCard" in component_info:
                 lc = component_info["lineCard"]
-                components.append({
-                    "kind": "lineCard",
-                    "slot": lc["slot"],
-                    "type": lc["type"]
-                })
+                components.append(
+                    {"kind": "lineCard", "slot": lc["slot"], "type": lc["type"]}
+                )
 
             # Add MDA component
             if "mda" in component_info:
                 mda = component_info["mda"]
-                components.append({
-                    "kind": "mda",
-                    "slot": mda["slot"],
-                    "type": mda["type"]
-                })
+                components.append(
+                    {"kind": "mda", "slot": mda["slot"], "type": mda["type"]}
+                )
 
             # Add connector components
             if "connectors" in component_info:
                 num_connectors = component_info["connectors"]
                 for i in range(1, num_connectors + 1):
-                    components.append({
-                        "kind": "connector",
-                        "slot": f"1-a-{i}",
-                        "type": "c1-100g"  # Default connector type
-                    })
+                    components.append(
+                        {
+                            "kind": "connector",
+                            "slot": f"1-a-{i}",
+                            "type": "c1-100g",  # Default connector type
+                        }
+                    )
 
         return components
 
@@ -223,7 +221,7 @@ class NokiaSROSNode(Node):
             "sw_version": normalized_version,
             "mgmt_ip": self.mgmt_ipv4,
             "containerlab_label": "managedSros",
-            "components": components  # Add component information
+            "components": components,  # Add component information
         }
         return helpers.render_template("toponode.j2", data)
 
@@ -298,11 +296,7 @@ class NokiaSROSNode(Node):
                                 eda_name = f"loopback-{match.group(1)}"
 
         if eda_name is None:
-            lag_pattern = re.compile(r"^lag-\d+$")
-            if lag_pattern.match(ifname):
-                eda_name = ifname
-            else:
-                eda_name = ifname
+            eda_name = ifname
 
         return eda_name
 
@@ -359,7 +353,9 @@ class NokiaSROSNode(Node):
         normalized_version = self._normalize_version(self.version)
         # Check if we have a supported schema for this normalized version
         if normalized_version not in self.SUPPORTED_SCHEMA_PROFILES:
-            logger.warning(f"{SUBSTEP_INDENT}No schema profile for version {normalized_version}")
+            logger.warning(
+                f"{SUBSTEP_INDENT}No schema profile for version {normalized_version}"
+            )
             return (None, None, None)
 
         artifact_name = self.get_artifact_name()
@@ -378,4 +374,3 @@ class NokiaSROSNode(Node):
             "artifact_url": download_url,
         }
         return helpers.render_template("artifact.j2", data)
-

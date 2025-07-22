@@ -3,15 +3,20 @@
 import logging
 import re
 import time
-import yaml
-from typing import Optional
 
-from kubernetes import client, config
+import yaml
+
+import kubernetes as k8s
+from clab_connector.utils.constants import SUBSTEP_INDENT
+from kubernetes import config
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 from kubernetes.utils import create_from_yaml
 
-from clab_connector.utils.constants import SUBSTEP_INDENT
+k8s_client = k8s.client
+
+HTTP_STATUS_CONFLICT = 409
+HTTP_STATUS_NOT_FOUND = 404
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +27,11 @@ try:
     config.load_incluster_config()
     logger.debug("Using in-cluster Kubernetes config.")
 except Exception:
-    config.load_kube_config()
-    logger.debug("Using local kubeconfig.")
+    try:
+        config.load_kube_config()
+        logger.debug("Using local kubeconfig.")
+    except Exception:
+        logger.debug("Kubernetes configuration could not be loaded")
 
 
 def get_toolbox_pod() -> str:
@@ -41,7 +49,7 @@ def get_toolbox_pod() -> str:
     RuntimeError
         If no toolbox pod is found.
     """
-    v1 = client.CoreV1Api()
+    v1 = k8s_client.CoreV1Api()
     label_selector = "eda.nokia.com/app=eda-toolbox"
     pods = v1.list_namespaced_pod("eda-system", label_selector=label_selector)
     if not pods.items:
@@ -64,7 +72,7 @@ def get_bsvr_pod() -> str:
     RuntimeError
         If no bsvr pod is found.
     """
-    v1 = client.CoreV1Api()
+    v1 = k8s_client.CoreV1Api()
     label_selector = "eda.nokia.com/app=bootstrapserver"
     pods = v1.list_namespaced_pod("eda-system", label_selector=label_selector)
     if not pods.items:
@@ -88,7 +96,7 @@ def ping_from_bsvr(target_ip: str) -> bool:
     """
     logger.debug(f"Pinging '{target_ip}' from the bsvr pod...")
     bsvr_name = get_bsvr_pod()
-    core_api = client.CoreV1Api()
+    core_api = k8s_client.CoreV1Api()
     command = ["ping", "-c", "1", target_ip]
     try:
         resp = stream(
@@ -106,7 +114,9 @@ def ping_from_bsvr(target_ip: str) -> bool:
             logger.info(f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} succeeded")
             return True
         else:
-            logger.error(f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} failed:\n{resp}")
+            logger.error(
+                f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} failed:\n{resp}"
+            )
             return False
     except ApiException as exc:
         logger.error(f"{SUBSTEP_INDENT}API error during ping: {exc}")
@@ -148,7 +158,7 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
             version = api_version
 
         # Use CustomObjectsApi for custom resources
-        custom_api = client.CustomObjectsApi()
+        custom_api = k8s_client.CustomObjectsApi()
 
         try:
             if group:
@@ -163,7 +173,7 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
             else:
                 # For core resources
                 create_from_yaml(
-                    k8s_client=client.ApiClient(),
+                    k8s_client=k8s_client.ApiClient(),
                     yaml_file=yaml.dump(manifest),
                     namespace=namespace,
                 )
@@ -171,7 +181,7 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
                 f"{SUBSTEP_INDENT}Successfully applied {kind} to namespace '{namespace}'"
             )
         except ApiException as e:
-            if e.status == 409:  # Already exists
+            if e.status == HTTP_STATUS_CONFLICT:  # Already exists
                 logger.info(
                     f"{SUBSTEP_INDENT}{kind} already exists in namespace '{namespace}'"
                 )
@@ -180,10 +190,10 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
 
     except Exception as exc:
         logger.error(f"Failed to apply manifest: {exc}")
-        raise RuntimeError(f"Failed to apply manifest: {exc}")
+        raise RuntimeError(f"Failed to apply manifest: {exc}") from exc
 
 
-def edactl_namespace_bootstrap(namespace: str) -> Optional[int]:
+def edactl_namespace_bootstrap(namespace: str) -> int | None:
     """
     Emulate `kubectl exec <toolbox_pod> -- edactl namespace bootstrap <namespace>`
     by streaming an exec call into the toolbox pod.
@@ -199,7 +209,7 @@ def edactl_namespace_bootstrap(namespace: str) -> Optional[int]:
         The transaction ID if found, or None if skipping/existing.
     """
     toolbox = get_toolbox_pod()
-    core_api = client.CoreV1Api()
+    core_api = k8s_client.CoreV1Api()
     cmd = ["edactl", "namespace", "bootstrap", namespace]
     try:
         resp = stream(
@@ -260,16 +270,14 @@ def wait_for_namespace(
     RuntimeError
         If the namespace is not found within the given attempts.
     """
-    v1 = client.CoreV1Api()
+    v1 = k8s_client.CoreV1Api()
     for attempt in range(max_retries):
         try:
             v1.read_namespace(name=namespace)
-            logger.info(
-                f"{SUBSTEP_INDENT}Namespace {namespace} is available"
-            )
+            logger.info(f"{SUBSTEP_INDENT}Namespace {namespace} is available")
             return True
         except ApiException as exc:
-            if exc.status == 404:
+            if exc.status == HTTP_STATUS_NOT_FOUND:
                 logger.debug(
                     f"Waiting for namespace '{namespace}' (attempt {attempt + 1}/{max_retries})"
                 )
@@ -280,7 +288,9 @@ def wait_for_namespace(
     raise RuntimeError(f"Timed out waiting for namespace {namespace}")
 
 
-def update_namespace_description(namespace: str, description: str, max_retries: int = 5, retry_delay: int = 2) -> bool:
+def update_namespace_description(
+    namespace: str, description: str, max_retries: int = 5, retry_delay: int = 2
+) -> bool:
     """
     Patch a namespace's description. For EDA, this may be a custom CRD
     (group=core.eda.nokia.com, version=v1, plural=namespaces).
@@ -302,7 +312,7 @@ def update_namespace_description(namespace: str, description: str, max_retries: 
     bool
         True if successful, False if couldn't update after retries.
     """
-    crd_api = client.CustomObjectsApi()
+    crd_api = k8s_client.CustomObjectsApi()
     group = "core.eda.nokia.com"
     version = "v1"
     plural = "namespaces"
@@ -310,11 +320,11 @@ def update_namespace_description(namespace: str, description: str, max_retries: 
     patch_body = {"spec": {"description": description}}
 
     # Check if namespace exists in Kubernetes first
-    v1 = client.CoreV1Api()
+    v1 = k8s_client.CoreV1Api()
     try:
         v1.read_namespace(name=namespace)
     except ApiException as exc:
-        if exc.status == 404:
+        if exc.status == HTTP_STATUS_NOT_FOUND:
             logger.warning(
                 f"{SUBSTEP_INDENT}Kubernetes namespace '{namespace}' does not exist. Cannot update EDA description."
             )
@@ -334,12 +344,14 @@ def update_namespace_description(namespace: str, description: str, max_retries: 
                 name=namespace,
                 body=patch_body,
             )
-            logger.debug(f"Namespace '{namespace}' patched with description. resp={resp}")
+            logger.debug(
+                f"Namespace '{namespace}' patched with description. resp={resp}"
+            )
             return True
         except ApiException as exc:
-            if exc.status == 404:
+            if exc.status == HTTP_STATUS_NOT_FOUND:
                 logger.info(
-                    f"{SUBSTEP_INDENT}EDA namespace '{namespace}' not found (attempt {attempt+1}/{max_retries}). Retrying in {retry_delay}s..."
+                    f"{SUBSTEP_INDENT}EDA namespace '{namespace}' not found (attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay}s..."
                 )
                 time.sleep(retry_delay)
             else:
@@ -367,7 +379,7 @@ def edactl_revert_commit(commit_hash: str) -> bool:
         True if revert is successful, False otherwise.
     """
     toolbox = get_toolbox_pod()
-    core_api = client.CoreV1Api()
+    core_api = k8s_client.CoreV1Api()
     cmd = ["edactl", "git", "revert", commit_hash]
     try:
         resp = stream(
@@ -392,7 +404,7 @@ def edactl_revert_commit(commit_hash: str) -> bool:
 
 
 def list_toponodes_in_namespace(namespace: str):
-    crd_api = client.CustomObjectsApi()
+    crd_api = k8s_client.CustomObjectsApi()
     group = "core.eda.nokia.com"
     version = "v1"
     plural = "toponodes"
@@ -405,7 +417,7 @@ def list_toponodes_in_namespace(namespace: str):
 
 
 def list_topolinks_in_namespace(namespace: str):
-    crd_api = client.CustomObjectsApi()
+    crd_api = k8s_client.CustomObjectsApi()
     group = "core.eda.nokia.com"
     version = "v1"
     plural = "topolinks"

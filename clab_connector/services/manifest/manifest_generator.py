@@ -1,12 +1,14 @@
 # clab_connector/services/manifest/manifest_generator.py
 
-import os
 import logging
+import os
+
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.utils import helpers
 from clab_connector.utils.constants import SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)
+
 
 class ManifestGenerator:
     """
@@ -29,7 +31,7 @@ class ManifestGenerator:
     def __init__(
         self,
         topology_file: str,
-        output: str = None,
+        output: str | None = None,
         separate: bool = False,
         skip_edge_intfs: bool = False,
     ):
@@ -77,7 +79,9 @@ class ManifestGenerator:
             if artifact_name in seen_artifacts:
                 continue
             seen_artifacts.add(artifact_name)
-            artifact_yaml = node.get_artifact_yaml(artifact_name, filename, download_url)
+            artifact_yaml = node.get_artifact_yaml(
+                artifact_name, filename, download_url
+            )
             if artifact_yaml:
                 artifacts.append(artifact_yaml)
         if artifacts:
@@ -88,11 +92,15 @@ class ManifestGenerator:
         self.cr_groups["init"] = [init_yaml]
 
         # --- Node Security Profile
-        nsp_yaml = helpers.render_template("nodesecurityprofile.yaml.j2", {"namespace": namespace})
+        nsp_yaml = helpers.render_template(
+            "nodesecurityprofile.yaml.j2", {"namespace": namespace}
+        )
         self.cr_groups["node-security-profile"] = [nsp_yaml]
 
         # --- Node User Group
-        nug_yaml = helpers.render_template("node-user-group.yaml.j2", {"namespace": namespace})
+        nug_yaml = helpers.render_template(
+            "node-user-group.yaml.j2", {"namespace": namespace}
+        )
         self.cr_groups["node-user-group"] = [nug_yaml]
 
         # --- Node User
@@ -103,7 +111,7 @@ class ManifestGenerator:
             "username": "admin",
             "password": "NokiaSrl1!",
             "ssh_pub_keys": self.topology.ssh_pub_keys or [],
-            "node_selector": "containerlab=managedSrl"
+            "node_selector": "containerlab=managedSrl",
         }
         srl_node_user = helpers.render_template("node-user.j2", srl_data)
 
@@ -114,7 +122,7 @@ class ManifestGenerator:
             "username": "admin",
             "password": "NokiaSros1!",
             "ssh_pub_keys": self.topology.ssh_pub_keys or [],
-            "node_selector": "containerlab=managedSros"
+            "node_selector": "containerlab=managedSros",
         }
         sros_node_user = helpers.render_template("node-user.j2", sros_data)
 
@@ -139,9 +147,7 @@ class ManifestGenerator:
             self.cr_groups["topolink-interfaces"] = list(intfs)
 
         # --- Topolinks
-        links = self.topology.get_topolinks(
-            skip_edge_links=self.skip_edge_intfs
-        )
+        links = self.topology.get_topolinks(skip_edge_links=self.skip_edge_intfs)
         if links:
             self.cr_groups["topolinks"] = list(links)
 

@@ -1,5 +1,6 @@
 # clab_connector/cli/main.py
 
+import logging
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
@@ -8,10 +9,22 @@ import typer
 import urllib3
 from rich import print as rprint
 
+from clab_connector.cli.common import create_eda_client
+from clab_connector.models.topology import parse_topology_file
+from clab_connector.services.export.topology_exporter import TopologyExporter
+from clab_connector.services.integration.topology_integrator import (
+    TopologyIntegrator,
+)
+from clab_connector.services.manifest.manifest_generator import ManifestGenerator
+from clab_connector.services.removal.topology_remover import TopologyRemover
+from clab_connector.services.status.node_sync_checker import NodeSyncChecker
+from clab_connector.utils.logging_config import setup_logging
+
 # Disable urllib3 warnings (optional)
 urllib3.disable_warnings()
 
 SUPPORTED_KINDS = ["nokia_srlinux", "nokia_sros"]
+NODE_DISPLAY_LIMIT = 5
 
 
 class LogLevel(str, Enum):
@@ -129,16 +142,7 @@ def integrate_cmd(
         help="Timeout for node synchronization check in seconds",
     ),
 ):
-    """
-    CLI command to integrate a containerlab topology with EDA.
-    """
-    import logging
-
-    from clab_connector.cli.common import create_eda_client
-    from clab_connector.services.integration.topology_integrator import (
-        TopologyIntegrator,
-    )
-    from clab_connector.utils.logging_config import setup_logging
+    """CLI command to integrate a containerlab topology with EDA."""
 
     # Set up logging now
     setup_logging(log_level.value, log_file)
@@ -170,16 +174,16 @@ def integrate_cmd(
             kc_secret=a.kc_secret,
             kc_user=a.kc_user,
             kc_password=a.kc_password,
-            verify=a.verify
+            verify=a.verify,
         )
 
-        integrator = TopologyIntegrator(eda_client, enable_sync_checking=a.enable_sync_check, sync_timeout=a.sync_timeout)
+        integrator = TopologyIntegrator(
+            eda_client,
+            enable_sync_checking=a.enable_sync_check,
+            sync_timeout=a.sync_timeout,
+        )
         integrator.run(
             topology_file=a.topology_data,
-            eda_url=a.eda_url,
-            eda_user=a.eda_user,
-            eda_password=a.eda_password,
-            verify=a.verify,
             skip_edge_intfs=a.skip_edge_intfs,
         )
 
@@ -230,15 +234,11 @@ def remove_cmd(
     log_file: str | None = log_file_option,
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
 ):
-    """
-    CLI command to remove EDA integration (delete the namespace).
-    """
-    from clab_connector.cli.common import create_eda_client
-    from clab_connector.services.removal.topology_remover import TopologyRemover
-    from clab_connector.utils.logging_config import setup_logging
+    """Remove EDA integration (delete the namespace)."""
 
     # Set up logging
     setup_logging(log_level.value, log_file)
+
     class Args:
         pass
 
@@ -260,7 +260,7 @@ def remove_cmd(
             kc_secret=a.kc_secret,
             kc_user=a.kc_user,
             kc_password=a.kc_password,
-            verify=a.verify
+            verify=a.verify,
         )
         remover = TopologyRemover(eda_client)
         remover.run(topology_file=a.topology_data)
@@ -289,17 +289,7 @@ def export_lab_cmd(
     log_level: LogLevel = log_level_option,
     log_file: str | None = log_file_option,
 ):
-    """
-    Fetch EDA toponodes & topolinks from the specified namespace
-    and convert them to a containerlab .clab.yaml file.
-
-    Example:
-      clab-connector export-lab -n clab-my-topo --output clab-my-topo.clab.yaml
-    """
-    import logging
-
-    from clab_connector.services.export.topology_exporter import TopologyExporter
-    from clab_connector.utils.logging_config import setup_logging
+    """Fetch EDA toponodes & topolinks and save them as a .clab.yaml file."""
 
     setup_logging(log_level.value, log_file)
     logger = logging.getLogger(__name__)
@@ -311,14 +301,13 @@ def export_lab_cmd(
     try:
         exporter.run()
     except Exception as e:
-        logger.error(
-            f"Failed to export lab from namespace '{namespace}': {e}"
-        )
+        logger.error(f"Failed to export lab from namespace '{namespace}': {e}")
         raise typer.Exit(code=1) from e
+
 
 @app.command(
     name="generate-crs",
-    help="Generate CR YAML manifests from a containerlab topology without applying them to EDA."
+    help="Generate CR YAML manifests from a containerlab topology without applying them to EDA.",
 )
 def generate_crs_cmd(
     topology_data: Annotated[
@@ -338,10 +327,12 @@ def generate_crs_cmd(
         None,
         "--output",
         "-o",
-        help="Output file path for a combined manifest; if --separate is used, this is the output directory"
+        help="Output file path for a combined manifest; if --separate is used, this is the output directory",
     ),
     separate: bool = typer.Option(
-        False, "--separate", help="Generate separate YAML files for each CR instead of one combined file"
+        False,
+        "--separate",
+        help="Generate separate YAML files for each CR instead of one combined file",
     ),
     log_level: LogLevel = log_level_option,
     log_file: str | None = log_file_option,
@@ -359,8 +350,6 @@ def generate_crs_cmd(
     The manifests can be written as one combined YAML file (default) or as separate files
     (if --separate is specified).
     """
-    from clab_connector.services.manifest.manifest_generator import ManifestGenerator
-    from clab_connector.utils.logging_config import setup_logging
 
     setup_logging(log_level.value, log_file)
 
@@ -378,10 +367,7 @@ def generate_crs_cmd(
         raise typer.Exit(code=1) from e
 
 
-@app.command(
-    name="check-sync",
-    help="Check synchronization status of nodes in EDA"
-)
+@app.command(name="check-sync", help="Check synchronization status of nodes in EDA")
 def check_sync_cmd(
     topology_data: Annotated[
         Path,
@@ -427,29 +413,21 @@ def check_sync_cmd(
     log_level: LogLevel = log_level_option,
     log_file: str | None = log_file_option,
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
-    wait: bool = typer.Option(
-        False, "--wait", help="Wait for all nodes to be ready"
-    ),
-    timeout: int = typer.Option(
-        90, "--timeout", help="Timeout for waiting (seconds)"
-    ),
+    wait: bool = typer.Option(False, "--wait", help="Wait for all nodes to be ready"),
+    timeout: int = typer.Option(90, "--timeout", help="Timeout for waiting (seconds)"),
     namespace_override: str | None = typer.Option(
-        None, "--namespace", help="Override the namespace (instead of deriving from topology)"
+        None,
+        "--namespace",
+        help="Override the namespace (instead of deriving from topology)",
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", "-v", 
-        help="Show detailed information about node status, API sources, and more"
+        False,
+        "--verbose",
+        "-v",
+        help="Show detailed information about node status, API sources, and more",
     ),
 ):
-    """
-    Check the synchronization status of nodes in EDA.
-    """
-    import logging
-
-    from clab_connector.cli.common import create_eda_client
-    from clab_connector.models.topology import parse_topology_file
-    from clab_connector.services.status.node_sync_checker import NodeSyncChecker
-    from clab_connector.utils.logging_config import setup_logging
+    """Check the synchronization status of nodes in EDA."""
 
     # Set up logging
     setup_logging(log_level.value, log_file)
@@ -460,10 +438,16 @@ def check_sync_cmd(
         topology = parse_topology_file(str(topology_data))
         node_names = [node.get_node_name(topology) for node in topology.nodes]
         namespace = namespace_override or f"clab-{topology.name}"
-        
+
         logger.info(f"Topology name: '{topology.name}'")
-        logger.info(f"Using namespace: '{namespace}'" + (" (overridden)" if namespace_override else " (from topology)"))
-        logger.info(f"Node names: {node_names[:5]}{'...' if len(node_names) > 5 else ''}")
+        logger.info(
+            f"Using namespace: '{namespace}'"
+            + (" (overridden)" if namespace_override else " (from topology)")
+        )
+        logger.info(
+            f"Node names: {node_names[:NODE_DISPLAY_LIMIT]}"
+            f"{'...' if len(node_names) > NODE_DISPLAY_LIMIT else ''}"
+        )
 
         # Create EDA client
         eda_client = create_eda_client(
@@ -473,50 +457,67 @@ def check_sync_cmd(
             kc_secret=kc_secret,
             kc_user=kc_user,
             kc_password=kc_password,
-            verify=verify
+            verify=verify,
         )
 
         # Create sync checker
         sync_checker = NodeSyncChecker(eda_client, namespace)
-        
+
         # Check if any nodes are found and suggest alternatives if not
         if wait:
-            logger.info(f"Waiting for {len(node_names)} nodes to be ready (timeout: {timeout}s)")
-            success = sync_checker.wait_for_nodes_ready(node_names, timeout=timeout, verbose=verbose, use_log_view=False)
+            logger.info(
+                f"Waiting for {len(node_names)} nodes to be ready (timeout: {timeout}s)"
+            )
+            success = sync_checker.wait_for_nodes_ready(
+                node_names, timeout=timeout, verbose=verbose, use_log_view=False
+            )
             if not success:
                 raise typer.Exit(code=1)
         else:
             # Use the new detailed status display method instead of the older approach
             sync_checker.display_detailed_status(node_names, verbose)
-            
+
             # Get summary for exit code handling
             summary = sync_checker.get_sync_summary(node_names)
-            
+
             # If all nodes are unknown, suggest namespace alternatives
-            if summary['unknown_nodes'] == summary['total_nodes']:
+            if summary["unknown_nodes"] == summary["total_nodes"]:
                 available_namespaces = sync_checker.list_available_namespaces()
                 if available_namespaces:
-                    suggested_namespace = sync_checker.suggest_correct_namespace(namespace)
-                    rprint("\n[yellow]Warning: All nodes are unknown. This might indicate the wrong namespace.[/yellow]")
+                    suggested_namespace = sync_checker.suggest_correct_namespace(
+                        namespace
+                    )
+                    rprint(
+                        "\n[yellow]Warning: All nodes are unknown. This might indicate the wrong namespace.[/yellow]"
+                    )
                     rprint(f"Current namespace: [dim]{namespace}[/dim]")
-                    rprint(f"Available clab namespaces: [dim]{', '.join(available_namespaces)}[/dim]")
+                    rprint(
+                        f"Available clab namespaces: [dim]{', '.join(available_namespaces)}[/dim]"
+                    )
                     if suggested_namespace and suggested_namespace != namespace:
-                        rprint(f"Suggested namespace: [green]{suggested_namespace}[/green]")
-                        rprint(f"\nTry: [dim]clab-connector check-sync -t {topology_data} -e {eda_url} --namespace {suggested_namespace}[/dim]")
+                        rprint(
+                            f"Suggested namespace: [green]{suggested_namespace}[/green]"
+                        )
+                        rprint(
+                            f"\nTry: [dim]clab-connector check-sync -t {topology_data} -e {eda_url} --namespace {suggested_namespace}[/dim]"
+                        )
                 else:
-                    rprint("\n[yellow]Warning: All nodes are unknown and no clab namespaces found via EDA API.[/yellow]")
-                    rprint("Check if the EDA connection is working and the namespace exists.")
-            
+                    rprint(
+                        "\n[yellow]Warning: All nodes are unknown and no clab namespaces found via EDA API.[/yellow]"
+                    )
+                    rprint(
+                        "Check if the EDA connection is working and the namespace exists."
+                    )
+
             # Set exit code based on status
-            if summary['error_nodes'] > 0:
+            if summary["error_nodes"] > 0:
                 raise typer.Exit(code=1)
-            elif summary['ready_nodes'] < summary['total_nodes']:
+            elif summary["ready_nodes"] < summary["total_nodes"]:
                 raise typer.Exit(code=2)  # Some nodes not ready yet
 
     except Exception as e:
         rprint(f"[red]Error: {e!s}[/red]")
         raise typer.Exit(code=1) from e
-
 
 
 if __name__ == "__main__":
