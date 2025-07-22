@@ -15,13 +15,17 @@ We support two flows:
 
 import json
 import logging
-import yaml
-
-from clab_connector.utils.constants import SUBSTEP_INDENT
 from urllib.parse import urlencode
 
+import yaml
+
 from clab_connector.clients.eda.http_client import create_pool_manager
+from clab_connector.utils.constants import SUBSTEP_INDENT
 from clab_connector.utils.exceptions import EDAConnectionError
+
+HTTP_OK = 200
+HTTP_NO_CONTENT = 204
+MAJOR_V1_THRESHOLD = 24
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +66,7 @@ class EDAClient:
         hostname: str,
         eda_user: str,
         eda_password: str,
-        kc_secret: str = None,
+        kc_secret: str | None = None,
         verify: bool = True,
         kc_user: str = "admin",
         kc_password: str = "admin",
@@ -141,7 +145,7 @@ class EDAClient:
         }
 
         resp = self.http.request("GET", admin_api_url, headers=headers)
-        if resp.status != 200:
+        if resp.status != HTTP_OK:
             raise EDAConnectionError(
                 f"Failed to list clients in realm='{self.EDA_REALM}': {resp.data.decode()}"
             )
@@ -158,7 +162,7 @@ class EDAClient:
         client_id = eda_client["id"]
         secret_url = f"{admin_api_url}/{client_id}/client-secret"
         secret_resp = self.http.request("GET", secret_url, headers=headers)
-        if secret_resp.status != 200:
+        if secret_resp.status != HTTP_OK:
             raise EDAConnectionError(
                 f"Failed to fetch '{self.EDA_API_CLIENT_ID}' client secret: {secret_resp.data.decode()}"
             )
@@ -183,7 +187,7 @@ class EDAClient:
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         resp = self.http.request("POST", token_url, body=encoded_data, headers=headers)
-        if resp.status != 200:
+        if resp.status != HTTP_OK:
             raise EDAConnectionError(
                 f"Failed Keycloak admin login in realm='{self.KEYCLOAK_ADMIN_REALM}': {resp.data.decode()}"
             )
@@ -211,7 +215,7 @@ class EDAClient:
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         resp = self.http.request("POST", token_url, body=encoded_data, headers=headers)
-        if resp.status != 200:
+        if resp.status != HTTP_OK:
             raise EDAConnectionError(f"Failed user token request: {resp.data.decode()}")
 
         token_json = json.loads(resp.data.decode("utf-8"))
@@ -258,7 +262,7 @@ class EDAClient:
     def is_up(self) -> bool:
         logger.info(f"{SUBSTEP_INDENT}Checking EDA health")
         resp = self.get("core/about/health", requires_auth=False)
-        if resp.status != 200:
+        if resp.status != HTTP_OK:
             return False
 
         data = json.loads(resp.data.decode("utf-8"))
@@ -270,7 +274,7 @@ class EDAClient:
 
         logger.debug("Retrieving EDA version")
         resp = self.get("core/about/version")
-        if resp.status != 200:
+        if resp.status != HTTP_OK:
             raise EDAConnectionError(f"Version check failed: {resp.data.decode()}")
 
         data = json.loads(resp.data.decode("utf-8"))
@@ -307,8 +311,8 @@ class EDAClient:
         namespace: str,
         kind: str,
         name: str,
-        group: str = None,
-        version: str = None,
+        group: str | None = None,
+        version: str | None = None,
     ):
         group = group or self.CORE_GROUP
         version = version or self.CORE_VERSION
@@ -339,14 +343,14 @@ class EDAClient:
         major = int(parts[0]) if parts[0].isdigit() else 0
 
         # v2 is the default. Only 24.x releases still use the v1 endpoint.
-        if major == 24:
+        if major == MAJOR_V1_THRESHOLD:
             logger.debug("Using v1 transaction validation endpoint")
             resp = self.post("core/transaction/v1/validate", item)
         else:
             logger.debug("Using v2 transaction validation endpoint")
             resp = self.post("core/transaction/v2/validate", [item])
 
-        if resp.status == 204:
+        if resp.status == HTTP_NO_CONTENT:
             logger.debug("Transaction item validation success.")
             return True
 
@@ -358,7 +362,7 @@ class EDAClient:
         self,
         description: str,
         dryrun: bool = False,
-        resultType: str = "normal",
+        result_type: str = "normal",
         retain: bool = True,
     ) -> str:
         version = self.get_version()
@@ -373,20 +377,20 @@ class EDAClient:
         payload = {
             "description": description,
             "dryrun": dryrun,
-            "resultType": resultType,
+            "resultType": result_type,
             "retain": retain,
             "crs": self.transactions,
         }
         logger.info(
             f"{SUBSTEP_INDENT}Committing transaction: {description}, {len(self.transactions)} items"
         )
-        if major == 24:
+        if major == MAJOR_V1_THRESHOLD:
             logger.debug("Using v1 transaction commit endpoint")
             resp = self.post("core/transaction/v1", payload)
         else:
             logger.debug("Using v2 transaction commit endpoint")
             resp = self.post("core/transaction/v2", payload)
-        if resp.status != 200:
+        if resp.status != HTTP_OK:
             raise EDAConnectionError(
                 f"Transaction request failed: {resp.data.decode()}"
             )
@@ -397,14 +401,14 @@ class EDAClient:
             raise EDAConnectionError(f"No transaction ID in response: {data}")
 
         logger.info(f"{SUBSTEP_INDENT}Waiting for transaction {tx_id} to complete...")
-        if major == 24:
+        if major == MAJOR_V1_THRESHOLD:
             details_path = (
                 f"core/transaction/v1/details/{tx_id}?waitForComplete=true&failOnErrors=true"
             )
         else:
             details_path = f"core/transaction/v2/result/summary/{tx_id}"
         details_resp = self.get(details_path)
-        if details_resp.status != 200:
+        if details_resp.status != HTTP_OK:
             raise EDAConnectionError(
                 f"Transaction detail request failed: {details_resp.data.decode()}"
             )

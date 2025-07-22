@@ -2,8 +2,8 @@
 
 import logging
 
-from clab_connector.utils import helpers
 from clab_connector.clients.kubernetes.client import ping_from_bsvr
+from clab_connector.utils import helpers
 from clab_connector.utils.exceptions import ClabConnectorError
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ class Node:
             logger.error(msg)
             raise RuntimeError(msg)
 
-    def get_node_name(self, topology):
+    def get_node_name(self, _topology):
         """
         Generate a name suitable for EDA resources, based on the node name.
 
@@ -141,7 +141,7 @@ class Node:
         """
         raise NotImplementedError("Must be implemented by subclass")
 
-    def get_node_profile(self, topology):
+    def get_node_profile(self, _topology):
         """
         Render and return NodeProfile YAML for the node.
 
@@ -157,7 +157,7 @@ class Node:
         """
         return None
 
-    def get_toponode(self, topology):
+    def get_toponode(self, _topology):
         """
         Render and return TopoNode YAML for the node.
 
@@ -209,7 +209,7 @@ class Node:
             f"{self.get_node_name(topology)}-{self.get_interface_name_for_kind(ifname)}"
         )
 
-    def get_topolink_interface(self, topology, ifname, other_node):
+    def get_topolink_interface(self, _topology, _ifname, _other_node):
         """
         Render and return the interface resource YAML (Interface CR) for a link endpoint.
 
@@ -262,7 +262,7 @@ class Node:
         """
         return (None, None, None)
 
-    def get_artifact_yaml(self, artifact_name, filename, download_url):
+    def get_artifact_yaml(self, _artifact_name, _filename, _download_url):
         """
         Render and return an Artifact CR YAML for this node.
 

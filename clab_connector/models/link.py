@@ -1,6 +1,7 @@
 # clab_connector/models/link.py
 
 import logging
+
 from clab_connector.utils import helpers
 
 logger = logging.getLogger(__name__)
@@ -50,9 +51,7 @@ class Link:
         """
         if self.node_1 is None or not self.node_1.is_eda_supported():
             return False
-        if self.node_2 is None or not self.node_2.is_eda_supported():
-            return False
-        return True
+        return not (self.node_2 is None or not self.node_2.is_eda_supported())
 
     def is_edge_link(self):
         """Check if exactly one endpoint is EDA-supported and the other is a linux node."""
@@ -60,9 +59,7 @@ class Link:
             return False
         if self.node_1.is_eda_supported() and self.node_2.kind == "linux":
             return True
-        if self.node_2.is_eda_supported() and self.node_1.kind == "linux":
-            return True
-        return False
+        return bool(self.node_2.is_eda_supported() and self.node_1.kind == "linux")
 
     def get_link_name(self, topology):
         """
@@ -150,3 +147,4 @@ def create_link(endpoints: list, nodes: list) -> Link:
     nB = next((n for n in nodes if n.name == nodeB), None)
 
     return Link(nA, ifA, nB, ifB)
+

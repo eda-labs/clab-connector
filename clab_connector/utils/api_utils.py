@@ -5,6 +5,8 @@
 import json
 import logging
 
+HTTP_OK = 200
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,7 +15,7 @@ def try_api_endpoints(client, endpoints, log_name="resource"):
     for endpoint in endpoints:
         try:
             response = client.get(endpoint)
-            if response.status == 200:
+            if response.status == HTTP_OK:
                 data = json.loads(response.data.decode('utf-8'))
                 logger.debug(f"Successfully got {log_name} via endpoint: {endpoint}")
                 return data, endpoint

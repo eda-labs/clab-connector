@@ -1,9 +1,11 @@
 import logging
 import re
+from typing import ClassVar
 
-from .base import Node
 from clab_connector.utils import helpers
 from clab_connector.utils.constants import SUBSTEP_INDENT
+
+from .base import Node
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +27,9 @@ class NokiaSROSNode(Node):
     LLM_DB_PATH = "https://eda-asvr.eda-system.svc/eda-system/llm-dbs/llm-db-sros-ghcr-{version}/llm-embeddings-sros-{version_short}.tar.gz"
 
     # Mapping for EDA operating system
-    EDA_OPERATING_SYSTEM = "sros"
+    EDA_OPERATING_SYSTEM: ClassVar[str] = "sros"
 
-    SUPPORTED_SCHEMA_PROFILES = {
+    SUPPORTED_SCHEMA_PROFILES: ClassVar[dict[str, tuple[str, str]]] = {
         "24.10.r4": (
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-v24.10.r4/sros-24.10.r4.zip"
@@ -39,7 +41,7 @@ class NokiaSROSNode(Node):
     }
 
     # Map of node types to their line card and MDA components
-    SROS_COMPONENTS = {
+    SROS_COMPONENTS: ClassVar[dict[str, dict[str, dict[str, str]] | dict[str, int]]] = {
         "sr-1": {
             "lineCard": {"slot": "1", "type": "iom-1"},
             "mda": {"slot": "1-a", "type": "me12-100gb-qsfp28"},
@@ -240,6 +242,8 @@ class NokiaSROSNode(Node):
         - eth3 → ethernet-1-a-3-1 (containerlab format)
         - e1-1 → ethernet-1-a-1-1 (containerlab format)
         """
+        eda_name = None
+
         # Handle native SR OS port format with slashes: "1/1/1"
         slot_mda_port = re.compile(r"^(\d+)/(\d+)/(\d+)$")
         match = slot_mda_port.match(ifname)
@@ -247,76 +251,60 @@ class NokiaSROSNode(Node):
             slot = match.group(1)
             mda_num = int(match.group(2))
             port = match.group(3)
+            mda_letter = chr(96 + mda_num)
+            eda_name = f"ethernet-{slot}-{mda_letter}-{port}-1"
+        else:
+            # Handle breakout ports with implicit or explicit MDA
+            breakout = re.compile(r"^(\d+)/(\d+)/c(\d+)/(\d+)$")
+            match = breakout.match(ifname)
+            if match:
+                slot = match.group(1)
+                mda_num = int(match.group(2))
+                channel = match.group(3)
+                port = match.group(4)
+                if match.group(2) == "1":
+                    eda_name = f"ethernet-{slot}-{channel}-{port}"
+                else:
+                    mda_letter = chr(96 + mda_num)
+                    eda_name = f"ethernet-{slot}-{mda_letter}-{channel}-{port}"
+            else:
+                # Handle XIOM MDA: "1/x1/1/1"
+                xiom = re.compile(r"^(\d+)/x(\d+)/(\d+)/(\d+)$")
+                match = xiom.match(ifname)
+                if match:
+                    slot = match.group(1)
+                    xiom_id = match.group(2)
+                    mda_num = int(match.group(3))
+                    port = match.group(4)
+                    mda_letter = chr(96 + mda_num)
+                    eda_name = f"ethernet-{slot}-{xiom_id}-{mda_letter}-{port}"
+                else:
+                    eth_pattern = re.compile(r"^eth(\d+)$")
+                    match = eth_pattern.match(ifname)
+                    if match:
+                        port_num = match.group(1)
+                        eda_name = f"ethernet-1-a-{port_num}-1"
+                    else:
+                        e_pattern = re.compile(r"^e(\d+)-(\d+)$")
+                        match = e_pattern.match(ifname)
+                        if match:
+                            slot = match.group(1)
+                            port = match.group(2)
+                            eda_name = f"ethernet-{slot}-a-{port}-1"
+                        else:
+                            lo_pattern = re.compile(r"^lo(\d+)$")
+                            match = lo_pattern.match(ifname)
+                            if match:
+                                eda_name = f"loopback-{match.group(1)}"
 
-            # Convert MDA number to letter (1→'a', 2→'b', etc.)
-            mda_letter = chr(96 + mda_num)  # ASCII 'a' is 97
-            return f"ethernet-{slot}-{mda_letter}-{port}-1"
+        if eda_name is None:
+            lag_pattern = re.compile(r"^lag-\d+$")
+            if lag_pattern.match(ifname):
+                eda_name = ifname
+            else:
+                eda_name = ifname
 
-        # Handle breakout ports with implicit MDA: "1/1/c1/1"
-        breakout_implicit = re.compile(r"^(\d+)/(\d+)/c(\d+)/(\d+)$")
-        match = breakout_implicit.match(ifname)
-        if match and match.group(2) == "1":  # Check for implicit MDA (1)
-            slot = match.group(1)
-            channel = match.group(3)
-            port = match.group(4)
-            return f"ethernet-{slot}-{channel}-{port}"
-
-        # Handle breakout ports with explicit MDA: "1/1/c2/1"
-        breakout_explicit = re.compile(r"^(\d+)/(\d+)/c(\d+)/(\d+)$")
-        match = breakout_explicit.match(ifname)
-        if match:
-            slot = match.group(1)
-            mda_num = int(match.group(2))
-            channel = match.group(3)
-            port = match.group(4)
-
-            # Convert MDA number to letter
-            mda_letter = chr(96 + mda_num)  # ASCII 'a' is 97
-            return f"ethernet-{slot}-{mda_letter}-{channel}-{port}"
-
-        # Handle XIOM MDA: "1/x1/1/1"
-        xiom = re.compile(r"^(\d+)/x(\d+)/(\d+)/(\d+)$")
-        match = xiom.match(ifname)
-        if match:
-            slot = match.group(1)
-            xiom_id = match.group(2)
-            mda_num = int(match.group(3))
-            port = match.group(4)
-
-            # Convert MDA number to letter
-            mda_letter = chr(96 + mda_num)  # ASCII 'a' is 97
-            return f"ethernet-{slot}-{xiom_id}-{mda_letter}-{port}"
-
-        # Handle ethX format (commonly used in containerlab for SR OS)
-        eth_pattern = re.compile(r"^eth(\d+)$")
-        match = eth_pattern.match(ifname)
-        if match:
-            port_num = match.group(1)
-            # Map to ethernet-1-a-{port}-1 format with connector
-            return f"ethernet-1-a-{port_num}-1"
-
-        # Handle standard containerlab eX-Y format
-        e_pattern = re.compile(r"^e(\d+)-(\d+)$")
-        match = e_pattern.match(ifname)
-        if match:
-            slot = match.group(1)
-            port = match.group(2)
-            # Add MDA 'a' and connector number
-            return f"ethernet-{slot}-a-{port}-1"
-
-        # Handle loopback interfaces
-        lo_pattern = re.compile(r"^lo(\d+)$")
-        match = lo_pattern.match(ifname)
-        if match:
-            return f"loopback-{match.group(1)}"  # Fixed: using match instead of lo_match
-
-        # Handle LAG interfaces (already named correctly)
-        lag_pattern = re.compile(r"^lag-\d+$")
-        if lag_pattern.match(ifname):
-            return ifname
-
-        # If not matching any pattern, return the original
-        return ifname
+        return eda_name
 
     def get_topolink_interface_name(self, topology, ifname):
         """
@@ -390,3 +378,4 @@ class NokiaSROSNode(Node):
             "artifact_url": download_url,
         }
         return helpers.render_template("artifact.j2", data)
+

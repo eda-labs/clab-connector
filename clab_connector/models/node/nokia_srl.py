@@ -2,10 +2,12 @@
 
 import logging
 import re
+from typing import ClassVar
 
-from .base import Node
 from clab_connector.utils import helpers
 from clab_connector.utils.constants import SUBSTEP_INDENT
+
+from .base import Node
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +29,9 @@ class NokiaSRLinuxNode(Node):
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
     # Mapping for EDA operating system
-    EDA_OPERATING_SYSTEM = "srl"
+    EDA_OPERATING_SYSTEM: ClassVar[str] = "srl"
 
-    SUPPORTED_SCHEMA_PROFILES = {
+    SUPPORTED_SCHEMA_PROFILES: ClassVar[dict[str, tuple[str, str]]] = {
         "24.10.1": (
             "https://github.com/nokia/srlinux-yang-models/"
             "releases/download/v24.10.1/srlinux-24.10.1-492.zip"
@@ -284,3 +286,4 @@ class NokiaSRLinuxNode(Node):
             "artifact_url": download_url,
         }
         return helpers.render_template("artifact.j2", data)
+

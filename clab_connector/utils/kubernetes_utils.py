@@ -2,11 +2,13 @@
 
 """Minimal Kubernetes utilities to eliminate duplication"""
 
-def load_k8s_config():
-    """Load Kubernetes config, trying in-cluster first, then local"""
-    from kubernetes import config
-    
+from kubernetes import config
+
+
+def load_k8s_config() -> None:
+    """Load Kubernetes config, trying in-cluster first, then local."""
+
     try:
         config.load_incluster_config()
-    except:
+    except Exception:
         config.load_kube_config()  # Will raise if no config found

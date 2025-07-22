@@ -2,12 +2,11 @@
 
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import Annotated
 
 import typer
 import urllib3
 from rich import print as rprint
-from typing_extensions import Annotated
 
 # Disable urllib3 warnings (optional)
 urllib3.disable_warnings()
@@ -29,14 +28,25 @@ app = typer.Typer(
     add_completion=True,
 )
 
+log_level_option = typer.Option(
+    LogLevel.INFO,
+    "--log-level",
+    "-l",
+    help="Set logging level",
+)
+
+log_file_option = typer.Option(
+    None,
+    "--log-file",
+    "-f",
+    help="Optional log file path",
+)
+
 
 def complete_json_files(
-    ctx: typer.Context, param: typer.Option, incomplete: str
-) -> List[str]:
-    """
-    Complete JSON file paths for CLI autocomplete.
-    """
-    from pathlib import Path
+    _ctx: typer.Context, _param: typer.Option, incomplete: str
+) -> list[str]:
+    """Complete JSON file paths for CLI autocomplete."""
 
     current = Path(incomplete) if incomplete else Path.cwd()
     if not current.is_dir():
@@ -45,8 +55,8 @@ def complete_json_files(
 
 
 def complete_eda_url(
-    ctx: typer.Context, param: typer.Option, incomplete: str
-) -> List[str]:
+    _ctx: typer.Context, _param: typer.Option, incomplete: str
+) -> list[str]:
     """
     Complete EDA URL for CLI autocomplete.
     """
@@ -95,17 +105,13 @@ def integrate_cmd(
         "--kc-password",
         help="Keycloak master realm admin password (default: admin)",
     ),
-    kc_secret: Optional[str] = typer.Option(
+    kc_secret: str | None = typer.Option(
         None,
         "--kc-secret",
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
-    log_level: LogLevel = typer.Option(
-        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
-    ),
-    log_file: Optional[str] = typer.Option(
-        None, "--log-file", "-f", help="Optional log file path"
-    ),
+    log_level: LogLevel = log_level_option,
+    log_file: str | None = log_file_option,
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
     skip_edge_intfs: bool = typer.Option(
         False,
@@ -127,11 +133,12 @@ def integrate_cmd(
     CLI command to integrate a containerlab topology with EDA.
     """
     import logging
-    from clab_connector.utils.logging_config import setup_logging
+
+    from clab_connector.cli.common import create_eda_client
     from clab_connector.services.integration.topology_integrator import (
         TopologyIntegrator,
     )
-    from clab_connector.cli.common import create_eda_client
+    from clab_connector.utils.logging_config import setup_logging
 
     # Set up logging now
     setup_logging(log_level.value, log_file)
@@ -179,8 +186,8 @@ def integrate_cmd(
     try:
         execute_integration(args)
     except Exception as e:
-        rprint(f"[red]Error: {str(e)}[/red]")
-        raise typer.Exit(code=1)
+        rprint(f"[red]Error: {e!s}[/red]")
+        raise typer.Exit(code=1) from e
 
 
 @app.command(name="remove", help="Remove containerlab integration from EDA")
@@ -214,25 +221,21 @@ def remove_cmd(
         "--kc-password",
         help="Keycloak master realm admin password (default: admin)",
     ),
-    kc_secret: Optional[str] = typer.Option(
+    kc_secret: str | None = typer.Option(
         None,
         "--kc-secret",
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
-    log_level: LogLevel = typer.Option(
-        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
-    ),
-    log_file: Optional[str] = typer.Option(
-        None, "--log-file", "-f", help="Optional log file path"
-    ),
+    log_level: LogLevel = log_level_option,
+    log_file: str | None = log_file_option,
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
 ):
     """
     CLI command to remove EDA integration (delete the namespace).
     """
-    from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.services.removal.topology_remover import TopologyRemover
     from clab_connector.cli.common import create_eda_client
+    from clab_connector.services.removal.topology_remover import TopologyRemover
+    from clab_connector.utils.logging_config import setup_logging
 
     # Set up logging
     setup_logging(log_level.value, log_file)
@@ -265,8 +268,8 @@ def remove_cmd(
     try:
         execute_removal(args)
     except Exception as e:
-        rprint(f"[red]Error: {str(e)}[/red]")
-        raise typer.Exit(code=1)
+        rprint(f"[red]Error: {e!s}[/red]")
+        raise typer.Exit(code=1) from e
 
 
 @app.command(
@@ -280,15 +283,11 @@ def export_lab_cmd(
         "-n",
         help="Kubernetes namespace containing toponodes/topolinks",
     ),
-    output_file: Optional[str] = typer.Option(
+    output_file: str | None = typer.Option(
         None, "--output", "-o", help="Output .clab.yaml file path"
     ),
-    log_level: LogLevel = typer.Option(
-        LogLevel.INFO, "--log-level", help="Logging level"
-    ),
-    log_file: Optional[str] = typer.Option(
-        None, "--log-file", help="Optional log file path"
-    ),
+    log_level: LogLevel = log_level_option,
+    log_file: str | None = log_file_option,
 ):
     """
     Fetch EDA toponodes & topolinks from the specified namespace
@@ -298,8 +297,9 @@ def export_lab_cmd(
       clab-connector export-lab -n clab-my-topo --output clab-my-topo.clab.yaml
     """
     import logging
-    from clab_connector.utils.logging_config import setup_logging
+
     from clab_connector.services.export.topology_exporter import TopologyExporter
+    from clab_connector.utils.logging_config import setup_logging
 
     setup_logging(log_level.value, log_file)
     logger = logging.getLogger(__name__)
@@ -311,8 +311,10 @@ def export_lab_cmd(
     try:
         exporter.run()
     except Exception as e:
-        logger.error(f"Failed to export lab from namespace '{namespace}': {e}")
-        raise typer.Exit(code=1)
+        logger.error(
+            f"Failed to export lab from namespace '{namespace}': {e}"
+        )
+        raise typer.Exit(code=1) from e
 
 @app.command(
     name="generate-crs",
@@ -332,7 +334,7 @@ def generate_crs_cmd(
             shell_complete=complete_json_files,
         ),
     ],
-    output_file: Optional[str] = typer.Option(
+    output_file: str | None = typer.Option(
         None,
         "--output",
         "-o",
@@ -341,12 +343,8 @@ def generate_crs_cmd(
     separate: bool = typer.Option(
         False, "--separate", help="Generate separate YAML files for each CR instead of one combined file"
     ),
-    log_level: LogLevel = typer.Option(
-        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
-    ),
-    log_file: Optional[str] = typer.Option(
-        None, "--log-file", "-f", help="Optional log file path"
-    ),
+    log_level: LogLevel = log_level_option,
+    log_file: str | None = log_file_option,
     skip_edge_intfs: bool = typer.Option(
         False,
         "--skip-edge-intfs",
@@ -376,8 +374,8 @@ def generate_crs_cmd(
         generator.generate()
         generator.output_manifests()
     except Exception as e:
-        rprint(f"[red]Error: {str(e)}[/red]")
-        raise typer.Exit(code=1)
+        rprint(f"[red]Error: {e!s}[/red]")
+        raise typer.Exit(code=1) from e
 
 
 @app.command(
@@ -421,17 +419,13 @@ def check_sync_cmd(
         "--kc-password",
         help="Keycloak master realm admin password (default: admin)",
     ),
-    kc_secret: Optional[str] = typer.Option(
+    kc_secret: str | None = typer.Option(
         None,
         "--kc-secret",
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
-    log_level: LogLevel = typer.Option(
-        LogLevel.INFO, "--log-level", "-l", help="Set logging level"
-    ),
-    log_file: Optional[str] = typer.Option(
-        None, "--log-file", "-f", help="Optional log file path"
-    ),
+    log_level: LogLevel = log_level_option,
+    log_file: str | None = log_file_option,
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
     wait: bool = typer.Option(
         False, "--wait", help="Wait for all nodes to be ready"
@@ -439,7 +433,7 @@ def check_sync_cmd(
     timeout: int = typer.Option(
         90, "--timeout", help="Timeout for waiting (seconds)"
     ),
-    namespace_override: Optional[str] = typer.Option(
+    namespace_override: str | None = typer.Option(
         None, "--namespace", help="Override the namespace (instead of deriving from topology)"
     ),
     verbose: bool = typer.Option(
@@ -451,10 +445,11 @@ def check_sync_cmd(
     Check the synchronization status of nodes in EDA.
     """
     import logging
-    from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.services.status.node_sync_checker import NodeSyncChecker
-    from clab_connector.models.topology import parse_topology_file
+
     from clab_connector.cli.common import create_eda_client
+    from clab_connector.models.topology import parse_topology_file
+    from clab_connector.services.status.node_sync_checker import NodeSyncChecker
+    from clab_connector.utils.logging_config import setup_logging
 
     # Set up logging
     setup_logging(log_level.value, log_file)
@@ -519,8 +514,8 @@ def check_sync_cmd(
                 raise typer.Exit(code=2)  # Some nodes not ready yet
 
     except Exception as e:
-        rprint(f"[red]Error: {str(e)}[/red]")
-        raise typer.Exit(code=1)
+        rprint(f"[red]Error: {e!s}[/red]")
+        raise typer.Exit(code=1) from e
 
 
 

@@ -1,7 +1,10 @@
 import logging
+
 import yaml
 
 from clab_connector.utils.constants import SUBSTEP_INDENT
+
+INLINE_LIST_LENGTH = 2
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +15,10 @@ class YAMLProcessor:
         Custom YAML dumper that adjusts the indentation for lists and maintains certain lists in inline format.
         """
 
-        pass
 
     def custom_list_representer(self, dumper, data):
         # Check if we are at the specific list under 'links' with 'endpoints'
-        if len(data) == 2 and isinstance(data[0], str) and ":" in data[0]:
+        if len(data) == INLINE_LIST_LENGTH and isinstance(data[0], str) and ":" in data[0]:
             return dumper.represent_sequence(
                 "tag:yaml.org,2002:seq", data, flow_style=True
             )
@@ -40,7 +42,7 @@ class YAMLProcessor:
             return data
 
         except yaml.YAMLError as e:
-            logger.error(f"Error loading YAML: {str(e)}")
+            logger.error(f"Error loading YAML: {e!s}")
             raise
 
     def save_yaml(self, data, output_file, flow_style=None):
@@ -61,6 +63,6 @@ class YAMLProcessor:
 
             logger.info(f"{SUBSTEP_INDENT}YAML file saved as '{output_file}'.")
 
-        except IOError as e:
-            logger.error(f"Error saving YAML file: {str(e)}")
+        except OSError as e:
+            logger.error(f"Error saving YAML file: {e!s}")
             raise

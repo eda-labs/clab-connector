@@ -3,8 +3,9 @@
 import logging
 import os
 import re
-import urllib3
 from urllib.parse import urlparse
+
+import urllib3
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +67,10 @@ def should_bypass_proxy(url, no_proxy=None):
 
     no_proxy_parts = [p.strip() for p in no_proxy.split(",") if p.strip()]
 
-    for np_val in no_proxy_parts:
-        if np_val.startswith("."):
-            np_val = np_val[1:]
+    for np_entry in no_proxy_parts:
+        pattern_val = np_entry[1:] if np_entry.startswith(".") else np_entry
         # Convert wildcard to regex
-        pattern = re.escape(np_val).replace(r"\*", ".*")
+        pattern = re.escape(pattern_val).replace(r"\*", ".*")
         if re.match(f"^{pattern}$", hostname, re.IGNORECASE):
             return True
 

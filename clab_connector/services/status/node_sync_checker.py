@@ -1,13 +1,14 @@
 # clab_connector/services/status/node_sync_checker.py
 
+import json
 import logging
 import sys
 import time
-from typing import List, Dict, Optional, Any
-from enum import Enum
 from dataclasses import dataclass
-from clab_connector.clients.eda.client import EDAClient
-from clab_connector.utils.api_utils import try_api_endpoints, extract_k8s_names
+from enum import Enum
+from typing import Any
+
+from clab_connector.utils.api_utils import extract_k8s_names, try_api_endpoints
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +28,11 @@ class NodeStatus:
     """Status information for a single node"""
     name: str
     status: NodeSyncStatus
-    last_sync: Optional[str] = None
-    error_message: Optional[str] = None
-    connectivity_status: Optional[str] = None
-    config_status: Optional[str] = None
-    certificates_status: Optional[str] = None
+    last_sync: str | None = None
+    error_message: str | None = None
+    connectivity_status: str | None = None
+    config_status: str | None = None
+    certificates_status: str | None = None
     
     def is_ready(self) -> bool:
         return self.status == NodeSyncStatus.READY
@@ -39,7 +40,7 @@ class NodeStatus:
     def has_error(self) -> bool:
         return self.status == NodeSyncStatus.ERROR
     
-    def add_debug_info(self, api_source: str, raw_data: Dict[str, Any]) -> None:
+    def add_debug_info(self, api_source: str, raw_data: dict[str, Any]) -> None:
         """Add debugging information to the status"""
         self._api_source = api_source
         self._raw_data = raw_data
@@ -62,7 +63,7 @@ class NodeSyncChecker:
         self.eda_client = eda_client
         self.namespace = namespace
         
-    def _print_node_status_table(self, statuses: List[NodeStatus], current_check: str = None, elapsed: float = 0, timeout: int = 90):
+    def _print_node_status_table(self, statuses: list[NodeStatus], current_check: str | None = None, elapsed: float = 0, timeout: int = 90):
         """Print node status table with current status"""
         # Use simple approach: clear screen for clean display
         if hasattr(self, '_table_printed'):
@@ -82,9 +83,14 @@ class NodeSyncChecker:
         for status in statuses:
             # Determine color based on status
             status_color = self._get_node_status_color(status.status)
-            
+
             # Truncate name and message to fit
-            name = status.name[:28] if len(status.name) > 28 else status.name
+            max_col_width = 28
+            name = (
+                status.name[:max_col_width]
+                if len(status.name) > max_col_width
+                else status.name
+            )
             
             # Build details message
             if status.error_message:
@@ -130,7 +136,7 @@ class NodeSyncChecker:
         }
         return colors.get(status, '\033[0m')
         
-    def _get_toponode_status(self, node_name: str) -> tuple[Dict[str, Any], str]:
+    def _get_toponode_status(self, node_name: str) -> tuple[dict[str, Any], str]:
         """
         Get the status of a toponode from EDA API
         
@@ -150,13 +156,14 @@ class NodeSyncChecker:
         if data:
             # Enhanced debugging for unknown node issues
             if logger.getEffectiveLevel() <= logging.DEBUG:
-                import json
-                logger.debug(f"Raw API response for {node_name}: {json.dumps(data, indent=2)}")
+                logger.debug(
+                    f"Raw API response for {node_name}: {json.dumps(data, indent=2)}"
+                )
             return data, f"EDA API ({endpoint})"
         
         return {}, "EDA API (failed)"
     
-    def _determine_node_status(self, node_name: str, data: Dict) -> NodeStatus:
+    def _determine_node_status(self, node_name: str, data: dict) -> NodeStatus:
         """Determine the overall status of a node based on TopoNode data"""
         
         # Start with unknown status
@@ -262,7 +269,7 @@ class NodeSyncChecker:
         
         return status
     
-    def check_all_nodes_status(self, node_names: List[str]) -> List[NodeStatus]:
+    def check_all_nodes_status(self, node_names: list[str]) -> list[NodeStatus]:
         """Check the synchronization status of all nodes in the topology"""
         logger.info(f"Checking synchronization status for {len(node_names)} nodes")
         
@@ -283,7 +290,7 @@ class NodeSyncChecker:
     
     def wait_for_nodes_ready(
         self, 
-        node_names: List[str], 
+        node_names: list[str], 
         timeout: int = 90,
         check_interval: int = 10,
         verbose: bool = False,
@@ -309,7 +316,7 @@ class NodeSyncChecker:
     
     def _wait_for_nodes_ready_log_view(
         self,
-        node_names: List[str],
+        node_names: list[str],
         timeout: int = 90,
         check_interval: int = 10
     ) -> bool:
@@ -366,10 +373,10 @@ class NodeSyncChecker:
     
     def _wait_for_nodes_ready_table_view(
         self,
-        node_names: List[str],
+        node_names: list[str],
         timeout: int = 90,
         check_interval: int = 10,
-        verbose: bool = False
+        _verbose: bool = False
     ) -> bool:
         """
         Wait for nodes to be ready using table view (for check-sync command).
@@ -445,7 +452,7 @@ class NodeSyncChecker:
         print(f"\n❌ Timeout waiting for nodes to be ready after {timeout}s")
         return False
     
-    def get_sync_summary(self, node_names: List[str]) -> Dict[str, Any]:
+    def get_sync_summary(self, node_names: list[str]) -> dict[str, Any]:
         """Get a summary of node synchronization status"""
         statuses = self.check_all_nodes_status(node_names)
         
@@ -468,7 +475,7 @@ class NodeSyncChecker:
         
         return summary
     
-    def list_available_namespaces(self) -> List[str]:
+    def list_available_namespaces(self) -> list[str]:
         """List all available namespaces that start with 'clab-' via EDA API"""
         try:
             # Try EDA API endpoints for namespaces
@@ -488,7 +495,7 @@ class NodeSyncChecker:
             logger.error(f"Error listing namespaces via EDA API: {e}")
             return []
     
-    def suggest_correct_namespace(self, expected_namespace: str) -> Optional[str]:
+    def suggest_correct_namespace(self, expected_namespace: str) -> str | None:
         """Suggest the correct namespace if the expected one doesn't exist"""
         available_namespaces = self.list_available_namespaces()
         
@@ -507,7 +514,7 @@ class NodeSyncChecker:
         # Return the first available namespace as a fallback
         return available_namespaces[0] if available_namespaces else None
     
-    def check_namespace_and_resources(self) -> Dict[str, Any]:
+    def check_namespace_and_resources(self) -> dict[str, Any]:
         """Check if namespace exists and what resources are in it via EDA API"""
         try:
             # Check what TopoNodes are available in the namespace via EDA API
@@ -530,7 +537,7 @@ class NodeSyncChecker:
                 "method": "EDA API only"
             }
         
-    def display_detailed_status(self, node_names: List[str], verbose: bool = False) -> None:
+    def display_detailed_status(self, node_names: list[str], verbose: bool = False) -> None:
         """
         Display detailed status information for all nodes using dynamic table.
         
@@ -601,7 +608,7 @@ class NodeSyncChecker:
             print("Note: Using EDA API only for status checks")
             print("="*80)
     
-    def list_toponodes_in_namespace(self) -> List[str]:
+    def list_toponodes_in_namespace(self) -> list[str]:
         """List all TopoNodes in the current namespace via EDA API"""
         try:
             # Try EDA API endpoints for listing TopoNodes
