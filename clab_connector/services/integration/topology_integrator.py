@@ -314,7 +314,7 @@ class TopologyIntegrator:
             logger.info(f"{SUBSTEP_INDENT}No TopoNodes to create")
             return
 
-        # Process nodes in smaller batches to avoid overwhelming EDA
+        # Process nodes in smaller batches
         batch_size = 3  # Process 3 nodes at a time
         batch_delay = 2  # Wait 2 seconds between batches
 
