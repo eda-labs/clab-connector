@@ -24,7 +24,7 @@ dependencies = [
     "pyyaml==6.0.2",
     "requests==2.32.4",
     "typer==0.16.0",
-    "urllib3==2.4.0",
+    "urllib3==2.5.0",
     "click==8.2.1",
     "rich>=10.0.0",  # For better CLI output formatting
 ]
