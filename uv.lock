@@ -187,6 +187,7 @@ dependencies = [
     { name = "pynacl" },
     { name = "pyyaml" },
     { name = "requests" },
+    { name = "rich" },
     { name = "typer" },
     { name = "urllib3" },
 ]
@@ -208,6 +209,7 @@ requires-dist = [
     { name = "pynacl", specifier = "==1.5.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "requests", specifier = "==2.32.4" },
+    { name = "rich", specifier = ">=10.0.0" },
     { name = "typer", specifier = "==0.16.0" },
     { name = "urllib3", specifier = "==2.4.0" },
 ]

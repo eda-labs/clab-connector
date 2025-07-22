@@ -7,6 +7,7 @@ from typing import List, Dict, Optional, Any
 from enum import Enum
 from dataclasses import dataclass
 from clab_connector.clients.eda.client import EDAClient
+from clab_connector.utils.api_utils import try_api_endpoints, extract_k8s_names
 
 logger = logging.getLogger(__name__)
 
@@ -140,37 +141,19 @@ class NodeSyncChecker:
         # Try EDA API endpoints for TopoNode resources
         eda_endpoints = [
             f"apps/core.eda.nokia.com/v1/namespaces/{self.namespace}/toponodes/{node_name}",
-            # Fallback endpoints in case the API structure varies
             f"core/topology/v1/namespaces/{self.namespace}/toponodes/{node_name}",
             f"api/core/v1/namespaces/{self.namespace}/toponodes/{node_name}",
         ]
         
-        for endpoint in eda_endpoints:
-            try:
-                response = self.eda_client.get(endpoint)
-                if response.status == 200:
-                    import json
-                    data = json.loads(response.data.decode('utf-8'))
-                    logger.debug(f"Successfully got TopoNode {node_name} via EDA API endpoint: {endpoint}")
-                    
-                    # Enhanced debugging for unknown node issues
-                    if logger.getEffectiveLevel() <= logging.DEBUG:
-                        logger.debug(f"Raw API response for {node_name}: {json.dumps(data, indent=2)}")
-                    
-                    return data, f"EDA API ({endpoint})"
-                else:
-                    logger.debug(f"API call to {endpoint} returned status {response.status}")
-            except Exception as e:
-                logger.debug(f"Error trying EDA API endpoint {endpoint}: {e}")
+        data, endpoint = try_api_endpoints(self.eda_client, eda_endpoints, f"TopoNode {node_name}")
         
-        logger.warning(f"Failed to get TopoNode {node_name} from any EDA API endpoint")
-        logger.debug(f"All EDA API endpoints failed for {node_name}:")
-        for endpoint in [
-            f"apps/core.eda.nokia.com/v1/namespaces/{self.namespace}/toponodes/{node_name}",
-            f"core/topology/v1/namespaces/{self.namespace}/toponodes/{node_name}",
-            f"api/core/v1/namespaces/{self.namespace}/toponodes/{node_name}",
-        ]:
-            logger.debug(f"  - {endpoint}")
+        if data:
+            # Enhanced debugging for unknown node issues
+            if logger.getEffectiveLevel() <= logging.DEBUG:
+                import json
+                logger.debug(f"Raw API response for {node_name}: {json.dumps(data, indent=2)}")
+            return data, f"EDA API ({endpoint})"
+        
         return {}, "EDA API (failed)"
     
     def _determine_node_status(self, node_name: str, data: Dict) -> NodeStatus:
@@ -420,37 +403,11 @@ class NodeSyncChecker:
                 "api/v1/namespaces",  # Fallback
             ]
             
-            for endpoint in namespace_endpoints:
-                try:
-                    response = self.eda_client.get(endpoint)
-                    
-                    if response.status == 200:
-                        import json
-                        data = json.loads(response.data.decode('utf-8'))
-                        namespaces = []
-                        
-                        # Extract namespace names from the response
-                        if isinstance(data, dict) and 'items' in data:
-                            for item in data['items']:
-                                if isinstance(item, dict) and 'metadata' in item:
-                                    name = item['metadata'].get('name', '')
-                                    if name.startswith('clab-'):
-                                        namespaces.append(name)
-                        elif isinstance(data, list):
-                            # Handle case where response is directly a list
-                            for item in data:
-                                if isinstance(item, str) and item.startswith('clab-'):
-                                    namespaces.append(item)
-                                elif isinstance(item, dict):
-                                    name = item.get('name', '') or item.get('metadata', {}).get('name', '')
-                                    if name.startswith('clab-'):
-                                        namespaces.append(name)
-                        
-                        return namespaces
-                except Exception as e:
-                    logger.info(f"Error trying EDA API endpoint {endpoint}: {e}")
+            data, endpoint = try_api_endpoints(self.eda_client, namespace_endpoints, "namespaces")
             
-            logger.warning("Failed to list namespaces via any EDA API endpoint")
+            if data:
+                return extract_k8s_names(data, lambda name: name.startswith('clab-'))
+            
             return []
             
         except Exception as e:
@@ -580,36 +537,13 @@ class NodeSyncChecker:
                 f"api/core/v1/namespaces/{self.namespace}/toponodes",
             ]
             
-            for endpoint in endpoints:
-                try:
-                    response = self.eda_client.get(endpoint)
-                    
-                    if response.status == 200:
-                        import json
-                        data = json.loads(response.data.decode('utf-8'))
-                        toponodes = []
-                        
-                        # Extract TopoNode names from the response
-                        if isinstance(data, dict) and 'items' in data:
-                            for item in data['items']:
-                                if isinstance(item, dict) and 'metadata' in item:
-                                    name = item['metadata'].get('name', '')
-                                    if name:
-                                        toponodes.append(name)
-                        elif isinstance(data, list):
-                            # Handle case where response is directly a list
-                            for item in data:
-                                if isinstance(item, dict):
-                                    name = item.get('metadata', {}).get('name', '') or item.get('name', '')
-                                    if name:
-                                        toponodes.append(name)
-                        
-                        logger.info(f"Found {len(toponodes)} TopoNodes in namespace {self.namespace} via EDA API endpoint: {endpoint}")
-                        return toponodes
-                except Exception as e:
-                    logger.info(f"Error trying EDA API endpoint {endpoint}: {e}")
+            data, endpoint = try_api_endpoints(self.eda_client, endpoints, f"TopoNodes in {self.namespace}")
             
-            logger.warning(f"Failed to list TopoNodes in namespace {self.namespace} via any EDA API endpoint")
+            if data:
+                toponodes = extract_k8s_names(data)
+                logger.info(f"Found {len(toponodes)} TopoNodes in namespace {self.namespace} via EDA API endpoint: {endpoint}")
+                return toponodes
+            
             return []
             
         except Exception as e:

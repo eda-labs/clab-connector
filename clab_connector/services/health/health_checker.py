@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from clab_connector.clients.eda.client import EDAClient
+from clab_connector.utils.kubernetes_utils import load_k8s_config
 
 logger = logging.getLogger(__name__)
 
@@ -175,18 +176,13 @@ class HealthChecker:
             
             # Try to load Kubernetes configuration
             try:
-                # First try in-cluster config (if running in a pod)
-                config.load_incluster_config()
-            except:
-                try:
-                    # Then try local kubeconfig
-                    config.load_kube_config()
-                except Exception as e:
-                    return ComponentHealth(
-                        name="Kubernetes Connectivity",
-                        status=HealthStatus.UNHEALTHY,
-                        message="No Kubernetes config found"
-                    )
+                load_k8s_config()
+            except Exception as e:
+                return ComponentHealth(
+                    name="Kubernetes Connectivity",
+                    status=HealthStatus.UNHEALTHY,
+                    message="No Kubernetes config found"
+                )
             
             # Test connectivity with a simple API call
             v1 = client.CoreV1Api()
@@ -227,18 +223,13 @@ class HealthChecker:
             
             # Try to load Kubernetes configuration
             try:
-                # First try in-cluster config (if running in a pod)
-                config.load_incluster_config()
-            except:
-                try:
-                    # Then try local kubeconfig
-                    config.load_kube_config()
-                except Exception as e:
-                    return ComponentHealth(
-                        name="Kubernetes Cluster",
-                        status=HealthStatus.UNHEALTHY,
-                        message="No Kubernetes config found"
-                    )
+                load_k8s_config()
+            except Exception as e:
+                return ComponentHealth(
+                    name="Kubernetes Cluster",
+                    status=HealthStatus.UNHEALTHY,
+                    message="No Kubernetes config found"
+                )
             
             # Check cluster health
             v1 = client.CoreV1Api()

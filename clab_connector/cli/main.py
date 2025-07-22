@@ -128,10 +128,10 @@ def integrate_cmd(
     """
     import logging
     from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.clients.eda.client import EDAClient
     from clab_connector.services.integration.topology_integrator import (
         TopologyIntegrator,
     )
+    from clab_connector.cli.common import create_eda_client
 
     # Set up logging now
     setup_logging(log_level.value, log_file)
@@ -156,14 +156,14 @@ def integrate_cmd(
     args.sync_timeout = sync_timeout
 
     def execute_integration(a):
-        eda_client = EDAClient(
-            hostname=a.eda_url,
+        eda_client = create_eda_client(
+            eda_url=a.eda_url,
             eda_user=a.eda_user,
             eda_password=a.eda_password,
-            kc_secret=a.kc_secret,  # If set, skip admin flow
+            kc_secret=a.kc_secret,
             kc_user=a.kc_user,
             kc_password=a.kc_password,
-            verify=a.verify,
+            verify=a.verify
         )
 
         integrator = TopologyIntegrator(eda_client, enable_sync_checking=a.enable_sync_check, sync_timeout=a.sync_timeout)
@@ -231,8 +231,8 @@ def remove_cmd(
     CLI command to remove EDA integration (delete the namespace).
     """
     from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.clients.eda.client import EDAClient
     from clab_connector.services.removal.topology_remover import TopologyRemover
+    from clab_connector.cli.common import create_eda_client
 
     # Set up logging
     setup_logging(log_level.value, log_file)
@@ -250,14 +250,14 @@ def remove_cmd(
     args.verify = verify
 
     def execute_removal(a):
-        eda_client = EDAClient(
-            hostname=a.eda_url,
+        eda_client = create_eda_client(
+            eda_url=a.eda_url,
             eda_user=a.eda_user,
             eda_password=a.eda_password,
             kc_secret=a.kc_secret,
             kc_user=a.kc_user,
             kc_password=a.kc_password,
-            verify=a.verify,
+            verify=a.verify
         )
         remover = TopologyRemover(eda_client)
         remover.run(topology_file=a.topology_data)
@@ -453,9 +453,9 @@ def check_sync_cmd(
     import logging
     import json
     from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.clients.eda.client import EDAClient
     from clab_connector.services.status.node_sync_checker import NodeSyncChecker
     from clab_connector.models.topology import parse_topology_file
+    from clab_connector.cli.common import create_eda_client
 
     # Set up logging
     setup_logging(log_level.value, log_file)
@@ -472,14 +472,14 @@ def check_sync_cmd(
         logger.info(f"Node names: {node_names[:5]}{'...' if len(node_names) > 5 else ''}")
 
         # Create EDA client
-        eda_client = EDAClient(
-            hostname=eda_url,
+        eda_client = create_eda_client(
+            eda_url=eda_url,
             eda_user=eda_user,
             eda_password=eda_password,
             kc_secret=kc_secret,
             kc_user=kc_user,
             kc_password=kc_password,
-            verify=verify,
+            verify=verify
         )
 
         # Create sync checker
@@ -569,8 +569,8 @@ def health_check_cmd(
     """
     import logging
     from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.clients.eda.client import EDAClient
     from clab_connector.services.health.health_checker import HealthChecker, HealthStatus
+    from clab_connector.cli.common import create_eda_client
 
     # Set up logging
     setup_logging(log_level.value, log_file)
@@ -578,14 +578,14 @@ def health_check_cmd(
 
     try:
         # Create EDA client
-        eda_client = EDAClient(
-            hostname=eda_url,
+        eda_client = create_eda_client(
+            eda_url=eda_url,
             eda_user=eda_user,
             eda_password=eda_password,
             kc_secret=kc_secret,
             kc_user=kc_user,
             kc_password=kc_password,
-            verify=verify,
+            verify=verify
         )
 
         # Create health checker
@@ -682,8 +682,8 @@ def debug_eda_cmd(
     """
     import logging
     from clab_connector.utils.logging_config import setup_logging
-    from clab_connector.clients.eda.client import EDAClient
     from clab_connector.services.status.node_sync_checker import NodeSyncChecker
+    from clab_connector.cli.common import create_eda_client
 
     # Set up logging
     setup_logging(log_level.value, log_file)
@@ -691,14 +691,14 @@ def debug_eda_cmd(
 
     try:
         # Create EDA client
-        eda_client = EDAClient(
-            hostname=eda_url,
+        eda_client = create_eda_client(
+            eda_url=eda_url,
             eda_user=eda_user,
             eda_password=eda_password,
             kc_secret=kc_secret,
             kc_user=kc_user,
             kc_password=kc_password,
-            verify=verify,
+            verify=verify
         )
 
         rprint(f"[bold]EDA Debug Information[/bold]")
