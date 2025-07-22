@@ -1,11 +1,10 @@
 # clab_connector/utils/logging_config.py
 
 import logging.config
-from typing import Optional
 from pathlib import Path
 
 
-def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
+def setup_logging(log_level: str = "INFO", log_file: str | None = None):
     """
     Set up logging configuration with optional file output.
 
@@ -13,8 +12,8 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
     ----------
     log_level : str
         Desired logging level (e.g. "WARNING", "INFO", "DEBUG").
-    log_file : Optional[str]
-        Path to the log file. If None, logs are not written to a file.
+    log_file : str | None
+        Path to the log file. If ``None``, logs are not written to a file.
 
     Returns
     -------

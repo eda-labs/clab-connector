@@ -53,4 +53,3 @@ class TopologyRemover:
         self.eda_client.add_delete_to_transaction(
             namespace="", kind="Namespace", name=ns
         )
-

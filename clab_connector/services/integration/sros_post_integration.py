@@ -159,6 +159,89 @@ def execute_ssh_commands(
 
 
 # --------------------------------------------------------------------------- #
+# Helper utilities                                                            #
+# --------------------------------------------------------------------------- #
+def _extract_cert_and_config(
+    node_name: str,
+    namespace: str,
+    version: str,
+    cert_p: Path,
+    key_p: Path,
+    cfg_p: Path,
+    quiet: bool,
+) -> str:
+    def _run(cmd: str) -> None:
+        subprocess.check_call(
+            cmd,
+            shell=True,
+            stdout=subprocess.DEVNULL if quiet else None,
+            stderr=subprocess.DEVNULL if quiet else None,
+        )
+
+    logger.info("Extracting TLS cert / key …")
+    _run(
+        f"kubectl get secret {namespace}--{node_name}-cert-tls "
+        f"-n eda-system -o jsonpath='{{.data.tls\\.crt}}' "
+        f"| base64 -d > {cert_p}"
+    )
+    _run(
+        f"kubectl get secret {namespace}--{node_name}-cert-tls "
+        f"-n eda-system -o jsonpath='{{.data.tls\\.key}}' "
+        f"| base64 -d > {key_p}"
+    )
+
+    logger.info("Extracting initial config …")
+    _run(
+        f"kubectl get artifact initcfg-{node_name}-{version} -n {namespace} "
+        f"-o jsonpath='{{.spec.textFile.content}}' "
+        f"| sed 's/\\n/\\n/g' > {cfg_p}"
+    )
+
+    cfg_text = cfg_p.read_text()
+    m = re.search(r"configure\s*\{(.*)\}", cfg_text, re.DOTALL)
+    if not m or not m.group(1).strip():
+        raise ValueError("Could not find inner config block")
+    return m.group(1).strip()
+
+
+def _copy_certificates(
+    dest_roots: tuple[str, str],
+    cert_p: Path,
+    key_p: Path,
+    username: str,
+    mgmt_ip: str,
+    working_pw: str,
+    quiet: bool,
+) -> str:
+    logger.info("Copying certificates to device …")
+    for root in dest_roots:
+        if transfer_file(
+            cert_p, root + "edaboot.crt", username, mgmt_ip, working_pw, quiet
+        ) and transfer_file(
+            key_p, root + "edaboot.key", username, mgmt_ip, working_pw, quiet
+        ):
+            return root
+    raise RuntimeError("Failed to copy certificate/key to device")
+
+
+def _build_command_script(script_p: Path, dest_root: str, inner_cfg: str) -> None:
+    with script_p.open("w") as f:
+        f.write("environment more false\n")
+        f.write("environment print-detail false\n")
+        f.write("environment confirmations false\n")
+        f.write(
+            f"admin system security pki import type certificate input-url {dest_root}edaboot.crt output-file edaboot.crt format pem\n"
+        )
+        f.write(
+            f"admin system security pki import type key input-url {dest_root}edaboot.key output-file edaboot.key format pem\n"
+        )
+        f.write("configure global\n")
+        f.write(inner_cfg + "\n")
+        f.write("commit\n")
+        f.write("exit all\n")
+
+
+# --------------------------------------------------------------------------- #
 # High-level workflow                                                         #
 # --------------------------------------------------------------------------- #
 def prepare_sros_node(
@@ -205,79 +288,14 @@ def prepare_sros_node(
         script_p = tdir_path / "sros_commands.txt"
 
         try:
-            # ------------------------------------------------------------------
-            # kubectl extractions
-            # ------------------------------------------------------------------
-            def _run(cmd: str) -> None:
-                subprocess.check_call(
-                    cmd,
-                    shell=True,
-                    stdout=subprocess.DEVNULL if quiet else None,
-                    stderr=subprocess.DEVNULL if quiet else None,
-                )
-
-            logger.info("Extracting TLS cert / key …")
-            _run(
-                f"kubectl get secret {namespace}--{node_name}-cert-tls "
-                f"-n eda-system -o jsonpath='{{.data.tls\\.crt}}' "
-                f"| base64 -d > {cert_p}"
+            inner_cfg = _extract_cert_and_config(
+                node_name, namespace, version, cert_p, key_p, cfg_p, quiet
             )
-            _run(
-                f"kubectl get secret {namespace}--{node_name}-cert-tls "
-                f"-n eda-system -o jsonpath='{{.data.tls\\.key}}' "
-                f"| base64 -d > {key_p}"
+            dest_root = _copy_certificates(
+                ("cf3:/", "/"), cert_p, key_p, username, mgmt_ip, working_pw, quiet
             )
+            _build_command_script(script_p, dest_root, inner_cfg)
 
-            logger.info("Extracting initial config …")
-            _run(
-                f"kubectl get artifact initcfg-{node_name}-{version} -n {namespace} "
-                f"-o jsonpath='{{.spec.textFile.content}}' "
-                f"| sed 's/\\\\n/\\n/g' > {cfg_p}"
-            )
-
-            cfg_text = cfg_p.read_text()
-            m = re.search(r"configure\s*\{(.*)\}", cfg_text, re.DOTALL)
-            if not m or not m.group(1).strip():
-                raise ValueError("Could not find inner config block")
-            inner_cfg = m.group(1).strip()
-
-            # ------------------------------------------------------------------
-            # copy certs (try cf3:/ then /)
-            # ------------------------------------------------------------------
-            logger.info("Copying certificates to device …")
-            dest_root = None
-            for root in ("cf3:/", "/"):
-                if transfer_file(
-                    cert_p, root + "edaboot.crt", username, mgmt_ip, working_pw, quiet
-                ) and transfer_file(
-                    key_p, root + "edaboot.key", username, mgmt_ip, working_pw, quiet
-                ):
-                    dest_root = root
-                    break
-            if not dest_root:
-                raise RuntimeError("Failed to copy certificate/key to device")
-
-            # ------------------------------------------------------------------
-            # build command script
-            # ------------------------------------------------------------------
-            with script_p.open("w") as f:
-                f.write("environment more false\n")
-                f.write("environment print-detail false\n")
-                f.write("environment confirmations false\n")
-                f.write(
-                    f"admin system security pki import type certificate input-url {dest_root}edaboot.crt output-file edaboot.crt format pem\n"
-                )
-                f.write(
-                    f"admin system security pki import type key input-url {dest_root}edaboot.key output-file edaboot.key format pem\n"
-                )
-                f.write("configure global\n")
-                f.write(inner_cfg + "\n")
-                f.write("commit\n")
-                f.write("exit all\n")
-
-            # ------------------------------------------------------------------
-            # execute
-            # ------------------------------------------------------------------
             logger.info("Pushing configuration to %s …", node_name)
             return execute_ssh_commands(
                 script_p, username, mgmt_ip, node_name, working_pw, quiet

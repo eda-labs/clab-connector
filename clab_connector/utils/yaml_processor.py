@@ -15,10 +15,13 @@ class YAMLProcessor:
         Custom YAML dumper that adjusts the indentation for lists and maintains certain lists in inline format.
         """
 
-
     def custom_list_representer(self, dumper, data):
         # Check if we are at the specific list under 'links' with 'endpoints'
-        if len(data) == INLINE_LIST_LENGTH and isinstance(data[0], str) and ":" in data[0]:
+        if (
+            len(data) == INLINE_LIST_LENGTH
+            and isinstance(data[0], str)
+            and ":" in data[0]
+        ):
             return dumper.represent_sequence(
                 "tag:yaml.org,2002:seq", data, flow_style=True
             )

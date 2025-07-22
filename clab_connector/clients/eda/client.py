@@ -245,9 +245,7 @@ class EDAClient:
         body = json.dumps(payload).encode("utf-8")
         headers = self.get_headers(requires_auth)
         headers["Content-Type"] = "application/json"
-        return self.http.request(
-            "POST", url, headers=headers, body=body
-        )
+        return self.http.request("POST", url, headers=headers, body=body)
 
     def patch(self, api_path: str, payload: str, requires_auth: bool = True):
         url = f"{self.url}/{api_path}"
@@ -255,9 +253,7 @@ class EDAClient:
         body = payload.encode("utf-8")
         headers = self.get_headers(requires_auth)
         headers["Content-Type"] = "application/json"
-        return self.http.request(
-            "PATCH", url, headers=headers, body=body
-        )
+        return self.http.request("PATCH", url, headers=headers, body=body)
 
     def is_up(self) -> bool:
         logger.info(f"{SUBSTEP_INDENT}Checking EDA health")
@@ -402,9 +398,7 @@ class EDAClient:
 
         logger.info(f"{SUBSTEP_INDENT}Waiting for transaction {tx_id} to complete...")
         if major == MAJOR_V1_THRESHOLD:
-            details_path = (
-                f"core/transaction/v1/details/{tx_id}?waitForComplete=true&failOnErrors=true"
-            )
+            details_path = f"core/transaction/v1/details/{tx_id}?waitForComplete=true&failOnErrors=true"
         else:
             details_path = f"core/transaction/v2/result/summary/{tx_id}"
         details_resp = self.get(details_path)

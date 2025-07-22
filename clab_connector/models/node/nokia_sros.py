@@ -226,77 +226,43 @@ class NokiaSROSNode(Node):
         return helpers.render_template("toponode.j2", data)
 
     def get_interface_name_for_kind(self, ifname):
-        """
-        Convert a containerlab interface name to an SR OS EDA-compatible interface name.
+        """Convert a containerlab interface name to the SR OS EDA format."""
 
-        Supports all SR OS interface naming conventions:
-        - 1/1/1 → ethernet-1-a-1 (first linecard, MDA 'a', port 1)
-        - 2/2/1 → ethernet-2-b-1 (second linecard, MDA 'b', port 1)
-        - 1/1/c1/1 → ethernet-1-1-1 (breakout port with implicit MDA)
-        - 1/1/c2/1 → ethernet-1-a-2-1 (breakout port with explicit MDA 'a')
-        - 1/x1/1/1 → ethernet-1-1-a-1 (XIOM MDA)
-        - lo0 → loopback-0
-        - lag-10 → lag-10
-        - eth3 → ethernet-1-a-3-1 (containerlab format)
-        - e1-1 → ethernet-1-a-1-1 (containerlab format)
-        """
-        eda_name = None
+        eda_name = ifname
 
-        # Handle native SR OS port format with slashes: "1/1/1"
-        slot_mda_port = re.compile(r"^(\d+)/(\d+)/(\d+)$")
-        match = slot_mda_port.match(ifname)
-        if match:
-            slot = match.group(1)
-            mda_num = int(match.group(2))
-            port = match.group(3)
-            mda_letter = chr(96 + mda_num)
+        m = re.match(r"^(\d+)/(\d+)/(\d+)$", ifname)
+        if m:
+            slot, mda_num, port = m.groups()
+            mda_letter = chr(96 + int(mda_num))
             eda_name = f"ethernet-{slot}-{mda_letter}-{port}-1"
         else:
-            # Handle breakout ports with implicit or explicit MDA
-            breakout = re.compile(r"^(\d+)/(\d+)/c(\d+)/(\d+)$")
-            match = breakout.match(ifname)
-            if match:
-                slot = match.group(1)
-                mda_num = int(match.group(2))
-                channel = match.group(3)
-                port = match.group(4)
-                if match.group(2) == "1":
+            m = re.match(r"^(\d+)/(\d+)/c(\d+)/(\d+)$", ifname)
+            if m:
+                slot, mda_num, channel, port = m.groups()
+                if mda_num == "1":
                     eda_name = f"ethernet-{slot}-{channel}-{port}"
                 else:
-                    mda_letter = chr(96 + mda_num)
+                    mda_letter = chr(96 + int(mda_num))
                     eda_name = f"ethernet-{slot}-{mda_letter}-{channel}-{port}"
             else:
-                # Handle XIOM MDA: "1/x1/1/1"
-                xiom = re.compile(r"^(\d+)/x(\d+)/(\d+)/(\d+)$")
-                match = xiom.match(ifname)
-                if match:
-                    slot = match.group(1)
-                    xiom_id = match.group(2)
-                    mda_num = int(match.group(3))
-                    port = match.group(4)
-                    mda_letter = chr(96 + mda_num)
+                m = re.match(r"^(\d+)/x(\d+)/(\d+)/(\d+)$", ifname)
+                if m:
+                    slot, xiom_id, mda_num, port = m.groups()
+                    mda_letter = chr(96 + int(mda_num))
                     eda_name = f"ethernet-{slot}-{xiom_id}-{mda_letter}-{port}"
                 else:
-                    eth_pattern = re.compile(r"^eth(\d+)$")
-                    match = eth_pattern.match(ifname)
-                    if match:
-                        port_num = match.group(1)
-                        eda_name = f"ethernet-1-a-{port_num}-1"
+                    m = re.match(r"^eth(\d+)$", ifname)
+                    if m:
+                        eda_name = f"ethernet-1-a-{m.group(1)}-1"
                     else:
-                        e_pattern = re.compile(r"^e(\d+)-(\d+)$")
-                        match = e_pattern.match(ifname)
-                        if match:
-                            slot = match.group(1)
-                            port = match.group(2)
+                        m = re.match(r"^e(\d+)-(\d+)$", ifname)
+                        if m:
+                            slot, port = m.groups()
                             eda_name = f"ethernet-{slot}-a-{port}-1"
                         else:
-                            lo_pattern = re.compile(r"^lo(\d+)$")
-                            match = lo_pattern.match(ifname)
-                            if match:
-                                eda_name = f"loopback-{match.group(1)}"
-
-        if eda_name is None:
-            eda_name = ifname
+                            m = re.match(r"^lo(\d+)$", ifname)
+                            if m:
+                                eda_name = f"loopback-{m.group(1)}"
 
         return eda_name
 

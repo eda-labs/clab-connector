@@ -11,6 +11,7 @@ from .base import Node
 
 logger = logging.getLogger(__name__)
 
+
 class NokiaSRLinuxNode(Node):
     """
     Nokia SR Linux Node representation.
@@ -55,7 +56,7 @@ class NokiaSRLinuxNode(Node):
         "25.3.2": (
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-srl-25.3.2/srlinux-25.3.2-312.zip"
-        )
+        ),
     }
 
     def get_default_node_type(self):
@@ -164,7 +165,7 @@ class NokiaSRLinuxNode(Node):
             "platform": self.get_platform(),
             "sw_version": self.version,
             "mgmt_ip": self.mgmt_ipv4,
-            "containerlab_label": "managedSrl"
+            "containerlab_label": "managedSrl",
         }
         return helpers.render_template("toponode.j2", data)
 
@@ -254,7 +255,9 @@ class NokiaSRLinuxNode(Node):
             (artifact_name, filename, download_url)
         """
         if self.version not in self.SUPPORTED_SCHEMA_PROFILES:
-            logger.warning(f"{SUBSTEP_INDENT}No schema profile for version {self.version}")
+            logger.warning(
+                f"{SUBSTEP_INDENT}No schema profile for version {self.version}"
+            )
             return (None, None, None)
         artifact_name = self.get_artifact_name()
         filename = f"srlinux-{self.version}.zip"
@@ -286,4 +289,3 @@ class NokiaSRLinuxNode(Node):
             "artifact_url": download_url,
         }
         return helpers.render_template("artifact.j2", data)
-
