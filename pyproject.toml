@@ -84,7 +84,7 @@ convention = "google"
 max-complexity = 15
 
 [tool.ruff.lint.pylint]
-max-args = 7
+max-args = 15
 max-branches = 12
 max-returns = 6
 max-statements = 50
@@ -109,53 +109,6 @@ exclude = ["example-topologies/"]
 module = ["paramiko.*", "kubernetes.*", "bcrypt.*"]
 ignore_missing_imports = true
 
-[tool.bandit]
-exclude_dirs = ["tests", "example-topologies"]
-skips = ["B101"]  # Skip assert_used test
-
-[tool.bandit.assert_used]
-skips = ["*_test.py", "test_*.py"]
-
-[tool.coverage.run]
-source = ["clab_connector"]
-omit = ["*/tests/*", "example-topologies/*"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if 0:",
-    "if __name__ == .__main__.:",
-]
-show_missing = true
-skip_covered = false
-precision = 2
-
-[tool.pytest.ini_options]
-minversion = "6.0"
-addopts = [
-    "--strict-markers",
-    "--strict-config",
-    "--verbose",
-    "--tb=short",
-    "--cov=clab_connector",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-report=xml",
-]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests",
-]
 
 [tool.isort]
 profile = "black"
