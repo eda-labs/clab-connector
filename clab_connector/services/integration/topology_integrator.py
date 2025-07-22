@@ -15,6 +15,7 @@ from clab_connector.clients.kubernetes.client import (
 from clab_connector.utils import helpers
 from clab_connector.utils.exceptions import EDAConnectionError, ClabConnectorError
 from clab_connector.services.integration.sros_post_integration import prepare_sros_node
+from clab_connector.services.status.node_sync_checker import NodeSyncChecker
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,11 @@ class TopologyIntegrator:
         A connected EDAClient used to submit resources to the EDA cluster.
     """
 
-    def __init__(self, eda_client: EDAClient):
+    def __init__(self, eda_client: EDAClient, enable_sync_checking: bool = True, sync_timeout: int = 90):
         self.eda_client = eda_client
         self.topology = None
+        self.enable_sync_checking = enable_sync_checking
+        self.sync_timeout = sync_timeout
 
     def run(
         self,
@@ -89,7 +92,7 @@ class TopologyIntegrator:
 
         logger.info("== Creating init ==")
         self.create_init()
-        self.eda_client.commit_transaction("create init (bootstrap)")
+        self.commit_transaction("create init (bootstrap)")
 
         logger.info("== Creating node security profile ==")
         self.create_node_security_profile()
@@ -97,21 +100,21 @@ class TopologyIntegrator:
         logger.info("== Creating node users ==")
         self.create_node_user_groups()
         self.create_node_users()
-        self.eda_client.commit_transaction("create node users and groups")
+        self.commit_transaction("create node users and groups")
 
         logger.info("== Creating node profiles ==")
         self.create_node_profiles()
-        self.eda_client.commit_transaction("create node profiles")
+        self.commit_transaction("create node profiles")
 
         logger.info("== Onboarding nodes ==")
         self.create_toponodes()
-        self.eda_client.commit_transaction("create nodes")
+        # Nodes are committed in batches within create_toponodes method
 
         logger.info("== Adding topolink interfaces ==")
         self.create_topolink_interfaces(skip_edge_intfs)
         # Only commit if there are transactions
         if self.eda_client.transactions:
-            self.eda_client.commit_transaction("create topolink interfaces")
+            self.commit_transaction("create topolink interfaces")
         else:
             logger.info(f"{SUBSTEP_INDENT}No topolink interfaces to create, skipping.")
 
@@ -119,12 +122,17 @@ class TopologyIntegrator:
         self.create_topolinks(skip_edge_intfs)
         # Only commit if there are transactions
         if self.eda_client.transactions:
-            self.eda_client.commit_transaction("create topolinks")
+            self.commit_transaction("create topolinks")
         else:
             logger.info(f"{SUBSTEP_INDENT}No topolinks to create, skipping.")
 
         logger.info("== Running post-integration steps ==")
         self.run_post_integration()
+
+        # Check node synchronization if enabled
+        if self.enable_sync_checking:
+            logger.info("== Checking node synchronization ==")
+            self.check_node_synchronization()
 
         logger.info("Done!")
 
@@ -214,6 +222,10 @@ class TopologyIntegrator:
                 else:
                     logger.error(f"Error creating artifact '{artifact_name}': {ex}")
 
+    def commit_transaction(self, description: str):
+        """Commit a transaction"""
+        return self.eda_client.commit_transaction(description)
+
     def create_init(self):
         """
         Create an Init resource in the namespace to bootstrap additional resources.
@@ -299,13 +311,50 @@ class TopologyIntegrator:
 
     def create_toponodes(self):
         """
-        Create TopoNode resources for each node.
+        Create TopoNode resources for each node in batches to smooth the integration.
         """
+        import time
+        
         tnodes = self.topology.get_toponodes()
-        for node_yaml in tnodes:
-            item = self.eda_client.add_replace_to_transaction(node_yaml)
-            if not self.eda_client.is_transaction_item_valid(item):
-                raise ClabConnectorError("Validation error creating toponode")
+        if not tnodes:
+            logger.info(f"{SUBSTEP_INDENT}No TopoNodes to create")
+            return
+        
+        # Process nodes in smaller batches to avoid overwhelming EDA
+        batch_size = 3  # Process 3 nodes at a time
+        batch_delay = 2  # Wait 2 seconds between batches
+        
+        logger.info(f"{SUBSTEP_INDENT}Creating {len(tnodes)} TopoNodes in batches of {batch_size}")
+        
+        for i in range(0, len(tnodes), batch_size):
+            batch = tnodes[i:i + batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (len(tnodes) + batch_size - 1) // batch_size
+            
+            logger.info(f"{SUBSTEP_INDENT}Processing batch {batch_num}/{total_batches} ({len(batch)} nodes)...")
+            
+            # Clear any existing transactions for this batch
+            if hasattr(self.eda_client, 'transactions'):
+                self.eda_client.transactions = []
+            
+            # Add nodes in this batch to transaction
+            for node_yaml in batch:
+                item = self.eda_client.add_replace_to_transaction(node_yaml)
+                if not self.eda_client.is_transaction_item_valid(item):
+                    raise ClabConnectorError("Validation error creating toponode")
+            
+            # Commit this batch
+            try:
+                self.commit_transaction(f"create nodes batch {batch_num}")
+                logger.info(f"{SUBSTEP_INDENT}Batch {batch_num}/{total_batches} committed successfully")
+            except Exception as e:
+                logger.error(f"Failed to commit batch {batch_num}/{total_batches}: {e}")
+                raise
+            
+            # Wait between batches (except for the last batch)
+            if i + batch_size < len(tnodes):
+                logger.debug(f"{SUBSTEP_INDENT}Waiting {batch_delay}s before next batch...")
+                time.sleep(batch_delay)
 
     def create_topolink_interfaces(self, skip_edge_intfs: bool = False):
         """
@@ -333,6 +382,18 @@ class TopologyIntegrator:
             if not self.eda_client.is_transaction_item_valid(item):
                 raise ClabConnectorError("Validation error creating topolink")
 
+    def run_sros_post_integration(self, node, namespace, normalized_version, quiet):
+        """Run SROS post-integration"""
+        return prepare_sros_node(
+            node_name=node.get_node_name(self.topology),
+            namespace=namespace,
+            version=normalized_version,
+            mgmt_ip=node.mgmt_ipv4,
+            username="admin",
+            password="admin",
+            quiet=quiet
+        )
+
     def run_post_integration(self):
         """
         Run any post-integration steps required for specific node types.
@@ -348,14 +409,8 @@ class TopologyIntegrator:
                 try:
                     # Get normalized version from the node
                     normalized_version = node._normalize_version(node.version)
-                    success = prepare_sros_node(
-                        node_name=node.get_node_name(self.topology),
-                        namespace=namespace,
-                        version=normalized_version,
-                        mgmt_ip=node.mgmt_ipv4,
-                        username="admin",
-                        password="admin",
-                        quiet=quiet  # Pass quiet parameter
+                    success = self.run_sros_post_integration(
+                        node, namespace, normalized_version, quiet
                     )
                     if success:
                         logger.info(f"{SUBSTEP_INDENT}SROS post-integration for {node.name} completed successfully")
@@ -363,3 +418,44 @@ class TopologyIntegrator:
                         logger.error(f"SROS post-integration for {node.name} failed")
                 except Exception as e:
                     logger.error(f"Error during SROS post-integration for {node.name}: {e}")
+
+    def check_node_synchronization(self):
+        """Check that all nodes are properly synchronized in EDA (simplified, no retries)"""
+        if not self.topology or not self.topology.nodes:
+            logger.warning("No nodes to check for synchronization")
+            return
+        
+        namespace = f"clab-{self.topology.name}"
+        node_names = [node.get_node_name(self.topology) for node in self.topology.nodes]
+        
+        logger.info(f"{SUBSTEP_INDENT}Checking synchronization for {len(node_names)} nodes...")
+        
+        sync_checker = NodeSyncChecker(self.eda_client, namespace)
+        
+        # Simple wait for nodes to be ready
+        logger.info(f"{SUBSTEP_INDENT}Waiting for nodes to synchronize (timeout: {self.sync_timeout}s)...")
+        if sync_checker.wait_for_nodes_ready(node_names, timeout=self.sync_timeout):
+            logger.info(f"{SUBSTEP_INDENT}All nodes synchronized successfully!")
+        else:
+            # Just report the final status without retrying
+            final_summary = sync_checker.get_sync_summary(node_names)
+            logger.info(f"Node synchronization completed:")
+            logger.info(f"  Ready: {final_summary['ready_nodes']}/{final_summary['total_nodes']}")
+            if final_summary['error_nodes'] > 0:
+                logger.info(f"  Errors: {final_summary['error_nodes']}")
+            if final_summary['pending_nodes'] > 0:
+                logger.info(f"  Pending: {final_summary['pending_nodes']}")  
+            if final_summary['unknown_nodes'] > 0:
+                logger.info(f"  Unknown: {final_summary['unknown_nodes']}")
+            if final_summary['syncing_nodes'] > 0:
+                logger.info(f"  Syncing: {final_summary['syncing_nodes']}")
+            
+            # Log details for non-ready nodes
+            for node_name, details in final_summary['node_details'].items():
+                if details['status'] != 'ready':
+                    status_msg = f"  {node_name}: {details['status']}"
+                    if details.get('error_message'):
+                        status_msg += f" - {details['error_message']}"
+                    logger.info(status_msg)
+        
+        logger.info("Continuing with topology integration...")
