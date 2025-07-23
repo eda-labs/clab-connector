@@ -2,12 +2,15 @@
 
 import logging
 import re
+from typing import ClassVar
 
-from .base import Node
 from clab_connector.utils import helpers
 from clab_connector.utils.constants import SUBSTEP_INDENT
 
+from .base import Node
+
 logger = logging.getLogger(__name__)
+
 
 class NokiaSRLinuxNode(Node):
     """
@@ -27,9 +30,9 @@ class NokiaSRLinuxNode(Node):
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
 
     # Mapping for EDA operating system
-    EDA_OPERATING_SYSTEM = "srl"
+    EDA_OPERATING_SYSTEM: ClassVar[str] = "srl"
 
-    SUPPORTED_SCHEMA_PROFILES = {
+    SUPPORTED_SCHEMA_PROFILES: ClassVar[dict[str, tuple[str, str]]] = {
         "24.10.1": (
             "https://github.com/nokia/srlinux-yang-models/"
             "releases/download/v24.10.1/srlinux-24.10.1-492.zip"
@@ -53,7 +56,7 @@ class NokiaSRLinuxNode(Node):
         "25.3.2": (
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-srl-25.3.2/srlinux-25.3.2-312.zip"
-        )
+        ),
     }
 
     def get_default_node_type(self):
@@ -162,7 +165,7 @@ class NokiaSRLinuxNode(Node):
             "platform": self.get_platform(),
             "sw_version": self.version,
             "mgmt_ip": self.mgmt_ipv4,
-            "containerlab_label": "managedSrl"
+            "containerlab_label": "managedSrl",
         }
         return helpers.render_template("toponode.j2", data)
 
@@ -252,7 +255,9 @@ class NokiaSRLinuxNode(Node):
             (artifact_name, filename, download_url)
         """
         if self.version not in self.SUPPORTED_SCHEMA_PROFILES:
-            logger.warning(f"{SUBSTEP_INDENT}No schema profile for version {self.version}")
+            logger.warning(
+                f"{SUBSTEP_INDENT}No schema profile for version {self.version}"
+            )
             return (None, None, None)
         artifact_name = self.get_artifact_name()
         filename = f"srlinux-{self.version}.zip"

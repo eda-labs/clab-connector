@@ -2,8 +2,8 @@
 
 import logging
 
-from clab_connector.models.topology import parse_topology_file
 from clab_connector.clients.eda.client import EDAClient
+from clab_connector.models.topology import parse_topology_file
 from clab_connector.utils.constants import SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)

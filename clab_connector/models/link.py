@@ -1,9 +1,12 @@
 # clab_connector/models/link.py
 
 import logging
+
 from clab_connector.utils import helpers
 
 logger = logging.getLogger(__name__)
+
+ENDPOINT_PARTS = 2
 
 
 class Link:
@@ -50,9 +53,7 @@ class Link:
         """
         if self.node_1 is None or not self.node_1.is_eda_supported():
             return False
-        if self.node_2 is None or not self.node_2.is_eda_supported():
-            return False
-        return True
+        return not (self.node_2 is None or not self.node_2.is_eda_supported())
 
     def is_edge_link(self):
         """Check if exactly one endpoint is EDA-supported and the other is a linux node."""
@@ -60,9 +61,7 @@ class Link:
             return False
         if self.node_1.is_eda_supported() and self.node_2.kind == "linux":
             return True
-        if self.node_2.is_eda_supported() and self.node_1.kind == "linux":
-            return True
-        return False
+        return bool(self.node_2.is_eda_supported() and self.node_1.kind == "linux")
 
     def get_link_name(self, topology):
         """
@@ -134,19 +133,18 @@ def create_link(endpoints: list, nodes: list) -> Link:
         If the endpoint format is invalid or length is not 2.
     """
 
-    if len(endpoints) != 2:
-        raise ValueError("Link endpoints must be a list of length 2")
+    if len(endpoints) != ENDPOINT_PARTS:
+        raise ValueError(f"Link endpoints must be a list of length {ENDPOINT_PARTS}")
 
     def parse_endpoint(ep):
         parts = ep.split(":")
-        if len(parts) != 2:
+        if len(parts) != ENDPOINT_PARTS:
             raise ValueError(f"Invalid endpoint '{ep}', must be 'node:iface'")
         return parts[0], parts[1]
 
-    nodeA, ifA = parse_endpoint(endpoints[0])
-    nodeB, ifB = parse_endpoint(endpoints[1])
+    node_a, if_a = parse_endpoint(endpoints[0])
+    node_b, if_b = parse_endpoint(endpoints[1])
 
-    nA = next((n for n in nodes if n.name == nodeA), None)
-    nB = next((n for n in nodes if n.name == nodeB), None)
-
-    return Link(nA, ifA, nB, ifB)
+    node_a_obj = next((n for n in nodes if n.name == node_a), None)
+    node_b_obj = next((n for n in nodes if n.name == node_b), None)
+    return Link(node_a_obj, if_a, node_b_obj, if_b)

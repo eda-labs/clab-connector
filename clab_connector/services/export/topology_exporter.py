@@ -1,13 +1,14 @@
 # clab_connector/services/export/topology_exporter.py
 
 import logging
-from ipaddress import IPv4Network, IPv4Address
+from ipaddress import IPv4Address, IPv4Network
+
 from clab_connector.clients.kubernetes.client import (
-    list_toponodes_in_namespace,
     list_topolinks_in_namespace,
+    list_toponodes_in_namespace,
 )
-from clab_connector.utils.yaml_processor import YAMLProcessor
 from clab_connector.utils.constants import SUBSTEP_INDENT
+from clab_connector.utils.yaml_processor import YAMLProcessor
 
 
 class TopologyExporter:
@@ -205,6 +206,6 @@ class TopologyExporter:
             self.logger.info(
                 f"{SUBSTEP_INDENT}Exported containerlab file: {self.output_file}"
             )
-        except IOError as e:
+        except OSError as e:
             self.logger.error(f"Failed to write containerlab file: {e}")
             raise

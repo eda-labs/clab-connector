@@ -1,6 +1,7 @@
 # clab_connector/models/node/factory.py
 
 import logging
+
 from .base import Node
 from .nokia_srl import NokiaSRLinuxNode
 from .nokia_sros import NokiaSROSNode

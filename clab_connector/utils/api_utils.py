@@ -5,6 +5,8 @@
 import json
 import logging
 
+HTTP_OK = 200
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,15 +15,17 @@ def try_api_endpoints(client, endpoints, log_name="resource"):
     for endpoint in endpoints:
         try:
             response = client.get(endpoint)
-            if response.status == 200:
-                data = json.loads(response.data.decode('utf-8'))
+            if response.status == HTTP_OK:
+                data = json.loads(response.data.decode("utf-8"))
                 logger.debug(f"Successfully got {log_name} via endpoint: {endpoint}")
                 return data, endpoint
             else:
-                logger.debug(f"API call to {endpoint} returned status {response.status}")
+                logger.debug(
+                    f"API call to {endpoint} returned status {response.status}"
+                )
         except Exception as e:
             logger.debug(f"Error trying endpoint {endpoint}: {e}")
-    
+
     logger.warning(f"Failed to get {log_name} from any API endpoint")
     return None, None
 
@@ -29,11 +33,11 @@ def try_api_endpoints(client, endpoints, log_name="resource"):
 def extract_k8s_names(data, name_filter=None):
     """Extract names from Kubernetes-style API response"""
     names = []
-    
-    if isinstance(data, dict) and 'items' in data:
-        for item in data['items']:
-            if isinstance(item, dict) and 'metadata' in item:
-                name = item['metadata'].get('name', '')
+
+    if isinstance(data, dict) and "items" in data:
+        for item in data["items"]:
+            if isinstance(item, dict) and "metadata" in item:
+                name = item["metadata"].get("name", "")
                 if name and (not name_filter or name_filter(name)):
                     names.append(name)
     elif isinstance(data, list):
@@ -42,8 +46,8 @@ def extract_k8s_names(data, name_filter=None):
                 if not name_filter or name_filter(item):
                     names.append(item)
             elif isinstance(item, dict):
-                name = item.get('name', '') or item.get('metadata', {}).get('name', '')
+                name = item.get("name", "") or item.get("metadata", {}).get("name", "")
                 if name and (not name_filter or name_filter(name)):
                     names.append(name)
-    
+
     return names

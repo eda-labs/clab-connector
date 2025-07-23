@@ -1,7 +1,8 @@
 # clab_connector/utils/helpers.py
 
-import os
 import logging
+import os
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)

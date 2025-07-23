@@ -1,14 +1,13 @@
 # clab_connector/models/topology.py
 
+import json
 import logging
 import os
-import json
 
-from clab_connector.utils.exceptions import ClabConnectorError, TopologyFileError
-
-from clab_connector.models.node.factory import create_node
-from clab_connector.models.node.base import Node
 from clab_connector.models.link import create_link
+from clab_connector.models.node.base import Node
+from clab_connector.models.node.factory import create_node
+from clab_connector.utils.exceptions import ClabConnectorError, TopologyFileError
 
 logger = logging.getLogger(__name__)
 
@@ -165,14 +164,79 @@ class Topology:
             ):
                 if node is None or not node.is_eda_supported():
                     continue
-                if skip_edge_link_interfaces and is_edge and (
-                    peer is None or not peer.is_eda_supported()
+                if (
+                    skip_edge_link_interfaces
+                    and is_edge
+                    and (peer is None or not peer.is_eda_supported())
                 ):
                     continue
                 intf_yaml = node.get_topolink_interface(self, ifname, peer)
                 if intf_yaml:
                     interfaces.append(intf_yaml)
         return interfaces
+
+
+def _load_topology_data(path: str) -> dict:
+    if not os.path.isfile(path):
+        logger.critical(f"Topology file '{path}' does not exist!")
+        raise TopologyFileError(f"Topology file '{path}' does not exist!")
+
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        logger.critical(f"File '{path}' is not valid JSON.")
+        raise TopologyFileError(f"File '{path}' is not valid JSON.") from e
+    except OSError as e:
+        logger.critical(f"Failed to read topology file '{path}': {e}")
+        raise TopologyFileError(f"Failed to read topology file '{path}': {e}") from e
+
+
+def _parse_nodes(nodes_data: dict) -> tuple[list[Node], dict[str, Node]]:
+    node_objects: list[Node] = []
+    all_nodes: dict[str, Node] = {}
+    for node_name, node_data in nodes_data.items():
+        image = node_data.get("image")
+        version = image.split(":")[-1] if image and ":" in image else None
+        config = {
+            "kind": node_data["kind"],
+            "type": node_data["labels"].get("clab-node-type", "ixrd2"),
+            "version": version,
+            "mgmt_ipv4": node_data.get("mgmt-ipv4-address"),
+        }
+        node_obj = create_node(node_name, config) or Node(
+            name=node_name,
+            kind=node_data["kind"],
+            node_type=config.get("type"),
+            version=version,
+            mgmt_ipv4=node_data.get("mgmt-ipv4-address"),
+        )
+        if node_obj.is_eda_supported():
+            if not node_obj.version:
+                raise ClabConnectorError(f"Node {node_name} is missing a version")
+            node_objects.append(node_obj)
+        all_nodes[node_name] = node_obj
+    return node_objects, all_nodes
+
+
+def _parse_links(links: list, all_nodes: dict[str, Node]) -> list:
+    link_objects = []
+    for link_info in links:
+        a_name = link_info["a"]["node"]
+        z_name = link_info["z"]["node"]
+        if a_name not in all_nodes or z_name not in all_nodes:
+            continue
+        node_a = all_nodes[a_name]
+        node_z = all_nodes[z_name]
+        if not (node_a.is_eda_supported() or node_z.is_eda_supported()):
+            continue
+        endpoints = [
+            f"{a_name}:{link_info['a']['interface']}",
+            f"{z_name}:{link_info['z']['interface']}",
+        ]
+        ln = create_link(endpoints, list(all_nodes.values()))
+        link_objects.append(ln)
+    return link_objects
 
 
 def parse_topology_file(path: str) -> Topology:
@@ -197,19 +261,7 @@ def parse_topology_file(path: str) -> Topology:
         If the file is not recognized as a containerlab topology.
     """
     logger.info(f"Parsing topology file '{path}'")
-    if not os.path.isfile(path):
-        logger.critical(f"Topology file '{path}' does not exist!")
-        raise TopologyFileError(f"Topology file '{path}' does not exist!")
-
-    try:
-        with open(path, "r") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        logger.critical(f"File '{path}' is not valid JSON.")
-        raise TopologyFileError(f"File '{path}' is not valid JSON.") from e
-    except OSError as e:
-        logger.critical(f"Failed to read topology file '{path}': {e}")
-        raise TopologyFileError(f"Failed to read topology file '{path}': {e}") from e
+    data = _load_topology_data(path)
 
     if data.get("type") != "clab":
         raise ValueError("Not a valid containerlab topology file (missing 'type=clab')")
@@ -223,53 +275,8 @@ def parse_topology_file(path: str) -> Topology:
         first_key = next(iter(data["nodes"]))
         file_path = data["nodes"][first_key]["labels"].get("clab-topo-file", "")
 
-    # Create node objects
-    node_objects = []  # only nodes supported by EDA
-    all_nodes = {}
-    for node_name, node_data in data["nodes"].items():
-        image = node_data.get("image")
-        version = None
-        if image and ":" in image:
-            version = image.split(":")[-1]
-        config = {
-            "kind": node_data["kind"],
-            "type": node_data["labels"].get("clab-node-type", "ixrd2"),
-            "version": version,
-            "mgmt_ipv4": node_data.get("mgmt-ipv4-address"),
-        }
-        node_obj = create_node(node_name, config)
-        if node_obj is None:
-            node_obj = Node(
-                name=node_name,
-                kind=node_data["kind"],
-                node_type=config.get("type"),
-                version=version,
-                mgmt_ipv4=node_data.get("mgmt-ipv4-address"),
-            )
-        if node_obj.is_eda_supported():
-            if not node_obj.version:
-                raise ClabConnectorError(f"Node {node_name} is missing a version")
-            node_objects.append(node_obj)
-        all_nodes[node_name] = node_obj
-
-    # Create link objects
-    link_objects = []
-    for link_info in data["links"]:
-        a_name = link_info["a"]["node"]
-        z_name = link_info["z"]["node"]
-        if a_name not in all_nodes or z_name not in all_nodes:
-            continue
-        node_a = all_nodes[a_name]
-        node_z = all_nodes[z_name]
-        # Only consider links where at least one endpoint is EDA-supported
-        if not (node_a.is_eda_supported() or node_z.is_eda_supported()):
-            continue
-        endpoints = [
-            f"{a_name}:{link_info['a']['interface']}",
-            f"{z_name}:{link_info['z']['interface']}",
-        ]
-        ln = create_link(endpoints, list(all_nodes.values()))
-        link_objects.append(ln)
+    node_objects, all_nodes = _parse_nodes(data["nodes"])
+    link_objects = _parse_links(data["links"], all_nodes)
 
     topo = Topology(
         name=name,
