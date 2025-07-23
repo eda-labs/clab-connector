@@ -15,6 +15,37 @@ import paramiko
 
 logger = logging.getLogger(__name__)
 
+# Default retry parameters
+RETRIES = 20
+DELAY = 2.0
+
+
+def _run_with_retry(cmd: str, quiet: bool, retries: int = RETRIES, delay: float = DELAY) -> None:
+    """Run a shell command with retries."""
+    for attempt in range(retries):
+        suppress_stderr = quiet or (attempt < retries - 1)
+        try:
+            subprocess.check_call(
+                cmd,
+                shell=True,
+                stdout=subprocess.DEVNULL if quiet else None,
+                stderr=subprocess.DEVNULL if suppress_stderr else None,
+            )
+            if attempt > 0:
+                logger.info("Command succeeded on attempt %s/%s", attempt + 1, retries)
+            return
+        except subprocess.CalledProcessError:
+            if attempt == retries - 1:
+                logger.error("Command failed after %s attempts: %s", retries, cmd)
+                raise
+            logger.warning(
+                "Command failed (attempt %s/%s), retrying in %ss...",
+                attempt + 1,
+                retries,
+                delay,
+            )
+            time.sleep(delay)
+
 
 # --------------------------------------------------------------------------- #
 # SSH helpers                                                                 #
@@ -161,6 +192,44 @@ def execute_ssh_commands(
 # --------------------------------------------------------------------------- #
 # Helper utilities                                                            #
 # --------------------------------------------------------------------------- #
+def _extract_file(cmd: str, path: Path, desc: str, quiet: bool) -> int:
+    """Run `cmd` until `path` exists and is non-empty."""
+    for attempt in range(RETRIES):
+        _run_with_retry(cmd, quiet, retries=1)
+        size = path.stat().st_size if path.exists() else 0
+        if size > 0:
+            if attempt > 0:
+                logger.info("%s extraction succeeded on attempt %s/%s", desc, attempt + 1, RETRIES)
+            logger.info("%s file size: %s bytes", desc, size)
+            return size
+        if attempt == RETRIES - 1:
+            raise ValueError(f"{desc} file is empty after extraction")
+        logger.warning("%s file empty (attempt %s/%s), re-extracting...", desc, attempt + 1, RETRIES)
+        time.sleep(DELAY)
+
+
+def _extract_config(cmd: str, path: Path, quiet: bool) -> str:
+    """Extract a config file and return the inner configure block."""
+    for attempt in range(RETRIES):
+        _run_with_retry(cmd, quiet, retries=1)
+        cfg_text = path.read_text() if path.exists() else ""
+        if not cfg_text.strip():
+            if attempt == RETRIES - 1:
+                raise ValueError("Config file is empty after extraction")
+            logger.warning("Config file empty (attempt %s/%s), re-extracting...", attempt + 1, RETRIES)
+            time.sleep(DELAY)
+            continue
+        match = re.search(r"configure\s*\{(.*)\}", cfg_text, re.DOTALL)
+        if match and match.group(1).strip():
+            if attempt > 0:
+                logger.info("Config extraction succeeded on attempt %s/%s", attempt + 1, RETRIES)
+            return match.group(1).strip()
+        if attempt == RETRIES - 1:
+            raise ValueError("Could not find inner config block")
+        logger.warning("Config block not found (attempt %s/%s), re-extracting...", attempt + 1, RETRIES)
+        time.sleep(DELAY)
+
+
 def _extract_cert_and_config(
     node_name: str,
     namespace: str,
@@ -170,32 +239,8 @@ def _extract_cert_and_config(
     cfg_p: Path,
     quiet: bool,
 ) -> str:
-    def _run_with_retry(cmd: str, retries: int = 20, delay: float = 2.0) -> None:
-        """Run a command with retries."""
-        for attempt in range(retries):
-            try:
-                # Always suppress stderr during retries except on the last attempt
-                suppress_stderr = quiet or (attempt < retries - 1)
-                subprocess.check_call(
-                    cmd,
-                    shell=True,
-                    stdout=subprocess.DEVNULL if quiet else None,
-                    stderr=subprocess.DEVNULL if suppress_stderr else None,
-                )
-                if attempt > 0:
-                    logger.info(f"Command succeeded on attempt {attempt + 1}/{retries}")
-                return
-            except subprocess.CalledProcessError as e:
-                if attempt == retries - 1:
-                    logger.error(f"Command failed after {retries} attempts: {cmd}")
-                    raise
-                logger.warning(
-                    f"Command failed (attempt {attempt + 1}/{retries}), retrying in {delay}s..."
-                )
-                time.sleep(delay)
-
     logger.info("Extracting TLS cert / key …")
-    
+
     # Extract cert and key with retries and validation
     cert_cmd = (
         f"kubectl get secret {namespace}--{node_name}-cert-tls "
@@ -208,71 +253,11 @@ def _extract_cert_and_config(
         f"| base64 -d > {key_p}"
     )
     
-    for attempt in range(20):
-        try:
-            # Extract certificate
-            suppress_stderr = quiet or (attempt < 19)
-            subprocess.check_call(
-                cert_cmd,
-                shell=True,
-                stdout=subprocess.DEVNULL if quiet else None,
-                stderr=subprocess.DEVNULL if suppress_stderr else None,
-            )
-            
-            # Extract private key
-            subprocess.check_call(
-                key_cmd,
-                shell=True,
-                stdout=subprocess.DEVNULL if quiet else None,
-                stderr=subprocess.DEVNULL if suppress_stderr else None,
-            )
-            
-            # Validate files exist and are not empty
-            cert_size = cert_p.stat().st_size if cert_p.exists() else 0
-            key_size = key_p.stat().st_size if key_p.exists() else 0
-            
-            if cert_size == 0:
-                if attempt == 19:
-                    raise ValueError("Certificate file is empty after extraction")
-                logger.warning(
-                    f"Certificate file empty (attempt {attempt + 1}/20), re-extracting..."
-                )
-                time.sleep(2)
-                continue
-                
-            if key_size == 0:
-                if attempt == 19:
-                    raise ValueError("Private key file is empty after extraction")
-                logger.warning(
-                    f"Private key file empty (attempt {attempt + 1}/20), re-extracting..."
-                )
-                time.sleep(2)
-                continue
-            
-            if attempt > 0:
-                logger.info(f"TLS cert/key extraction succeeded on attempt {attempt + 1}/20")
-            logger.info(f"Certificate file size: {cert_size} bytes")
-            logger.info(f"Private key file size: {key_size} bytes")
-            break
-            
-        except subprocess.CalledProcessError as e:
-            if attempt == 19:
-                logger.error(f"TLS cert/key extraction failed after 20 attempts")
-                raise
-            logger.warning(
-                f"Cert/key extraction command failed (attempt {attempt + 1}/20), retrying in 2s..."
-            )
-            time.sleep(2)
-        except Exception as e:
-            if attempt == 19:
-                raise
-            logger.warning(
-                f"Error extracting cert/key (attempt {attempt + 1}/20): {e}, retrying..."
-            )
-            time.sleep(2)
+    _extract_file(cert_cmd, cert_p, "Certificate", quiet)
+    _extract_file(key_cmd, key_p, "Private key", quiet)
 
     logger.info("Extracting initial config …")
-    
+
     # Extract and parse config with retries
     extract_cmd = (
         f"kubectl get artifact initcfg-{node_name}-{version} -n {namespace} "
@@ -280,58 +265,7 @@ def _extract_cert_and_config(
         f"| sed 's/\\n/\\n/g' > {cfg_p}"
     )
     
-    for attempt in range(20):
-        try:
-            # Run the extraction command
-            suppress_stderr = quiet or (attempt < 19)
-            subprocess.check_call(
-                extract_cmd,
-                shell=True,
-                stdout=subprocess.DEVNULL if quiet else None,
-                stderr=subprocess.DEVNULL if suppress_stderr else None,
-            )
-            
-            # Try to read and parse the file
-            cfg_text = cfg_p.read_text()
-            if not cfg_text.strip():
-                if attempt == 19:
-                    raise ValueError("Config file is empty after extraction")
-                logger.warning(
-                    f"Config file empty (attempt {attempt + 1}/20), re-extracting..."
-                )
-                time.sleep(2)
-                continue
-
-            m = re.search(r"configure\s*\{(.*)\}", cfg_text, re.DOTALL)
-            if not m or not m.group(1).strip():
-                if attempt == 19:
-                    raise ValueError("Could not find inner config block")
-                logger.warning(
-                    f"Config block not found (attempt {attempt + 1}/20), re-extracting..."
-                )
-                time.sleep(2)
-                continue
-
-            if attempt > 0:
-                logger.info(f"Config extraction succeeded on attempt {attempt + 1}/20")
-            return m.group(1).strip()
-            
-        except subprocess.CalledProcessError as e:
-            if attempt == 19:
-                logger.error(f"Config extraction failed after 20 attempts: {extract_cmd}")
-                raise
-            logger.warning(
-                f"Extraction command failed (attempt {attempt + 1}/20), retrying in 2s..."
-            )
-            time.sleep(2)
-        except Exception as e:
-            if attempt == 19:
-                raise
-            logger.warning(
-                f"Error reading config (attempt {attempt + 1}/20): {e}, retrying..."
-            )
-            time.sleep(2)
-
+    return _extract_config(extract_cmd, cfg_p, quiet)
 
 def _copy_certificates(
     dest_roots: tuple[str, str],
