@@ -289,7 +289,7 @@ def wait_for_namespace(
 
 
 def update_namespace_description(
-    namespace: str, description: str, max_retries: int = 5, retry_delay: int = 2
+    namespace: str, description: str, max_retries: int = 10, retry_delay: int = 2
 ) -> bool:
     """
     Patch a namespace's description. For EDA, this may be a custom CRD

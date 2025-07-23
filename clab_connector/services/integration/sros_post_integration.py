@@ -170,38 +170,167 @@ def _extract_cert_and_config(
     cfg_p: Path,
     quiet: bool,
 ) -> str:
-    def _run(cmd: str) -> None:
-        subprocess.check_call(
-            cmd,
-            shell=True,
-            stdout=subprocess.DEVNULL if quiet else None,
-            stderr=subprocess.DEVNULL if quiet else None,
-        )
+    def _run_with_retry(cmd: str, retries: int = 20, delay: float = 2.0) -> None:
+        """Run a command with retries."""
+        for attempt in range(retries):
+            try:
+                # Always suppress stderr during retries except on the last attempt
+                suppress_stderr = quiet or (attempt < retries - 1)
+                subprocess.check_call(
+                    cmd,
+                    shell=True,
+                    stdout=subprocess.DEVNULL if quiet else None,
+                    stderr=subprocess.DEVNULL if suppress_stderr else None,
+                )
+                if attempt > 0:
+                    logger.info(f"Command succeeded on attempt {attempt + 1}/{retries}")
+                return
+            except subprocess.CalledProcessError as e:
+                if attempt == retries - 1:
+                    logger.error(f"Command failed after {retries} attempts: {cmd}")
+                    raise
+                logger.warning(
+                    f"Command failed (attempt {attempt + 1}/{retries}), retrying in {delay}s..."
+                )
+                time.sleep(delay)
 
     logger.info("Extracting TLS cert / key …")
-    _run(
+    
+    # Extract cert and key with retries and validation
+    cert_cmd = (
         f"kubectl get secret {namespace}--{node_name}-cert-tls "
         f"-n eda-system -o jsonpath='{{.data.tls\\.crt}}' "
         f"| base64 -d > {cert_p}"
     )
-    _run(
+    key_cmd = (
         f"kubectl get secret {namespace}--{node_name}-cert-tls "
         f"-n eda-system -o jsonpath='{{.data.tls\\.key}}' "
         f"| base64 -d > {key_p}"
     )
+    
+    for attempt in range(20):
+        try:
+            # Extract certificate
+            suppress_stderr = quiet or (attempt < 19)
+            subprocess.check_call(
+                cert_cmd,
+                shell=True,
+                stdout=subprocess.DEVNULL if quiet else None,
+                stderr=subprocess.DEVNULL if suppress_stderr else None,
+            )
+            
+            # Extract private key
+            subprocess.check_call(
+                key_cmd,
+                shell=True,
+                stdout=subprocess.DEVNULL if quiet else None,
+                stderr=subprocess.DEVNULL if suppress_stderr else None,
+            )
+            
+            # Validate files exist and are not empty
+            cert_size = cert_p.stat().st_size if cert_p.exists() else 0
+            key_size = key_p.stat().st_size if key_p.exists() else 0
+            
+            if cert_size == 0:
+                if attempt == 19:
+                    raise ValueError("Certificate file is empty after extraction")
+                logger.warning(
+                    f"Certificate file empty (attempt {attempt + 1}/20), re-extracting..."
+                )
+                time.sleep(2)
+                continue
+                
+            if key_size == 0:
+                if attempt == 19:
+                    raise ValueError("Private key file is empty after extraction")
+                logger.warning(
+                    f"Private key file empty (attempt {attempt + 1}/20), re-extracting..."
+                )
+                time.sleep(2)
+                continue
+            
+            if attempt > 0:
+                logger.info(f"TLS cert/key extraction succeeded on attempt {attempt + 1}/20")
+            logger.info(f"Certificate file size: {cert_size} bytes")
+            logger.info(f"Private key file size: {key_size} bytes")
+            break
+            
+        except subprocess.CalledProcessError as e:
+            if attempt == 19:
+                logger.error(f"TLS cert/key extraction failed after 20 attempts")
+                raise
+            logger.warning(
+                f"Cert/key extraction command failed (attempt {attempt + 1}/20), retrying in 2s..."
+            )
+            time.sleep(2)
+        except Exception as e:
+            if attempt == 19:
+                raise
+            logger.warning(
+                f"Error extracting cert/key (attempt {attempt + 1}/20): {e}, retrying..."
+            )
+            time.sleep(2)
 
     logger.info("Extracting initial config …")
-    _run(
+    
+    # Extract and parse config with retries
+    extract_cmd = (
         f"kubectl get artifact initcfg-{node_name}-{version} -n {namespace} "
         f"-o jsonpath='{{.spec.textFile.content}}' "
         f"| sed 's/\\n/\\n/g' > {cfg_p}"
     )
+    
+    for attempt in range(20):
+        try:
+            # Run the extraction command
+            suppress_stderr = quiet or (attempt < 19)
+            subprocess.check_call(
+                extract_cmd,
+                shell=True,
+                stdout=subprocess.DEVNULL if quiet else None,
+                stderr=subprocess.DEVNULL if suppress_stderr else None,
+            )
+            
+            # Try to read and parse the file
+            cfg_text = cfg_p.read_text()
+            if not cfg_text.strip():
+                if attempt == 19:
+                    raise ValueError("Config file is empty after extraction")
+                logger.warning(
+                    f"Config file empty (attempt {attempt + 1}/20), re-extracting..."
+                )
+                time.sleep(2)
+                continue
 
-    cfg_text = cfg_p.read_text()
-    m = re.search(r"configure\s*\{(.*)\}", cfg_text, re.DOTALL)
-    if not m or not m.group(1).strip():
-        raise ValueError("Could not find inner config block")
-    return m.group(1).strip()
+            m = re.search(r"configure\s*\{(.*)\}", cfg_text, re.DOTALL)
+            if not m or not m.group(1).strip():
+                if attempt == 19:
+                    raise ValueError("Could not find inner config block")
+                logger.warning(
+                    f"Config block not found (attempt {attempt + 1}/20), re-extracting..."
+                )
+                time.sleep(2)
+                continue
+
+            if attempt > 0:
+                logger.info(f"Config extraction succeeded on attempt {attempt + 1}/20")
+            return m.group(1).strip()
+            
+        except subprocess.CalledProcessError as e:
+            if attempt == 19:
+                logger.error(f"Config extraction failed after 20 attempts: {extract_cmd}")
+                raise
+            logger.warning(
+                f"Extraction command failed (attempt {attempt + 1}/20), retrying in 2s..."
+            )
+            time.sleep(2)
+        except Exception as e:
+            if attempt == 19:
+                raise
+            logger.warning(
+                f"Error reading config (attempt {attempt + 1}/20): {e}, retrying..."
+            )
+            time.sleep(2)
 
 
 def _copy_certificates(
@@ -214,13 +343,29 @@ def _copy_certificates(
     quiet: bool,
 ) -> str:
     logger.info("Copying certificates to device …")
+    
     for root in dest_roots:
-        if transfer_file(
+        logger.info(f"Attempting to copy certificates to root: {root}")
+        
+        cert_success = transfer_file(
             cert_p, root + "edaboot.crt", username, mgmt_ip, working_pw, quiet
-        ) and transfer_file(
+        )
+        if cert_success:
+            logger.info(f"Certificate copied successfully to {root}edaboot.crt")
+        else:
+            logger.warning(f"Failed to copy certificate to {root}edaboot.crt")
+            continue
+            
+        key_success = transfer_file(
             key_p, root + "edaboot.key", username, mgmt_ip, working_pw, quiet
-        ):
+        )
+        if key_success:
+            logger.info(f"Private key copied successfully to {root}edaboot.key")
+            logger.info(f"Both certificate files copied successfully using root: {root}")
             return root
+        else:
+            logger.warning(f"Failed to copy private key to {root}edaboot.key")
+    
     raise RuntimeError("Failed to copy certificate/key to device")
 
 
