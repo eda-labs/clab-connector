@@ -3,14 +3,14 @@ name: eda_sros
 topology:
   kinds:
     nokia_srlinux:
-      image: eda-docker-local.artifactory.nuq.ion.nokia.net/core/srlinux:0.0.0-78143
-    nokia_srsim:
-      image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+      image: ghcr.io/nokia/srlinux:24.10.1
+    nokia_sros:
+      image: registry.srlinux.dev/pub/vr-sros:25.3.R2
       type: SR-1
       license: license.txt
   nodes:
     dc-gw-1:
-      kind: nokia_srsim
+      kind: nokia_sros
     spine1:
       kind: nokia_srlinux
       type: ixrd5
