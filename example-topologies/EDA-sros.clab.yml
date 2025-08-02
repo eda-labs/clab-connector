@@ -11,6 +11,8 @@ topology:
   nodes:
     dc-gw-1:
       kind: nokia_srsim
+      env: 
+        NOKIA_SROS_MDA_1: me12-100gb-qsfp28 
     spine1:
       kind: nokia_srlinux
       type: ixrd5
