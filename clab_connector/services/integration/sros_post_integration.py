@@ -328,21 +328,27 @@ def prepare_sros_node(
     namespace: str,
     version: str,
     mgmt_ip: str,
+    node_type: str,
     username: str = "admin",
     password: str | None = None,
-    quiet: bool = False,
+    quiet: bool = True,
 ) -> bool:
     """
     Perform SROS-specific post-integration steps.
     """
     # First check if we can login with admin:admin
     # If we can't, assume the node is already bootstrapped
-    admin_pwd = "admin"
+    if node_type == "nokia_sros":
+        admin_pwd = "admin"
+    else:
+        admin_pwd = "NokiaSros1!"
     can_login = verify_ssh_credentials(mgmt_ip, username, [admin_pwd], quiet)
 
-    if not can_login:
+    if not can_login and node_type == "nokia_sros":
         logger.info("Node: %s already bootstrapped", node_name)
         return True
+    if not can_login:
+        logger.error("Can't login to node %s of kind %s", node_name, node_type)
 
     # Proceed with original logic if admin:admin works
     # 1. determine password list (keep provided one first if present)
@@ -357,7 +363,6 @@ def prepare_sros_node(
     if not working_pw:
         logger.error("No valid password found - aborting")
         return False
-
     # 2. create temp artefacts
     with tempfile.TemporaryDirectory() as tdir:
         tdir_path = Path(tdir)
