@@ -7,7 +7,7 @@ topology:
     nokia_srsim:
       image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
       type: SR-1
-      license: license.txt
+      license: /opt/nokia/license_sros.txt
   nodes:
     dc-gw-1:
       kind: nokia_srsim
@@ -15,13 +15,13 @@ topology:
         NOKIA_SROS_MDA_1: me12-100gb-qsfp28 
     spine1:
       kind: nokia_srlinux
-      type: ixrd5
+      type: ixr-d5
     leaf1:
       kind: nokia_srlinux
-      type: ixrd3l
+      type: ixr-d3l
     leaf2:
       kind: nokia_srlinux
-      type: ixrd3l
+      type: ixr-d3l
 
   links:
     - endpoints: ["spine1:e1-1", "leaf1:e1-33"]

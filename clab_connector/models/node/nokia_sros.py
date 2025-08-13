@@ -229,47 +229,64 @@ class NokiaSROSNode(Node):
             "components": components,  # Add component information
         }
         return helpers.render_template("toponode.j2", data)
-
-    def get_interface_name_for_kind(self, ifname):
-        """Convert a containerlab interface name to the SR OS EDA format."""
-
-        eda_name = ifname
-
-        m = re.match(r"^(\d+)/(\d+)/(\d+)$", ifname)
-        if m:
-            slot, mda_num, port = m.groups()
-            mda_letter = chr(96 + int(mda_num))
-            eda_name = f"ethernet-{slot}-{mda_letter}-{port}-1"
-        else:
-            m = re.match(r"^(\d+)/(\d+)/c(\d+)/(\d+)$", ifname)
-            if m:
-                slot, mda_num, channel, port = m.groups()
-                if mda_num == "1":
-                    eda_name = f"ethernet-{slot}-{channel}-{port}"
-                else:
-                    mda_letter = chr(96 + int(mda_num))
-                    eda_name = f"ethernet-{slot}-{mda_letter}-{channel}-{port}"
-            else:
-                m = re.match(r"^(\d+)/x(\d+)/(\d+)/(\d+)$", ifname)
-                if m:
-                    slot, xiom_id, mda_num, port = m.groups()
-                    mda_letter = chr(96 + int(mda_num))
-                    eda_name = f"ethernet-{slot}-{xiom_id}-{mda_letter}-{port}"
-                else:
-                    m = re.match(r"^eth(\d+)$", ifname)
-                    if m:
-                        eda_name = f"ethernet-1-a-{m.group(1)}-1"
-                    else:
-                        m = re.match(r"^e(\d+)-(\d+)$", ifname)
-                        if m:
-                            slot, port = m.groups()
-                            eda_name = f"ethernet-{slot}-a-{port}-1"
-                        else:
-                            m = re.match(r"^lo(\d+)$", ifname)
-                            if m:
-                                eda_name = f"loopback-{m.group(1)}"
-
-        return eda_name
+def get_interface_name_for_kind(self, ifname):
+    """Convert a containerlab interface name to the SR OS EDA format.
+    
+    Supported input formats:
+    - "1/2/3"           -> "ethernet-1-b-3-1"
+    - "1/2/c3/4"        -> "ethernet-1-3-4" (mda=1) or "ethernet-1-b-3-4" (mda>1)
+    - "1/x2/1/c3/1"        -> "ethernet-1-2-1-3-1"
+    - "eth1"            -> "ethernet-1-a-1-1"
+    - "e1-2"            -> "ethernet-1-a-2-1"
+    - "lo1"             -> "loopback-1"
+    
+    Args:
+        ifname: Interface name in containerlab format
+        
+    Returns:
+        Interface name in SR OS EDA format
+    """
+    
+    def mda_to_letter(mda_num):
+        """Convert MDA number to letter (1->a, 2->b, etc.)"""
+        return chr(96 + int(mda_num))
+    
+    # Define patterns with their transformation logic
+    patterns = [
+        # Pattern: "1/2/3" -> "ethernet-1-b-3-1"
+        (r"^(\d+)/(\d+)/(\d+)$", 
+         lambda m: f"ethernet-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-1"),
+        
+        # Pattern: "1/2/c3/4" -> conditional format
+        (r"^(\d+)/(\d+)/c(\d+)/(\d+)$",
+         lambda m: f"ethernet-{m[1]}-{m[3]}-{m[4]}" if m[2] == "1" 
+                   else f"ethernet-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-{m[4]}"),
+        
+        # Pattern: "1/x2/1/c3/1" -> "ethernet-1-2-1-c3-1"
+        (r"^(\d+)/x(\d+)/(\d+)/c(\d+)/(\d+)$",
+         lambda m: f"ethernet-{m[1]}-{m[2]}-{mda_to_letter(m[3])}-{m[4]}-{m[5]}"),
+        
+        # Pattern: "eth1" -> "ethernet-1-a-1-1"
+        (r"^eth(\d+)$",
+         lambda m: f"ethernet-1-a-{m[1]}-1"),
+        
+        # Pattern: "e1-2" -> "ethernet-1-a-2-1"
+        (r"^e(\d+)-(\d+)$",
+         lambda m: f"ethernet-{m[1]}-a-{m[2]}-1"),
+        
+        # Pattern: "lo1" -> "loopback-1"
+        (r"^lo(\d+)$",
+         lambda m: f"loopback-{m[1]}")
+    ]
+    
+    # Try each pattern
+    for pattern, transformer in patterns:
+        match = re.match(pattern, ifname)
+        if match:
+            return transformer(match.groups())
+    
+    # Return original if no pattern matches
+    return ifname
 
     def get_topolink_interface_name(self, topology, ifname):
         """
