@@ -386,13 +386,17 @@ class TopologyIntegrator:
 
     def run_sros_post_integration(self, node, namespace, normalized_version, quiet):
         """Run SROS post-integration"""
+        password = 'NokiaSros1!'
+        if node.kind == "nokia_sros": 
+           password = "admin"
         return prepare_sros_node(
             node_name=node.get_node_name(self.topology),
             namespace=namespace,
             version=normalized_version,
             mgmt_ip=node.mgmt_ipv4,
             username="admin",
-            password="admin",
+            password=password,
+            node_type=node.kind,
             quiet=quiet,
         )
 
@@ -406,9 +410,9 @@ class TopologyIntegrator:
 
         # Look for SROS nodes and run post-integration for them
         for node in self.topology.nodes:
-            if node.kind == "nokia_sros":
+            if (node.kind == "nokia_sros") or  (node.kind == "nokia_srsim"):
                 logger.info(
-                    f"{SUBSTEP_INDENT}Running SROS post-integration for node {node.name}"
+                    f"{SUBSTEP_INDENT}Running SROS post-integration for node {node.name} kind {node.kind}"
                 )
                 try:
                     # Get normalized version from the node

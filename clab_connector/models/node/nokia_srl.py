@@ -61,6 +61,10 @@ class NokiaSRLinuxNode(Node):
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-srl-25.3.3/srlinux-25.3.3-158.zip"
         ),
+        "25.7.1": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-srl-25.7.1/srlinux-25.7.1-180.zip"
+        ),
     }
 
     def get_default_node_type(self):
@@ -83,10 +87,20 @@ class NokiaSRLinuxNode(Node):
         str
             The platform name (e.g. '7220 IXR-D3L').
         """
-        if self.node_type and self.node_type.lower() == "ixsa1":
-            return "7215 IXS-A1"
-        t = self.node_type.replace("ixr", "")
-        return f"7220 IXR-{t.upper()}"
+        m = re.match(r"(?i)(^ixr|^sxr|^ixs)-?(.*)$", self.node_type)
+        if m:
+            prefix = (m.group(1) or "")
+            suffix = (m.group(2) or "")
+            if prefix.lower().startswith("ixr") and suffix.lower().startswith(("h", "d")):
+               return f"7220 IXR-{suffix.upper()}"
+            elif prefix.lower().startswith("sxr"):
+               return f"7730 IXR-{suffix.upper()}" 
+            elif prefix.lower().startswith("ixs"):
+               return f"7215 IXS-{suffix.upper()}"
+            else: 
+               return f"7250 IXR-{suffix.upper()}"
+        else: 
+            return f"NoMatchOnClabType"
 
     def is_eda_supported(self):
         """

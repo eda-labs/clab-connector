@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 KIND_MAPPING = {
     "nokia_srlinux": NokiaSRLinuxNode,
     "nokia_sros": NokiaSROSNode,
+    "nokia_srsim": NokiaSROSNode,
 }
 
 
