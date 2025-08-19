@@ -133,7 +133,11 @@ class NokiaSROSNode(Node):
             The platform name (e.g. '7750 SR-1').
         """
         if self.node_type and self.node_type.lower().startswith("sr-"):
-            # For SR-1, SR-7, etc.
+            # For SR-1, SR-7, SR-1s, etc. - preserve the exact case
+            # Only uppercase the "SR" part, keep the suffix as-is
+            if "-" in self.node_type:
+                parts = self.node_type.split("-", 1)
+                return f"7750 {parts[0].upper()}-{parts[1]}"
             return f"7750 {self.node_type.upper()}"
         return "7750 SR"  # Default fallback
 

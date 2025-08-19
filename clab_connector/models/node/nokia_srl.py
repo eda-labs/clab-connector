@@ -32,7 +32,26 @@ class NokiaSRLinuxNode(Node):
     # Mapping for EDA operating system
     EDA_OPERATING_SYSTEM: ClassVar[str] = "srl"
 
-    SUPPORTED_SCHEMA_PROFILES: ClassVar[dict[str, tuple[str, str]]] = {
+    def __init__(self, name, kind, node_type, version, mgmt_ipv4):
+        """Initialize a Nokia SR Linux node and check for deprecated type syntax."""
+        super().__init__(name, kind, node_type, version, mgmt_ipv4)
+
+        # Check if using old syntax (without dash) and warn about deprecation
+        if self.node_type and "-" not in self.node_type:
+            if "ixr" in self.node_type.lower():
+                logger.warning(
+                    f"Node '{self.name}' uses deprecated type syntax '{self.node_type}'. "
+                    f"Please update to '{self.node_type.replace('ixr', 'ixr-')}'. "
+                    "Old syntax will be deprecated in early 2026."
+                )
+            elif self.node_type.lower() == "ixsa1":
+                logger.warning(
+                    f"Node '{self.name}' uses deprecated type syntax '{self.node_type}'. "
+                    f"Please update to 'ixs-a1'. "
+                    "Old syntax will be deprecated in early 2026."
+                )
+
+    SUPPORTED_SCHEMA_PROFILES: ClassVar[dict[str, str]] = {
         "24.10.1": (
             "https://github.com/nokia/srlinux-yang-models/"
             "releases/download/v24.10.1/srlinux-24.10.1-492.zip"
