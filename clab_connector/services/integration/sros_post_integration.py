@@ -20,7 +20,9 @@ RETRIES = 20
 DELAY = 2.0
 
 
-def _run_with_retry(cmd: str, quiet: bool, retries: int = RETRIES, delay: float = DELAY) -> None:
+def _run_with_retry(
+    cmd: str, quiet: bool, retries: int = RETRIES, delay: float = DELAY
+) -> None:
     """Run a shell command with retries."""
     for attempt in range(retries):
         suppress_stderr = quiet or (attempt < retries - 1)
@@ -199,12 +201,22 @@ def _extract_file(cmd: str, path: Path, desc: str, quiet: bool) -> int:
         size = path.stat().st_size if path.exists() else 0
         if size > 0:
             if attempt > 0:
-                logger.info("%s extraction succeeded on attempt %s/%s", desc, attempt + 1, RETRIES)
+                logger.info(
+                    "%s extraction succeeded on attempt %s/%s",
+                    desc,
+                    attempt + 1,
+                    RETRIES,
+                )
             logger.info("%s file size: %s bytes", desc, size)
             return size
         if attempt == RETRIES - 1:
             raise ValueError(f"{desc} file is empty after extraction")
-        logger.warning("%s file empty (attempt %s/%s), re-extracting...", desc, attempt + 1, RETRIES)
+        logger.warning(
+            "%s file empty (attempt %s/%s), re-extracting...",
+            desc,
+            attempt + 1,
+            RETRIES,
+        )
         time.sleep(DELAY)
 
 
@@ -216,17 +228,27 @@ def _extract_config(cmd: str, path: Path, quiet: bool) -> str:
         if not cfg_text.strip():
             if attempt == RETRIES - 1:
                 raise ValueError("Config file is empty after extraction")
-            logger.warning("Config file empty (attempt %s/%s), re-extracting...", attempt + 1, RETRIES)
+            logger.warning(
+                "Config file empty (attempt %s/%s), re-extracting...",
+                attempt + 1,
+                RETRIES,
+            )
             time.sleep(DELAY)
             continue
         match = re.search(r"configure\s*\{(.*)\}", cfg_text, re.DOTALL)
         if match and match.group(1).strip():
             if attempt > 0:
-                logger.info("Config extraction succeeded on attempt %s/%s", attempt + 1, RETRIES)
+                logger.info(
+                    "Config extraction succeeded on attempt %s/%s", attempt + 1, RETRIES
+                )
             return match.group(1).strip()
         if attempt == RETRIES - 1:
             raise ValueError("Could not find inner config block")
-        logger.warning("Config block not found (attempt %s/%s), re-extracting...", attempt + 1, RETRIES)
+        logger.warning(
+            "Config block not found (attempt %s/%s), re-extracting...",
+            attempt + 1,
+            RETRIES,
+        )
         time.sleep(DELAY)
 
 
@@ -252,7 +274,7 @@ def _extract_cert_and_config(
         f"-n eda-system -o jsonpath='{{.data.tls\\.key}}' "
         f"| base64 -d > {key_p}"
     )
-    
+
     _extract_file(cert_cmd, cert_p, "Certificate", quiet)
     _extract_file(key_cmd, key_p, "Private key", quiet)
 
@@ -264,8 +286,9 @@ def _extract_cert_and_config(
         f"-o jsonpath='{{.spec.textFile.content}}' "
         f"| sed 's/\\n/\\n/g' > {cfg_p}"
     )
-    
+
     return _extract_config(extract_cmd, cfg_p, quiet)
+
 
 def _copy_certificates(
     dest_roots: tuple[str, str],
@@ -277,10 +300,10 @@ def _copy_certificates(
     quiet: bool,
 ) -> str:
     logger.info("Copying certificates to device …")
-    
+
     for root in dest_roots:
         logger.info(f"Attempting to copy certificates to root: {root}")
-        
+
         cert_success = transfer_file(
             cert_p, root + "edaboot.crt", username, mgmt_ip, working_pw, quiet
         )
@@ -289,17 +312,19 @@ def _copy_certificates(
         else:
             logger.warning(f"Failed to copy certificate to {root}edaboot.crt")
             continue
-            
+
         key_success = transfer_file(
             key_p, root + "edaboot.key", username, mgmt_ip, working_pw, quiet
         )
         if key_success:
             logger.info(f"Private key copied successfully to {root}edaboot.key")
-            logger.info(f"Both certificate files copied successfully using root: {root}")
+            logger.info(
+                f"Both certificate files copied successfully using root: {root}"
+            )
             return root
         else:
             logger.warning(f"Failed to copy private key to {root}edaboot.key")
-    
+
     raise RuntimeError("Failed to copy certificate/key to device")
 
 
