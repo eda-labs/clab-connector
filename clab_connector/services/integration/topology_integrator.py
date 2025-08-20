@@ -386,9 +386,9 @@ class TopologyIntegrator:
 
     def run_sros_post_integration(self, node, namespace, normalized_version, quiet):
         """Run SROS post-integration"""
-        password = 'NokiaSros1!'
-        if node.kind == "nokia_sros": 
-           password = "admin"
+        password = "NokiaSros1!"
+        if node.kind == "nokia_sros":
+            password = "admin"
         return prepare_sros_node(
             node_name=node.get_node_name(self.topology),
             namespace=namespace,

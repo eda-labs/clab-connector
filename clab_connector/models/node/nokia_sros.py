@@ -42,7 +42,6 @@ class NokiaSROSNode(Node):
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-v25.7.r1/sros-25.7.r1.zip"
         ),
-        
     }
 
     # Map of node types to their line card and MDA components
@@ -236,7 +235,7 @@ class NokiaSROSNode(Node):
 
     def get_interface_name_for_kind(self, ifname):
         """Convert a containerlab interface name to the SR OS EDA format.
-        
+
         Supported input formats:
         - "1/2/3"           -> "ethernet-1-b-3-1"
         - "1/2/c3/4"        -> "ethernet-1-3-4" (mda=1) or "ethernet-1-b-3-4" (mda>1)
@@ -244,55 +243,54 @@ class NokiaSROSNode(Node):
         - "eth1"            -> "ethernet-1-a-1-1"
         - "e1-2"            -> "ethernet-1-a-2-1"
         - "lo1"             -> "loopback-1"
-        
+
         Args:
             ifname: Interface name in containerlab format
-            
+
         Returns:
             Interface name in SR OS EDA format
         """
-        
+
         def mda_to_letter(mda_num):
             """Convert MDA number to letter (1->a, 2->b, etc.)"""
             return chr(96 + int(mda_num))
-        
+
         # Define patterns with their transformation logic
         patterns = [
             # Pattern: "1/2/3" -> "ethernet-1-b-3-1"
-            (r"^(\d+)/(\d+)/(\d+)$", 
-             lambda m: f"ethernet-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-1"),
-            
+            (
+                r"^(\d+)/(\d+)/(\d+)$",
+                lambda m: f"ethernet-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-1",
+            ),
             # Pattern: "1/2/c3/4" -> conditional format
-            (r"^(\d+)/(\d+)/c(\d+)/(\d+)$",
-             lambda m: f"ethernet-{m[1]}-{m[3]}-{m[4]}" if m[2] == "1" 
-                       else f"ethernet-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-{m[4]}"),
-            
+            (
+                r"^(\d+)/(\d+)/c(\d+)/(\d+)$",
+                lambda m: f"ethernet-{m[1]}-{m[3]}-{m[4]}"
+                if m[2] == "1"
+                else f"ethernet-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-{m[4]}",
+            ),
             # Pattern: "1/x2/1/c3/1" -> "ethernet-1-2-1-c3-1"
-            (r"^(\d+)/x(\d+)/(\d+)/c(\d+)/(\d+)$",
-             lambda m: f"ethernet-{m[1]}-{m[2]}-{mda_to_letter(m[3])}-{m[4]}-{m[5]}"),
-            
+            (
+                r"^(\d+)/x(\d+)/(\d+)/c(\d+)/(\d+)$",
+                lambda m: f"ethernet-{m[1]}-{m[2]}-{mda_to_letter(m[3])}-{m[4]}-{m[5]}",
+            ),
             # Pattern: "eth1" -> "ethernet-1-a-1-1"
-            (r"^eth(\d+)$",
-             lambda m: f"ethernet-1-a-{m[1]}-1"),
-            
+            (r"^eth(\d+)$", lambda m: f"ethernet-1-a-{m[1]}-1"),
             # Pattern: "e1-2" -> "ethernet-1-a-2-1"
-            (r"^e(\d+)-(\d+)$",
-             lambda m: f"ethernet-{m[1]}-a-{m[2]}-1"),
-            
+            (r"^e(\d+)-(\d+)$", lambda m: f"ethernet-{m[1]}-a-{m[2]}-1"),
             # Pattern: "lo1" -> "loopback-1"
-            (r"^lo(\d+)$",
-             lambda m: f"loopback-{m[1]}")
+            (r"^lo(\d+)$", lambda m: f"loopback-{m[1]}"),
         ]
-        
+
         # Try each pattern
         for pattern, transformer in patterns:
             match = re.match(pattern, ifname)
             if match:
                 return transformer(match.groups())
-        
+
         # Return original if no pattern matches
         return ifname
-    
+
     def get_topolink_interface_name(self, topology, ifname):
         """
         Generate a unique interface resource name for a link in EDA.

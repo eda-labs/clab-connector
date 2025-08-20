@@ -108,17 +108,19 @@ class NokiaSRLinuxNode(Node):
         """
         m = re.match(r"(?i)(^ixr|^sxr|^ixs)-?(.*)$", self.node_type)
         if m:
-            prefix = (m.group(1) or "")
-            suffix = (m.group(2) or "")
-            if prefix.lower().startswith("ixr") and suffix.lower().startswith(("h", "d")):
-               return f"7220 IXR-{suffix.upper()}"
+            prefix = m.group(1) or ""
+            suffix = m.group(2) or ""
+            if prefix.lower().startswith("ixr") and suffix.lower().startswith(
+                ("h", "d")
+            ):
+                return f"7220 IXR-{suffix.upper()}"
             elif prefix.lower().startswith("sxr"):
-               return f"7730 IXR-{suffix.upper()}" 
+                return f"7730 IXR-{suffix.upper()}"
             elif prefix.lower().startswith("ixs"):
-               return f"7215 IXS-{suffix.upper()}"
-            else: 
-               return f"7250 IXR-{suffix.upper()}"
-        else: 
+                return f"7215 IXS-{suffix.upper()}"
+            else:
+                return f"7250 IXR-{suffix.upper()}"
+        else:
             return "NoMatchOnClabType"
 
     def is_eda_supported(self):
