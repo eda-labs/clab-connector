@@ -93,9 +93,9 @@ class NokiaSRLinuxNode(Node):
         Returns
         -------
         str
-            The default node type (e.g., "ixrd3l").
+            The default node type (e.g., "ixr-d3l").
         """
-        return "ixrd3l"
+        return "ixr-d3l"
 
     def get_platform(self):
         """
