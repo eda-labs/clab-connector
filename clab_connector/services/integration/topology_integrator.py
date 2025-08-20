@@ -410,7 +410,7 @@ class TopologyIntegrator:
 
         # Look for SROS nodes and run post-integration for them
         for node in self.topology.nodes:
-            if (node.kind == "nokia_sros") or  (node.kind == "nokia_srsim"):
+            if node.kind in {"nokia_sros", "nokia_srsim"}:
                 logger.info(
                     f"{SUBSTEP_INDENT}Running SROS post-integration for node {node.name} kind {node.kind}"
                 )

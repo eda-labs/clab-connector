@@ -119,7 +119,7 @@ class NokiaSRLinuxNode(Node):
             else: 
                return f"7250 IXR-{suffix.upper()}"
         else: 
-            return f"NoMatchOnClabType"
+            return "NoMatchOnClabType"
 
     def is_eda_supported(self):
         """

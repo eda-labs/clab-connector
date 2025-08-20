@@ -338,10 +338,7 @@ def prepare_sros_node(
     """
     # First check if we can login with admin:admin
     # If we can't, assume the node is already bootstrapped
-    if node_type == "nokia_sros":
-        admin_pwd = "admin"
-    else:
-        admin_pwd = "NokiaSros1!"
+    admin_pwd = "admin" if node_type == "nokia_sros" else "NokiaSros1!"
     can_login = verify_ssh_credentials(mgmt_ip, username, [admin_pwd], quiet)
 
     if not can_login and node_type == "nokia_sros":
