@@ -160,7 +160,7 @@ class TopologyExporter:
         # guess 'nokia_srlinux' if operating_system is 'srl*'
         kind = "nokia_srlinux"
         if operating_system.lower().startswith("sros"):
-            kind = "nokia_sros"
+            kind = "nokia_srsim"
 
         node_def = {
             "kind": kind,

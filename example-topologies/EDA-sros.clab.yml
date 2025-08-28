@@ -3,25 +3,27 @@ name: eda_sros
 topology:
   kinds:
     nokia_srlinux:
-      image: ghcr.io/nokia/srlinux:24.10.1
-    nokia_sros:
-      image: registry.srlinux.dev/pub/vr-sros:25.3.R2
+      image: ghcr.io/nokia/srlinux:25.7.1
+    nokia_srsim:
+      image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
       type: SR-1
-      license: license.txt
+      license: /opt/nokia/license_sros.txt
   nodes:
     dc-gw-1:
-      kind: nokia_sros
+      kind: nokia_srsim
+      env: 
+        NOKIA_SROS_MDA_1: me12-100gb-qsfp28 
     spine1:
       kind: nokia_srlinux
-      type: ixrd5
+      type: ixr-d5
     leaf1:
       kind: nokia_srlinux
-      type: ixrd3l
+      type: ixr-d3l
     leaf2:
       kind: nokia_srlinux
-      type: ixrd3l
+      type: ixr-d3l
 
   links:
     - endpoints: ["spine1:e1-1", "leaf1:e1-33"]
     - endpoints: ["spine1:e1-2", "leaf2:e1-34"]
-    - endpoints: ["spine1:e1-3", "dc-gw-1:1/1/3"]
+    - endpoints: ["spine1:e1-3", "dc-gw-1:1/1/c3/1"]
