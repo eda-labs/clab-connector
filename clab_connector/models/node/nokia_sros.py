@@ -34,9 +34,21 @@ class NokiaSROSNode(Node):
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-v24.10.r4/sros-24.10.r4.zip"
         ),
+        "24.10.r5": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-v24.10.r5/sros-24.10.r5.zip"
+        ),
+        "24.10.r6": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-v24.10.r6/sros-24.10.r6.zip"
+        ),
         "25.3.r2": (
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-v25.3.r2/sros-25.3.r2.zip"
+        ),
+        "25.7.r1": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-v25.7.r1/sros-25.7.r1.zip"
         ),
     }
 
