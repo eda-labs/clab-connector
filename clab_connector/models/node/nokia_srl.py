@@ -68,6 +68,10 @@ class NokiaSRLinuxNode(Node):
             "https://github.com/nokia/srlinux-yang-models/"
             "releases/download/v24.10.4/srlinux-24.10.4-244.zip"
         ),
+        "24.10.5": (
+            "https://github.com/nokia/srlinux-yang-models/"
+            "nokia-srl-24.10.5/srlinux-24.10.5-344.zip"
+        ),
         "25.3.1": (
             "https://github.com/nokia/srlinux-yang-models/"
             "releases/download/v25.3.1/srlinux-25.3.1-149.zip"
@@ -82,7 +86,7 @@ class NokiaSRLinuxNode(Node):
         ),
         "25.7.1": (
             "https://github.com/nokia-eda/schema-profiles/"
-            "releases/download/nokia-srl-25.7.1/srlinux-25.7.1-180.zip"
+            "releases/download/nokia-srl-25.7.1/srlinux-25.7.1-187.zip"
         ),
     }
 

@@ -34,6 +34,14 @@ class NokiaSROSNode(Node):
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-v24.10.r4/sros-24.10.r4.zip"
         ),
+        "24.10.r5": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-v24.10.r5/sros-24.10.r5.zip"
+        ),
+        "24.10.r6": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-v24.10.r6/sros-24.10.r6.zip"
+        ),
         "25.3.r2": (
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-v25.3.r2/sros-25.3.r2.zip"
@@ -238,7 +246,7 @@ class NokiaSROSNode(Node):
 
         Supported input formats:
         - "1-2-3"           -> "ethernet-1-b-3"
-        - "1-2-c3-4"        ->  "ethernet-1-b-3-4" (mda>1) |  "1-1-c3-4" -> "ethernet-1-3-4" (mda=1) 
+        - "1-2-c3-4"        ->  "ethernet-1-b-3-4" (mda>1) |  "1-1-c3-4" -> "ethernet-1-3-4" (mda=1)
         - "1-x2-1-3"        -> "ethernet-1-2-1-3"
         - "1-x2-1-c3-1"        -> "ethernet-1-2-1-3-1"
 

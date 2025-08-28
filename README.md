@@ -272,6 +272,82 @@ If you encounter issues or have questions, please reach out through the followin
 
 Contributions are welcome! Please fork the repository and submit a pull request with your enhancements.
 
+### Development Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/eda-labs/clab-connector.git
+   cd clab-connector
+   ```
+
+2. **Install development dependencies:**
+   ```bash
+   make install
+   ```
+
+### Code Quality Standards
+
+**All code must pass linting and formatting checks before being committed.** We use [Ruff](https://github.com/astral-sh/ruff) for both linting and formatting.
+
+#### Using Make (Recommended)
+
+The project includes a Makefile with convenient commands:
+
+```bash
+# Run linting checks
+make lint
+
+# Format code
+make format
+
+# Auto-fix linting issues and format
+make fix
+
+# Run all checks (required before committing)
+make check
+
+# Run tests
+make test
+
+# See all available commands
+make help
+```
+
+#### Manual Commands
+
+If you prefer running commands directly:
+
+```bash
+# Check for linting issues
+uv run ruff check .
+
+# Format code
+uv run ruff format .
+
+# Auto-fix and format
+uv run ruff check --fix .
+uv run ruff format .
+```
+
+### Before Submitting a PR
+
+1. **Ensure all checks pass:**
+   ```bash
+   make check
+   ```
+
+2. **Run tests:**
+   ```bash
+   make test
+   ```
+
+3. **Format your code:**
+   ```bash
+   make format
+   ```
+
+Our CI pipeline will automatically verify that your code passes all ruff checks. PRs with failing checks cannot be merged.
+
 ## Acknowledgements
 
 - [Containerlab](https://containerlab.dev/) for providing an excellent network emulation platform.

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clab-connector"
-version = "0.5.9"
+version = "0.5.10"
 description = "EDA Containerlab Connector"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,8 +22,8 @@ dependencies = [
     "pycparser==2.22",
     "pynacl==1.5.0",
     "pyyaml==6.0.2",
-    "requests==2.32.4",
-    "typer==0.16.0",
+    "requests==2.32.5",
+    "typer==0.16.1",
     "urllib3==2.5.0",
     "click==8.2.1",
     "rich>=10.0.0",  # For better CLI output formatting
