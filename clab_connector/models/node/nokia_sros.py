@@ -263,7 +263,7 @@ class NokiaSROSNode(Node):
 
         # Define patterns with their transformation logic
         kind_patterns = {
-                "nokia_srsim": [
+            "nokia_srsim": [
                 # Pattern: "1-2-3" -> "ethernet-1-b-3"
                 (
                     r"^e(\d+)-(\d+)-(\d+)$",
@@ -286,8 +286,8 @@ class NokiaSROSNode(Node):
                     r"^e(\d+)-x(\d+)-(\d+)-(\d+)$",
                     lambda m: f"ethernet-{m[0]}-{m[1]}-{mda_to_letter(m[2])}-{m[3]}",
                 ),
-                ],
-                 "nokia_sros": [
+            ],
+            "nokia_sros": [
                 # Pattern: "1/2/3" -> "ethernet-1-b-3-1"
                 (
                     r"^(\d+)/(\d+)/(\d+)$",
@@ -311,12 +311,12 @@ class NokiaSROSNode(Node):
                 (r"^e(\d+)-(\d+)$", lambda m: f"ethernet-{m[0]}-a-{m[1]}-1"),
                 # Pattern: "lo1" -> "loopback-1"
                 (r"^lo(\d+)$", lambda m: f"loopback-{m[0]}"),
-                ]
+            ],
         }
         # Try each pattern
         patterns = kind_patterns.get(self.kind, [])
         if not patterns:
-           return "Bollocks"
+            return "Bollocks"
         for pattern, transformer in patterns:
             match = re.match(pattern, ifname)
             if match:
