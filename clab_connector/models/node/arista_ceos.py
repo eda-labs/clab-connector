@@ -27,7 +27,10 @@ class AristaCEOSNode(Node):
     EDA_OPERATING_SYSTEM: ClassVar[str] = "eos"
 
     SUPPORTED_SCHEMA_PROFILES: ClassVar[dict[str, tuple[str, str]]] = {
-        "4.33.2f": ("http://100.114.11.11:8080/ceos/eos-4.33.2F.zip"),
+        "4.33.2f": (
+            "https://github.com/hellt/tmp/"
+            "releases/download/v0.0.1-test1/eos-4.33.2f.zip"
+        ),
     }
 
     def get_platform(self):
