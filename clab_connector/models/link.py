@@ -77,7 +77,9 @@ class Link:
         str
             A link name safe for EDA.
         """
-        return f"{self.node_1.get_node_name(topology)}-{self.intf_1}-{self.node_2.get_node_name(topology)}-{self.intf_2}"
+        return helpers.normalize_name(
+            f"{self.node_1.get_node_name(topology)}-{self.intf_1}-{self.node_2.get_node_name(topology)}-{self.intf_2}"
+        )
 
     def get_topolink_yaml(self, topology):
         """

@@ -2,6 +2,7 @@
 
 import logging
 
+from .arista_ceos import AristaCEOSNode
 from .base import Node
 from .nokia_srl import NokiaSRLinuxNode
 from .nokia_sros import NokiaSROSNode
@@ -12,6 +13,7 @@ KIND_MAPPING = {
     "nokia_srlinux": NokiaSRLinuxNode,
     "nokia_sros": NokiaSROSNode,
     "nokia_srsim": NokiaSROSNode,
+    "ceos": AristaCEOSNode,
 }
 
 
@@ -47,4 +49,5 @@ def create_node(name: str, config: dict) -> Node:
         node_type=config.get("type"),
         version=config.get("version"),
         mgmt_ipv4=config.get("mgmt_ipv4"),
+        mgmt_ipv4_prefix_length=config.get("mgmt_ipv4_prefix_length"),
     )

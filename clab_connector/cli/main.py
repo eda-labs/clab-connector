@@ -23,7 +23,7 @@ from clab_connector.utils.logging_config import setup_logging
 # Disable urllib3 warnings (optional)
 urllib3.disable_warnings()
 
-SUPPORTED_KINDS = ["nokia_srlinux", "nokia_sros", "nokia_srsim"]
+SUPPORTED_KINDS = ["nokia_srlinux", "nokia_sros", "nokia_srsim", "ceos"]
 NODE_DISPLAY_LIMIT = 5
 
 
