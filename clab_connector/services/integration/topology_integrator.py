@@ -85,7 +85,7 @@ class TopologyIntegrator:
         self.create_artifacts()
 
         logger.info("== Creating init ==")
-        self.create_init(self.topology.mgmt_ipv4_gw)
+        self.create_init()
         self.commit_transaction("create init (bootstrap)")
 
         logger.info("== Creating node security profile ==")
@@ -222,7 +222,7 @@ class TopologyIntegrator:
         """Commit a transaction"""
         return self.eda_client.commit_transaction(description)
 
-    def create_init(self, gateway: str):
+    def create_init(self):
         """
         Create an Init resource in the namespace to bootstrap additional resources.
         """
@@ -239,7 +239,7 @@ class TopologyIntegrator:
         ceos_data = {
             "name": "init-base-ceos",
             "namespace": f"clab-{self.topology.name}",
-            "gateway": gateway,
+            "gateway": self.topology.mgmt_ipv4_gw,
             "nodeselectors": ["containerlab=managedEos"],
         }
         ceos_yml = helpers.render_template("init.yaml.j2", ceos_data)
