@@ -214,6 +214,15 @@ class Node:
             f"{self.get_node_name(topology)}-{self.get_interface_name_for_kind(ifname)}"
         )
 
+    def get_link_name_interface_token(self, ifname: str) -> str:
+        """
+        Return the interface token to embed in a TopoLink resource name.
+
+        By default, this is the raw containerlab interface string. Vendors can
+        override to normalize short/long forms (e.g., 'eth1' -> 'eth1_1').
+        """
+        return ifname
+
     def get_topolink_interface(self, _topology, _ifname, _other_node):
         """
         Render and return the interface resource YAML (Interface CR) for a link endpoint.
