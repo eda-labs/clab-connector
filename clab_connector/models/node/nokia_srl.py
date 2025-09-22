@@ -32,9 +32,24 @@ class NokiaSRLinuxNode(Node):
     # Mapping for EDA operating system
     EDA_OPERATING_SYSTEM: ClassVar[str] = "srl"
 
-    def __init__(self, name, kind, node_type, version, mgmt_ipv4):
+    def __init__(
+        self,
+        name,
+        kind,
+        node_type,
+        version,
+        mgmt_ipv4,
+        mgmt_ipv4_prefix_length,
+    ):
         """Initialize a Nokia SR Linux node and check for deprecated type syntax."""
-        super().__init__(name, kind, node_type, version, mgmt_ipv4)
+        super().__init__(
+            name,
+            kind,
+            node_type,
+            version,
+            mgmt_ipv4,
+            mgmt_ipv4_prefix_length,
+        )
 
         # Check if using old syntax (without dash) and warn about deprecation
         if self.node_type and "-" not in self.node_type:

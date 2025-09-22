@@ -11,6 +11,7 @@ from clab_connector.clients.kubernetes.client import (
     wait_for_namespace,
 )
 from clab_connector.models.topology import parse_topology_file
+from clab_connector.services.integration.ceos_post_integration import prepare_ceos_node
 from clab_connector.services.integration.sros_post_integration import prepare_sros_node
 from clab_connector.services.status.node_sync_checker import NodeSyncChecker
 from clab_connector.utils import helpers
@@ -225,11 +226,26 @@ class TopologyIntegrator:
         """
         Create an Init resource in the namespace to bootstrap additional resources.
         """
-        data = {"namespace": f"clab-{self.topology.name}"}
+        data = {
+            "name": "init-base",
+            "namespace": f"clab-{self.topology.name}",
+            "nodeselectors": ["containerlab=managedSrl", "containerlab=managedSros"],
+        }
         yml = helpers.render_template("init.yaml.j2", data)
         item = self.eda_client.add_replace_to_transaction(yml)
         if not self.eda_client.is_transaction_item_valid(item):
             raise ClabConnectorError("Validation error for init resource")
+
+        ceos_data = {
+            "name": "init-base-ceos",
+            "namespace": f"clab-{self.topology.name}",
+            "gateway": self.topology.mgmt_ipv4_gw,
+            "nodeselectors": ["containerlab=managedEos"],
+        }
+        ceos_yml = helpers.render_template("init.yaml.j2", ceos_data)
+        ceos_item = self.eda_client.add_replace_to_transaction(ceos_yml)
+        if not self.eda_client.is_transaction_item_valid(ceos_item):
+            raise ClabConnectorError("Validation error for cEOS init resource")
 
     def create_node_security_profile(self):
         """
@@ -295,6 +311,20 @@ class TopologyIntegrator:
         item_sros = self.eda_client.add_replace_to_transaction(sros_node_user)
         if not self.eda_client.is_transaction_item_valid(item_sros):
             raise ClabConnectorError("Validation error for SROS node user")
+
+        # Create cEOS node user
+        ceos_data = {
+            "namespace": f"clab-{self.topology.name}",
+            "node_user": "admin-ceos",
+            "username": "admin",
+            "password": "admin",
+            "ssh_pub_keys": ssh_pub_keys,
+            "node_selector": "containerlab=managedEos",
+        }
+        ceos_node_user = helpers.render_template("node-user.j2", ceos_data)
+        item_ceos = self.eda_client.add_replace_to_transaction(ceos_node_user)
+        if not self.eda_client.is_transaction_item_valid(item_ceos):
+            raise ClabConnectorError("Validation error for cEOS node user")
 
     def create_node_profiles(self):
         """
@@ -400,6 +430,19 @@ class TopologyIntegrator:
             quiet=quiet,
         )
 
+    def run_ceos_post_integration(self, node, namespace, normalized_version, quiet):
+        """Run CEOS post-integration"""
+        password = "admin"
+        return prepare_ceos_node(
+            node_name=node.get_node_name(self.topology),
+            namespace=namespace,
+            version=normalized_version,
+            mgmt_ip=node.mgmt_ipv4,
+            username="admin",
+            password=password,
+            quiet=quiet,
+        )
+
     def run_post_integration(self):
         """
         Run any post-integration steps required for specific node types.
@@ -429,6 +472,26 @@ class TopologyIntegrator:
                 except Exception as e:
                     logger.error(
                         f"Error during SROS post-integration for {node.name}: {e}"
+                    )
+            elif node.kind in {"arista_ceos"}:
+                logger.info(
+                    f"{SUBSTEP_INDENT}Running cEOS post-integration for node {node.name} kind {node.kind}"
+                )
+                try:
+                    # Get normalized version from the node
+                    normalized_version = node._normalize_version(node.version)
+                    success = self.run_ceos_post_integration(
+                        node, namespace, normalized_version, quiet
+                    )
+                    if success:
+                        logger.info(
+                            f"{SUBSTEP_INDENT}cEOS post-integration for {node.name} completed successfully"
+                        )
+                    else:
+                        logger.error(f"cEOS post-integration for {node.name} failed")
+                except Exception as e:
+                    logger.error(
+                        f"Error during cEOS post-integration for {node.name}: {e}"
                     )
 
     def check_node_synchronization(self):

@@ -25,14 +25,19 @@ class Node:
         The software version of the node.
     mgmt_ipv4 : str
         The management IPv4 address of the node.
+    mgmt_ipv4_prefix_length : str
+        The management IPv4 address prefix length of the node.
     """
 
-    def __init__(self, name, kind, node_type, version, mgmt_ipv4):
+    def __init__(
+        self, name, kind, node_type, version, mgmt_ipv4, mgmt_ipv4_prefix_length
+    ):
         self.name = name
         self.kind = kind
         self.node_type = node_type or self.get_default_node_type()
         self.version = version
         self.mgmt_ipv4 = mgmt_ipv4
+        self.mgmt_ipv4_prefix_length = mgmt_ipv4_prefix_length
 
     def _require_version(self):
         """Raise an error if the node has no software version defined."""
@@ -50,7 +55,7 @@ class Node:
         """
         return (
             f"Node(name={self.name}, kind={self.kind}, type={self.node_type}, "
-            f"version={self.version}, mgmt_ipv4={self.mgmt_ipv4})"
+            f"version={self.version}, mgmt_ipv4={self.mgmt_ipv4}, mgmt_ipv4_prefix_length={self.mgmt_ipv4_prefix_length})"
         )
 
     def ping(self):

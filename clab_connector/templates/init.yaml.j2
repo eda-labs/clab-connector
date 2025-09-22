@@ -1,10 +1,21 @@
 apiVersion: bootstrap.eda.nokia.com/v1alpha1
 kind: Init
 metadata:
-  name: init-base
+  name: {{ name }}
   namespace: {{ namespace }}
 spec:
   commitSave: true
   mgmt:
     ipv4DHCP: true
     ipv6DHCP: true
+{%- if gateway is defined %}
+    staticRoutes:
+    - nextHop: {{ gateway }}
+      prefix: 0.0.0.0/0
+{%- endif %}
+{%- if nodeselectors is defined and nodeselectors is iterable and (nodeselectors is not string and nodeselectors is not mapping) %}
+  nodeSelector:
+  {%- for nodeselector in nodeselectors %}
+    - {{ nodeselector }}
+  {%- endfor %}
+{%- endif %}

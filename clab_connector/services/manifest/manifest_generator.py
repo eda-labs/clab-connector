@@ -88,8 +88,28 @@ class ManifestGenerator:
             self.cr_groups["artifacts"] = artifacts
 
         # --- Init resource
-        init_yaml = helpers.render_template("init.yaml.j2", {"namespace": namespace})
-        self.cr_groups["init"] = [init_yaml]
+        init_yaml = helpers.render_template(
+            "init.yaml.j2",
+            {
+                "name": "init-base",
+                "namespace": namespace,
+                "nodeselectors": [
+                    "containerlab=managedSrl",
+                    "containerlab=managedSros",
+                ],
+            },
+        )
+        init_ceos_yaml = helpers.render_template(
+            "init.yaml.j2",
+            {
+                "name": "init-base-ceos",
+                "namespace": namespace,
+                "gateway": self.topology.mgmt_ipv4_gw,
+                "nodeselectors": ["containerlab=managedEos"],
+            },
+        )
+
+        self.cr_groups["init"] = [init_yaml, init_ceos_yaml]
 
         # --- Node Security Profile
         nsp_yaml = helpers.render_template(
@@ -126,8 +146,19 @@ class ManifestGenerator:
         }
         sros_node_user = helpers.render_template("node-user.j2", sros_data)
 
+        # Create cEOS node user
+        ceos_data = {
+            "namespace": namespace,
+            "node_user": "admin-ceos",
+            "username": "admin",
+            "password": "admin",
+            "ssh_pub_keys": self.topology.ssh_pub_keys or [],
+            "node_selector": "containerlab=managedEos",
+        }
+        ceos_node_user = helpers.render_template("node-user.j2", ceos_data)
+
         # Add both node users to the manifest
-        self.cr_groups["node-user"] = [srl_node_user, sros_node_user]
+        self.cr_groups["node-user"] = [srl_node_user, sros_node_user, ceos_node_user]
 
         # --- Node Profiles
         profiles = self.topology.get_node_profiles()

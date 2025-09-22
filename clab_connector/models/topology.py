@@ -32,9 +32,12 @@ class Topology:
         Path to the original containerlab file if available.
     """
 
-    def __init__(self, name, mgmt_subnet, ssh_keys, nodes, links, clab_file_path=""):
+    def __init__(
+        self, name, mgmt_subnet, mgmt_gw, ssh_keys, nodes, links, clab_file_path=""
+    ):
         self.name = name
         self.mgmt_ipv4_subnet = mgmt_subnet
+        self.mgmt_ipv4_gw = mgmt_gw
         self.ssh_pub_keys = ssh_keys
         self.nodes = nodes
         self.links = links
@@ -203,6 +206,7 @@ def _parse_nodes(nodes_data: dict) -> tuple[list[Node], dict[str, Node]]:
             "type": node_data["labels"].get("clab-node-type", "ixrd2"),
             "version": version,
             "mgmt_ipv4": node_data.get("mgmt-ipv4-address"),
+            "mgmt_ipv4_prefix_length": node_data.get("mgmt-ipv4-prefix-length"),
         }
         node_obj = create_node(node_name, config) or Node(
             name=node_name,
@@ -210,6 +214,7 @@ def _parse_nodes(nodes_data: dict) -> tuple[list[Node], dict[str, Node]]:
             node_type=config.get("type"),
             version=version,
             mgmt_ipv4=node_data.get("mgmt-ipv4-address"),
+            mgmt_ipv4_prefix_length=node_data.get("mgmt-ipv4-prefix-length"),
         )
         if node_obj.is_eda_supported():
             if not node_obj.version:
@@ -268,6 +273,7 @@ def parse_topology_file(path: str) -> Topology:
 
     name = data["name"]
     mgmt_subnet = data["clab"]["config"]["mgmt"].get("ipv4-subnet")
+    mgmt_gw = data["clab"]["config"]["mgmt"].get("ipv4-gw")
     ssh_keys = data.get("ssh-pub-keys", [])
     file_path = ""
 
@@ -281,6 +287,7 @@ def parse_topology_file(path: str) -> Topology:
     topo = Topology(
         name=name,
         mgmt_subnet=mgmt_subnet,
+        mgmt_gw=mgmt_gw,
         ssh_keys=ssh_keys,
         nodes=node_objects,
         links=link_objects,
