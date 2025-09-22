@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clab-connector"
-version = "0.6.1+arista"
+version = "0.7.0"
 description = "EDA Containerlab Connector"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "bcrypt==4.3.0",
     "certifi==2025.8.3",
-    "cffi==1.17.1",
+    "cffi==2.0.0",
     "charset-normalizer==3.4.3",
     "cryptography==45.0.7",
     "idna==3.10",
@@ -19,11 +19,11 @@ dependencies = [
     "kubernetes==33.1.0",
     "markupsafe==3.0.2",
     "paramiko>=3.5.1",
-    "pycparser==2.22",
+    "pycparser==2.23",
     "pynacl==1.5.0",
     "pyyaml==6.0.2",
     "requests==2.32.5",
-    "typer==0.17.3",
+    "typer==0.17.4",
     "urllib3==2.5.0",
     "click==8.2.1",
     "rich>=10.0.0",  # For better CLI output formatting
