@@ -77,18 +77,8 @@ class Link:
         str
             A link name safe for EDA.
         """
-        i1 = (
-            self.node_1.get_link_name_interface_token(self.intf_1)
-            if self.node_1 is not None
-            else self.intf_1
-        )
-        i2 = (
-            self.node_2.get_link_name_interface_token(self.intf_2)
-            if self.node_2 is not None
-            else self.intf_2
-        )
         return helpers.normalize_name(
-            f"{self.node_1.get_node_name(topology)}-{i1}-{self.node_2.get_node_name(topology)}-{i2}"
+            f"{self.node_1.get_node_name(topology)}-{self.intf_1}-{self.node_2.get_node_name(topology)}-{self.intf_2}"
         )
 
     def get_topolink_yaml(self, topology):

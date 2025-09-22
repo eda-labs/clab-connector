@@ -143,51 +143,10 @@ class AristaCEOSNode(Node):
         str
             Arista cEOS style name, e.g. 'ethernet-1-1'.
         """
-        # Accept both ethX_Y/etX_Y and short ethX/etX, mapping to ethernet-X-Y
-        # Examples:
-        #   eth1_1 -> ethernet-1-1
-        #   et2_3  -> ethernet-2-3
-        #   eth5   -> ethernet-5-1 (default breakout '1')
-        #   et7    -> ethernet-7-1
-        # Already EDA style (ethernet-1-1) is returned as-is
-        m = re.match(r"^ethernet-(\d+)-(\d+)$", ifname, flags=re.IGNORECASE)
-        if m:
-            return f"ethernet-{m.group(1)}-{m.group(2)}"
-
-        m = re.match(r"^[a-zA-Z]+(\d+)_(\d+)$", ifname)
-        if m:
-            return f"ethernet-{m.group(1)}-{m.group(2)}"
-
-        m = re.match(r"^(?:eth|et)(\d+)$", ifname, flags=re.IGNORECASE)
-        if m:
-            return f"ethernet-{m.group(1)}-1"
-
-        return ifname
-
-    def get_link_name_interface_token(self, ifname: str) -> str:
-        """
-        Normalize interface token used in TopoLink resource name so that
-        short-form names (e.g., 'eth1') resolve to the same token as
-        long-form names (e.g., 'eth1_1'). This keeps manifests identical
-        regardless of which form the topology used.
-
-        We deliberately keep the token in containerlab style (ethX_Y) to
-        preserve existing link names where 'ethX_Y' was used.
-        """
-        # ethX_Y or etX_Y -> keep as-is
-        if re.match(r"^(?:eth|et)\d+_\d+$", ifname, flags=re.IGNORECASE):
-            return ifname
-
-        # ethX or etX -> normalize to ethX_1 / etX_1
-        m = re.match(r"^(eth|et)(\d+)$", ifname, flags=re.IGNORECASE)
-        if m:
-            return f"{m.group(1)}{m.group(2)}_1"
-
-        # If already in EDA style, convert to ethX_Y token for stability
-        m = re.match(r"^ethernet-(\d+)-(\d+)$", ifname, flags=re.IGNORECASE)
-        if m:
-            return f"eth{m.group(1)}_{m.group(2)}"
-
+        pattern = re.compile(r"^[a-zA-Z]+(\d+)_(\d+)$")
+        match = pattern.match(ifname)
+        if match:
+            return f"ethernet-{match.group(1)}-{match.group(2)}"
         return ifname
 
     def get_topolink_interface_name(self, topology, ifname):
