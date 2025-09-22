@@ -473,7 +473,7 @@ class TopologyIntegrator:
                     logger.error(
                         f"Error during SROS post-integration for {node.name}: {e}"
                     )
-            elif node.kind in {"ceos"}:
+            elif node.kind in {"arista_ceos"}:
                 logger.info(
                     f"{SUBSTEP_INDENT}Running cEOS post-integration for node {node.name} kind {node.kind}"
                 )

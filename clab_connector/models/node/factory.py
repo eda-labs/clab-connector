@@ -13,7 +13,7 @@ KIND_MAPPING = {
     "nokia_srlinux": NokiaSRLinuxNode,
     "nokia_sros": NokiaSROSNode,
     "nokia_srsim": NokiaSROSNode,
-    "ceos": AristaCEOSNode,
+    "arista_ceos": AristaCEOSNode,
 }
 
 
