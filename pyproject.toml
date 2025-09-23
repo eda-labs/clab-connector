@@ -23,9 +23,9 @@ dependencies = [
     "pynacl==1.5.0",
     "pyyaml==6.0.2",
     "requests==2.32.5",
-    "typer==0.17.4",
+    "typer==0.19.1",
     "urllib3==2.5.0",
-    "click==8.2.1",
+    "click==8.3.0",
     "rich>=10.0.0",  # For better CLI output formatting
 ]
 
