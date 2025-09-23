@@ -11,11 +11,9 @@ spec:
         - sudo
       nodeSelector:
         - {{ node_selector }}
-  sshPublicKeys:
   {%- if ssh_pub_keys and ssh_pub_keys|length > 0 %}
+  sshPublicKeys:
   {% for key in ssh_pub_keys %}
     - {{ key }}
   {% endfor %}
-  {%- else %}
-    []
   {%- endif %}
