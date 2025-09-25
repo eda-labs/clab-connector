@@ -13,7 +13,7 @@ dependencies = [
     "certifi==2025.8.3",
     "cffi==2.0.0",
     "charset-normalizer==3.4.3",
-    "cryptography==45.0.7",
+    "cryptography==46.0.1",
     "idna==3.10",
     "jinja2==3.1.6",
     "kubernetes==33.1.0",
@@ -26,7 +26,7 @@ dependencies = [
     "typer==0.19.1",
     "urllib3==2.5.0",
     "click==8.3.0",
-    "rich>=10.0.0",  # For better CLI output formatting
+    "rich>=14.1.0",
 ]
 
 [project.scripts]
@@ -135,8 +135,8 @@ dev = [
     "bandit>=1.8.6",
     "black>=25.1.0",
     "isort>=6.0.1",
-    "mypy>=1.17.0",
-    "pytest>=8.4.1",
-    "pytest-cov>=6.2.1",
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
     "ruff>=0.12.4",
 ]
