@@ -17,7 +17,7 @@ dependencies = [
     "idna==3.10",
     "jinja2==3.1.6",
     "kubernetes==33.1.0",
-    "markupsafe==3.0.2",
+    "markupsafe==3.0.3",
     "paramiko>=3.5.1",
     "pycparser==2.23",
     "pynacl==1.5.0",
