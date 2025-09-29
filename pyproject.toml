@@ -21,7 +21,7 @@ dependencies = [
     "paramiko>=3.5.1",
     "pycparser==2.23",
     "pynacl==1.5.0",
-    "pyyaml==6.0.2",
+    "pyyaml==6.0.3",
     "requests==2.32.5",
     "typer==0.19.1",
     "urllib3==2.5.0",
