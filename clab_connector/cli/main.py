@@ -35,6 +35,11 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
+class InterfaceEncapsulation(str, Enum):
+    UNTAGGED = "untagged"
+    DOT1Q = "dot1q"
+
+
 app = typer.Typer(
     name="clab-connector",
     help="Integrate or remove an existing containerlab topology with EDA (Event-Driven Automation)",
@@ -53,6 +58,20 @@ log_file_option = typer.Option(
     "--log-file",
     "-f",
     help="Optional log file path",
+)
+
+edge_encapsulation_option = typer.Option(
+    None,
+    "--edge-encapsulation",
+    help="Encapsulation type for generated edge interfaces",
+    case_sensitive=False,
+)
+
+isl_encapsulation_option = typer.Option(
+    None,
+    "--isl-encapsulation",
+    help="Encapsulation type for generated inter-switch link interfaces",
+    case_sensitive=False,
 )
 
 
@@ -81,7 +100,7 @@ def complete_eda_url(
 
 
 @app.command(name="integrate", help="Integrate containerlab with EDA")
-def integrate_cmd(
+def integrate_cmd(  # noqa: PLR0913
     topology_data: Annotated[
         Path,
         typer.Option(
@@ -147,6 +166,8 @@ def integrate_cmd(
         "--sync-timeout",
         help="Timeout for node synchronization check in seconds",
     ),
+    edge_encapsulation: InterfaceEncapsulation | None = edge_encapsulation_option,
+    isl_encapsulation: InterfaceEncapsulation | None = isl_encapsulation_option,
 ):
     """CLI command to integrate a containerlab topology with EDA."""
 
@@ -172,6 +193,14 @@ def integrate_cmd(
     args.skip_edge_intfs = skip_edge_intfs
     args.enable_sync_check = enable_sync_check
     args.sync_timeout = sync_timeout
+    if edge_encapsulation and edge_encapsulation != InterfaceEncapsulation.UNTAGGED:
+        args.edge_encapsulation = edge_encapsulation.value
+    else:
+        args.edge_encapsulation = None
+    if isl_encapsulation and isl_encapsulation != InterfaceEncapsulation.UNTAGGED:
+        args.isl_encapsulation = isl_encapsulation.value
+    else:
+        args.isl_encapsulation = None
 
     def execute_integration(a):
         eda_client = create_eda_client(
@@ -193,6 +222,8 @@ def integrate_cmd(
             topology_file=a.topology_data,
             skip_edge_intfs=a.skip_edge_intfs,
             namespace_override=a.namespace_override,
+            edge_encapsulation=a.edge_encapsulation,
+            isl_encapsulation=a.isl_encapsulation,
         )
 
     try:
@@ -364,6 +395,8 @@ def generate_crs_cmd(
         "--skip-edge-intfs",
         help="Skip creation of edge links and their interfaces",
     ),
+    edge_encapsulation: InterfaceEncapsulation | None = edge_encapsulation_option,
+    isl_encapsulation: InterfaceEncapsulation | None = isl_encapsulation_option,
 ):
     """
     Generate the CR YAML manifests (artifacts, init, node security profile,
@@ -383,6 +416,18 @@ def generate_crs_cmd(
             separate=separate,
             skip_edge_intfs=skip_edge_intfs,
             namespace=namespace_override,
+            edge_encapsulation=(
+                edge_encapsulation.value
+                if edge_encapsulation
+                and edge_encapsulation != InterfaceEncapsulation.UNTAGGED
+                else None
+            ),
+            isl_encapsulation=(
+                isl_encapsulation.value
+                if isl_encapsulation
+                and isl_encapsulation != InterfaceEncapsulation.UNTAGGED
+                else None
+            ),
         )
         generator.generate()
         generator.output_manifests()

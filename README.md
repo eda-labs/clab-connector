@@ -148,6 +148,8 @@ clab-connector integrate \
 | `--log-file`, `-f`      | No       | None    | Optional log file path                                 |
 | `--verify`              | No       | False   | Enable certificate verification for EDA                |
 | `--skip-edge-intfs`     | No       | False   | Skip creation of edge links and their interfaces       |
+| `--edge-encapsulation`  | No       | None    | Encapsulation for generated edge interfaces (`dot1q`)  |
+| `--isl-encapsulation`   | No       | None    | Encapsulation for inter-switch interfaces (`dot1q`)    |
 
 
 > [!NOTE]
@@ -253,6 +255,8 @@ clab-connector generate-crs \
 | `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)      |
 | `--log-file`, `-f`      | No       | None    | Optional log file path                                 |
 | `--skip-edge-intfs`     | No       | False   | Skip creation of edge links and their interfaces       |
+| `--edge-encapsulation`  | No       | None    | Encapsulation for generated edge interfaces (`dot1q`)  |
+| `--isl-encapsulation`   | No       | None    | Encapsulation for inter-switch interfaces (`dot1q`)    |
 | `--namespace`, `-n`     | No       | None    | Namespace to use instead of deriving from the topology |
 
 

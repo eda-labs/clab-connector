@@ -41,12 +41,16 @@ class TopologyIntegrator:
         self.topology = None
         self.enable_sync_checking = enable_sync_checking
         self.sync_timeout = sync_timeout
+        self.edge_encapsulation: str | None = None
+        self.isl_encapsulation: str | None = None
 
     def run(
         self,
         topology_file,
         skip_edge_intfs: bool = False,
         namespace_override: str | None = None,
+        edge_encapsulation: str | None = None,
+        isl_encapsulation: str | None = None,
     ):
         """
         Parse the topology, run connectivity checks, and create EDA resources.
@@ -73,6 +77,8 @@ class TopologyIntegrator:
             If any resource fails validation.
         """
         logger.info("Parsing topology for integration")
+        self.edge_encapsulation = edge_encapsulation
+        self.isl_encapsulation = isl_encapsulation
         self.topology = parse_topology_file(
             str(topology_file), namespace=namespace_override
         )
@@ -119,7 +125,11 @@ class TopologyIntegrator:
         # Nodes are committed in batches within create_toponodes method
 
         logger.info("== Adding topolink interfaces ==")
-        self.create_topolink_interfaces(skip_edge_intfs)
+        self.create_topolink_interfaces(
+            skip_edge_intfs,
+            edge_encapsulation=self.edge_encapsulation,
+            isl_encapsulation=self.isl_encapsulation,
+        )
         # Only commit if there are transactions
         if self.eda_client.transactions:
             self.commit_transaction("create topolink interfaces")
@@ -402,12 +412,19 @@ class TopologyIntegrator:
                 )
                 time.sleep(batch_delay)
 
-    def create_topolink_interfaces(self, skip_edge_intfs: bool = False):
+    def create_topolink_interfaces(
+        self,
+        skip_edge_intfs: bool = False,
+        edge_encapsulation: str | None = None,
+        isl_encapsulation: str | None = None,
+    ):
         """
         Create Interface resources for each link endpoint in the topology.
         """
         interfaces = self.topology.get_topolink_interfaces(
-            skip_edge_link_interfaces=skip_edge_intfs
+            skip_edge_link_interfaces=skip_edge_intfs,
+            edge_encapsulation=edge_encapsulation,
+            isl_encapsulation=isl_encapsulation,
         )
         for intf_yaml in interfaces:
             item = self.eda_client.add_replace_to_transaction(intf_yaml)

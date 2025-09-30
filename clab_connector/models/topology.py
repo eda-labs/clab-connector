@@ -175,7 +175,12 @@ class Topology:
                     links.append(link_yaml)
         return links
 
-    def get_topolink_interfaces(self, skip_edge_link_interfaces: bool = False):
+    def get_topolink_interfaces(
+        self,
+        skip_edge_link_interfaces: bool = False,
+        edge_encapsulation: str | None = None,
+        isl_encapsulation: str | None = None,
+    ):
         """
         Generate Interface YAML for each link endpoint (if EDA-supported).
 
@@ -205,7 +210,13 @@ class Topology:
                     and (peer is None or not peer.is_eda_supported())
                 ):
                     continue
-                intf_yaml = node.get_topolink_interface(self, ifname, peer)
+                intf_yaml = node.get_topolink_interface(
+                    self,
+                    ifname,
+                    peer,
+                    edge_encapsulation=edge_encapsulation,
+                    isl_encapsulation=isl_encapsulation,
+                )
                 if intf_yaml:
                     interfaces.append(intf_yaml)
         return interfaces

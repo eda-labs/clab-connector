@@ -162,7 +162,14 @@ class AristaCEOSNode(Node):
         # No longer strip out the 'ethernet-' prefix to maintain consistency with SR Linux
         return f"{node_name}-{eda_ifname}"
 
-    def get_topolink_interface(self, topology, ifname, other_node):
+    def get_topolink_interface(
+        self,
+        topology,
+        ifname,
+        other_node,
+        edge_encapsulation: str | None = None,
+        isl_encapsulation: str | None = None,
+    ):
         """
         Render the Interface CR YAML for an cEOS link endpoint.
         """
@@ -170,15 +177,25 @@ class AristaCEOSNode(Node):
         role = "interSwitch"
         if other_node is None or not other_node.is_eda_supported():
             role = "edge"
+        peer_name = (
+            other_node.get_node_name(topology)
+            if other_node is not None
+            else "external-endpoint"
+        )
+        if role == "edge":
+            encap_type = "dot1q" if edge_encapsulation == "dot1q" else None
+        else:
+            encap_type = "dot1q" if isl_encapsulation == "dot1q" else None
+
         data = {
             "namespace": topology.namespace,
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
             "label_value": role,
-            "encap_type": "'null'",
+            "encap_type": encap_type,
             "node_name": self.get_node_name(topology),
             "interface": self.get_interface_name_for_kind(ifname),
-            "description": f"{role} link to {other_node.get_node_name(topology)}",
+            "description": f"{role} link to {peer_name}",
         }
         return helpers.render_template("interface.j2", data)
 

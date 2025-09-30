@@ -167,3 +167,5 @@ example-topologies/*/
 .envrc
 CLAUDE.md
 AGENTS.md
+license.txt
+patch.sh
