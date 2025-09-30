@@ -214,7 +214,14 @@ class Node:
             f"{self.get_node_name(topology)}-{self.get_interface_name_for_kind(ifname)}"
         )
 
-    def get_topolink_interface(self, _topology, _ifname, _other_node):
+    def get_topolink_interface(
+        self,
+        _topology,
+        _ifname,
+        _other_node,
+        _edge_encapsulation: str | None = None,
+        _isl_encapsulation: str | None = None,
+    ):
         """
         Render and return the interface resource YAML (Interface CR) for a link endpoint.
 

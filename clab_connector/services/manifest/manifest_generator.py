@@ -35,6 +35,8 @@ class ManifestGenerator:
         separate: bool = False,
         skip_edge_intfs: bool = False,
         namespace: str | None = None,
+        edge_encapsulation: str | None = None,
+        isl_encapsulation: str | None = None,
     ):
         """
         Parameters
@@ -59,6 +61,8 @@ class ManifestGenerator:
         self.separate = separate
         self.skip_edge_intfs = skip_edge_intfs
         self.namespace_override = namespace
+        self.edge_encapsulation = edge_encapsulation
+        self.isl_encapsulation = isl_encapsulation
         self.topology = None
         # Dictionary mapping category name to a list of YAML document strings.
         self.cr_groups = {}
@@ -185,7 +189,9 @@ class ManifestGenerator:
 
         # --- Topolink Interfaces
         intfs = self.topology.get_topolink_interfaces(
-            skip_edge_link_interfaces=self.skip_edge_intfs
+            skip_edge_link_interfaces=self.skip_edge_intfs,
+            edge_encapsulation=self.edge_encapsulation,
+            isl_encapsulation=self.isl_encapsulation,
         )
         if intfs:
             self.cr_groups["topolink-interfaces"] = list(intfs)

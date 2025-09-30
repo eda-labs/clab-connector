@@ -9,7 +9,9 @@ metadata:
 {%- endif %}
 spec:
   enabled: true
-  encapType: {{ encap_type}}
+{% if encap_type is not none %}
+  encapType: {{ encap_type }}
+{% endif %}
   ethernet:
     stormControl:
       enabled: false
