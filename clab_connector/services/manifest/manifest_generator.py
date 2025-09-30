@@ -34,6 +34,7 @@ class ManifestGenerator:
         output: str | None = None,
         separate: bool = False,
         skip_edge_intfs: bool = False,
+        namespace: str | None = None,
     ):
         """
         Parameters
@@ -49,20 +50,32 @@ class ManifestGenerator:
         skip_edge_intfs : bool
             When True, omit edge link resources and their interfaces from the
             generated manifests.
+        namespace : str | None
+            Optional namespace override. Defaults to deriving the namespace from
+            the topology name.
         """
         self.topology_file = topology_file
         self.output = output
         self.separate = separate
         self.skip_edge_intfs = skip_edge_intfs
+        self.namespace_override = namespace
         self.topology = None
         # Dictionary mapping category name to a list of YAML document strings.
         self.cr_groups = {}
 
     def generate(self):
         """Parse the topology and generate the CR YAML documents grouped by category."""
-        self.topology = parse_topology_file(self.topology_file)
-        namespace = f"clab-{self.topology.name}"
-        logger.info(f"Generating manifests for namespace: {namespace}")
+        self.topology = parse_topology_file(
+            self.topology_file, namespace=self.namespace_override
+        )
+        namespace = self.topology.namespace
+        logger.info(
+            "Generating manifests for namespace: %s%s",
+            namespace,
+            " (overridden)"
+            if self.topology.namespace_overridden
+            else " (from topology)",
+        )
 
         # --- Artifacts: Group each unique artifact into one document per artifact.
         artifacts = []

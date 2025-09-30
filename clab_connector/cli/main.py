@@ -123,6 +123,12 @@ def integrate_cmd(
         "--kc-secret",
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
+    namespace_override: str | None = typer.Option(
+        None,
+        "--namespace",
+        "-n",
+        help="Namespace to use instead of deriving from the topology name",
+    ),
     log_level: LogLevel = log_level_option,
     log_file: str | None = log_file_option,
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
@@ -161,6 +167,7 @@ def integrate_cmd(
     args.kc_user = kc_user
     args.kc_password = kc_password
     args.kc_secret = kc_secret
+    args.namespace_override = namespace_override
     args.verify = verify
     args.skip_edge_intfs = skip_edge_intfs
     args.enable_sync_check = enable_sync_check
@@ -185,6 +192,7 @@ def integrate_cmd(
         integrator.run(
             topology_file=a.topology_data,
             skip_edge_intfs=a.skip_edge_intfs,
+            namespace_override=a.namespace_override,
         )
 
     try:
@@ -230,6 +238,12 @@ def remove_cmd(
         "--kc-secret",
         help="If given, use this as the EDA client secret and skip Keycloak admin flow",
     ),
+    namespace_override: str | None = typer.Option(
+        None,
+        "--namespace",
+        "-n",
+        help="Namespace to use instead of deriving from the topology name",
+    ),
     log_level: LogLevel = log_level_option,
     log_file: str | None = log_file_option,
     verify: bool = typer.Option(False, "--verify", help="Enable TLS cert verification"),
@@ -250,6 +264,7 @@ def remove_cmd(
     args.kc_user = kc_user
     args.kc_password = kc_password
     args.kc_secret = kc_secret
+    args.namespace_override = namespace_override
     args.verify = verify
 
     def execute_removal(a):
@@ -263,7 +278,9 @@ def remove_cmd(
             verify=a.verify,
         )
         remover = TopologyRemover(eda_client)
-        remover.run(topology_file=a.topology_data)
+        remover.run(
+            topology_file=a.topology_data, namespace_override=a.namespace_override
+        )
 
     try:
         execute_removal(args)
@@ -334,6 +351,12 @@ def generate_crs_cmd(
         "--separate",
         help="Generate separate YAML files for each CR instead of one combined file",
     ),
+    namespace_override: str | None = typer.Option(
+        None,
+        "--namespace",
+        "-n",
+        help="Namespace to use instead of deriving from the topology name",
+    ),
     log_level: LogLevel = log_level_option,
     log_file: str | None = log_file_option,
     skip_edge_intfs: bool = typer.Option(
@@ -359,6 +382,7 @@ def generate_crs_cmd(
             output=output_file,
             separate=separate,
             skip_edge_intfs=skip_edge_intfs,
+            namespace=namespace_override,
         )
         generator.generate()
         generator.output_manifests()
@@ -435,14 +459,14 @@ def check_sync_cmd(
 
     try:
         # Parse topology to get node names
-        topology = parse_topology_file(str(topology_data))
+        topology = parse_topology_file(str(topology_data), namespace=namespace_override)
         node_names = [node.get_node_name(topology) for node in topology.nodes]
-        namespace = namespace_override or f"clab-{topology.name}"
+        namespace = topology.namespace
 
         logger.info(f"Topology name: '{topology.name}'")
         logger.info(
             f"Using namespace: '{namespace}'"
-            + (" (overridden)" if namespace_override else " (from topology)")
+            + (" (overridden)" if topology.namespace_overridden else " (from topology)")
         )
         logger.info(
             f"Node names: {node_names[:NODE_DISPLAY_LIMIT]}"

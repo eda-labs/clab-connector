@@ -102,7 +102,7 @@ class Link:
         else:
             return None
         data = {
-            "namespace": f"clab-{topology.name}",
+            "namespace": topology.namespace,
             "link_role": role,
             "link_name": self.get_link_name(topology),
             "local_node": self.node_1.get_node_name(topology),
