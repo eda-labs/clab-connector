@@ -72,7 +72,9 @@ class ManifestGenerator:
         logger.info(
             "Generating manifests for namespace: %s%s",
             namespace,
-            " (overridden)" if self.topology.namespace_overridden else " (from topology)",
+            " (overridden)"
+            if self.topology.namespace_overridden
+            else " (from topology)",
         )
 
         # --- Artifacts: Group each unique artifact into one document per artifact.

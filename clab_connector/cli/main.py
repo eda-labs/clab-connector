@@ -278,7 +278,9 @@ def remove_cmd(
             verify=a.verify,
         )
         remover = TopologyRemover(eda_client)
-        remover.run(topology_file=a.topology_data, namespace_override=a.namespace_override)
+        remover.run(
+            topology_file=a.topology_data, namespace_override=a.namespace_override
+        )
 
     try:
         execute_removal(args)
@@ -457,18 +459,14 @@ def check_sync_cmd(
 
     try:
         # Parse topology to get node names
-        topology = parse_topology_file(
-            str(topology_data), namespace=namespace_override
-        )
+        topology = parse_topology_file(str(topology_data), namespace=namespace_override)
         node_names = [node.get_node_name(topology) for node in topology.nodes]
         namespace = topology.namespace
 
         logger.info(f"Topology name: '{topology.name}'")
         logger.info(
             f"Using namespace: '{namespace}'"
-            + (
-                " (overridden)" if topology.namespace_overridden else " (from topology)"
-            )
+            + (" (overridden)" if topology.namespace_overridden else " (from topology)")
         )
         logger.info(
             f"Node names: {node_names[:NODE_DISPLAY_LIMIT]}"
