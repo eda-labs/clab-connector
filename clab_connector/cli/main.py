@@ -193,10 +193,7 @@ def integrate_cmd(  # noqa: PLR0913
     args.skip_edge_intfs = skip_edge_intfs
     args.enable_sync_check = enable_sync_check
     args.sync_timeout = sync_timeout
-    if (
-        edge_encapsulation
-        and edge_encapsulation != InterfaceEncapsulation.UNTAGGED
-    ):
+    if edge_encapsulation and edge_encapsulation != InterfaceEncapsulation.UNTAGGED:
         args.edge_encapsulation = edge_encapsulation.value
     else:
         args.edge_encapsulation = None
