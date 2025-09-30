@@ -22,6 +22,8 @@ class Topology:
         The name of the topology.
     mgmt_subnet : str
         The management IPv4 subnet for the topology.
+    mgmt_gw : str
+        The management IPv4 gateway for the topology.
     ssh_keys : list
         A list of SSH public keys.
     nodes : list
@@ -30,10 +32,20 @@ class Topology:
         A list of Link objects in the topology.
     clab_file_path : str
         Path to the original containerlab file if available.
+    namespace : str | None
+        Optional namespace override to use instead of deriving from the topology name.
     """
 
     def __init__(
-        self, name, mgmt_subnet, mgmt_gw, ssh_keys, nodes, links, clab_file_path=""
+        self,
+        name,
+        mgmt_subnet,
+        mgmt_gw,
+        ssh_keys,
+        nodes,
+        links,
+        clab_file_path="",
+        namespace: str | None = None,
     ):
         self.name = name
         self.mgmt_ipv4_subnet = mgmt_subnet
@@ -42,6 +54,8 @@ class Topology:
         self.nodes = nodes
         self.links = links
         self.clab_file_path = clab_file_path
+        self._namespace_overridden = namespace is not None
+        self.namespace = namespace or f"clab-{self.name}"
 
     def __repr__(self):
         """
@@ -73,6 +87,24 @@ class Topology:
         if not safe[-1].isalnum():
             safe += "0"
         return safe
+
+    def set_namespace(self, namespace: str):
+        """Explicitly set the namespace for the topology."""
+
+        self.namespace = namespace
+        self._namespace_overridden = True
+
+    def reset_namespace_to_default(self):
+        """Reset namespace derived from the topology name if not overridden."""
+
+        if not self._namespace_overridden:
+            self.namespace = f"clab-{self.name}"
+
+    @property
+    def namespace_overridden(self) -> bool:
+        """Return whether a namespace override has been provided."""
+
+        return self._namespace_overridden
 
     def check_connectivity(self):
         """
@@ -244,7 +276,7 @@ def _parse_links(links: list, all_nodes: dict[str, Node]) -> list:
     return link_objects
 
 
-def parse_topology_file(path: str) -> Topology:
+def parse_topology_file(path: str, namespace: str | None = None) -> Topology:
     """
     Parse a containerlab topology JSON file and return a Topology object.
 
@@ -252,6 +284,8 @@ def parse_topology_file(path: str) -> Topology:
     ----------
     path : str
         Path to the containerlab topology JSON file.
+    namespace : str | None
+        Optional namespace override to use instead of deriving it from the topology name.
 
     Returns
     -------
@@ -292,10 +326,12 @@ def parse_topology_file(path: str) -> Topology:
         nodes=node_objects,
         links=link_objects,
         clab_file_path=file_path,
+        namespace=namespace,
     )
 
     original = topo.name
     topo.name = topo.get_eda_safe_name()
     if topo.name != original:
         logger.debug(f"Renamed topology '{original}' -> '{topo.name}' for EDA safety")
+    topo.reset_namespace_to_default()
     return topo

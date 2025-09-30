@@ -185,7 +185,7 @@ class NokiaSRLinuxNode(Node):
         filename = f"srlinux-{self.version}.zip"
 
         data = {
-            "namespace": f"clab-{topology.name}",
+            "namespace": topology.namespace,
             "profile_name": self.get_profile_name(topology),
             "sw_version": self.version,
             "gnmi_port": self.GNMI_PORT,
@@ -220,7 +220,7 @@ class NokiaSRLinuxNode(Node):
             role_value = "dcgw"
 
         data = {
-            "namespace": f"clab-{topology.name}",
+            "namespace": topology.namespace,
             "node_name": self.get_node_name(topology),
             "topology_name": topology.get_eda_safe_name(),
             "role_value": role_value,
@@ -276,7 +276,7 @@ class NokiaSRLinuxNode(Node):
         if other_node is None or not other_node.is_eda_supported():
             role = "edge"
         data = {
-            "namespace": f"clab-{topology.name}",
+            "namespace": topology.namespace,
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
             "label_value": role,

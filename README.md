@@ -133,19 +133,21 @@ clab-connector integrate \
   --eda-user youruser \
   --eda-password yourpassword
 ```
+
 | Option                  | Required | Default | Description
-|-------------------------|----------|---------|-------------------------------------------------------|
-| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file      |
-| `--eda-url`, `-e`       | Yes      | None    | EDA deployment hostname or IP address                 |
-| `--eda-user`            | No       | admin   | EDA username                                          |
-| `--eda-password`        | No       | admin   | EDA password                                          |
-| `--kc-user`             | No       | admin   | Keycloak master realm admin user                      |
-| `--kc-password`         | No       | admin   | Keycloak master realm admin password                  |
-| `--kc-secret`           | No       | None    | Use given EDA client secret and skip Keycloak flow    |
-| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)     |
-| `--log-file`, `-f`      | No       | None    | Optional log file path                                |
-| `--verify`              | No       | False   | Enable certificate verification for EDA               |
-| `--skip-edge-intfs`     | No       | False   | Skip creation of edge links and their interfaces      |
+|-------------------------|----------|---------|--------------------------------------------------------|
+| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file       |
+| `--eda-url`, `-e`       | Yes      | None    | EDA deployment hostname or IP address                  |
+| `--eda-user`            | No       | admin   | EDA username                                           |
+| `--eda-password`        | No       | admin   | EDA password                                           |
+| `--kc-user`             | No       | admin   | Keycloak master realm admin user                       |
+| `--kc-password`         | No       | admin   | Keycloak master realm admin password                   |
+| `--kc-secret`           | No       | None    | Use given EDA client secret and skip Keycloak flow     |
+| `--namespace`, `-n`     | No       | None    | Namespace to use instead of deriving from the topology |
+| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)      |
+| `--log-file`, `-f`      | No       | None    | Optional log file path                                 |
+| `--verify`              | No       | False   | Enable certificate verification for EDA                |
+| `--skip-edge-intfs`     | No       | False   | Skip creation of edge links and their interfaces       |
 
 
 > [!NOTE]
@@ -162,18 +164,23 @@ clab-connector remove \
     --eda-user youruser \
     --eda-password yourpassword
 ```
+
+> [!NOTE]
+> If you integrated into a custom namespace, pass the same value with `--namespace` so the connector removes the correct lab.
+
 | Option                  | Required | Default | Description
-|-------------------------|----------|---------|-------------------------------------------------------|
-| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file      |
-| `--eda-url`, `-e`       | Yes      | None    | EDA deployment hostname or IP address                 |
-| `--eda-user`            | No       | admin   | EDA username                                          |
-| `--eda-password`        | No       | admin   | EDA password                                          |
-| `--kc-user`             | No       | admin   | Keycloak master realm admin user                      |
-| `--kc-password`         | No       | admin   | Keycloak master realm admin password                  |
-| `--kc-secret`           | No       | None    | Use given EDA client secret and skip Keycloak flow    |
-| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)     |
-| `--log-file`, `-f`      | No       | None    | Optional log file path                                |
-| `--verify`              | No       | False   | Enable certificate verification for EDA               |
+|-------------------------|----------|---------|--------------------------------------------------------|
+| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file       |
+| `--eda-url`, `-e`       | Yes      | None    | EDA deployment hostname or IP address                  |
+| `--eda-user`            | No       | admin   | EDA username                                           |
+| `--eda-password`        | No       | admin   | EDA password                                           |
+| `--kc-user`             | No       | admin   | Keycloak master realm admin user                       |
+| `--kc-password`         | No       | admin   | Keycloak master realm admin password                   |
+| `--kc-secret`           | No       | None    | Use given EDA client secret and skip Keycloak flow     |
+| `--namespace`, `-n`     | No       | None    | Namespace to use instead of deriving from the topology |
+| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)      |
+| `--log-file`, `-f`      | No       | None    | Optional log file path                                 |
+| `--verify`              | No       | False   | Enable certificate verification for EDA                |
 
 
 
@@ -188,22 +195,22 @@ clab-connector check-sync \
   --verbose
 ```
 
-| Option                | Required | Default | Description                                                 |
-|----------------------|----------|---------|-------------------------------------------------------------|
-| `--topology-data`, `-t` | Yes    | None    | Path to the Containerlab topology data JSON file            |
-| `--eda-url`, `-e`     | Yes      | None    | EDA deployment hostname or IP address                       |
-| `--eda-user`          | No       | admin   | EDA username                                                |
-| `--eda-password`      | No       | admin   | EDA password                                                |
-| `--kc-user`           | No       | admin   | Keycloak master realm admin user                            |
-| `--kc-password`       | No       | admin   | Keycloak master realm admin password                        |
-| `--kc-secret`         | No       | None    | Use given EDA client secret and skip Keycloak flow          |
-| `--namespace`         | No       | None    | Override the namespace (instead of deriving from topology)   |
-| `--verbose`, `-v`     | No       | False   | Show detailed information about node status and API sources  |
-| `--wait`              | No       | False   | Wait for all nodes to be ready                              |
-| `--timeout`           | No       | 90      | Timeout in seconds when waiting for nodes to be ready       |
-| `--log-level`, `-l`   | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)           |
-| `--log-file`, `-f`    | No       | None    | Optional log file path                                      |
-| `--verify`            | No       | False   | Enable certificate verification for EDA                     |
+| Option                  | Required | Default | Description                                                   |
+|-------------------------|----------|---------|---------------------------------------------------------------|
+| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file              |
+| `--eda-url`, `-e`       | Yes      | None    | EDA deployment hostname or IP address                         |
+| `--eda-user`            | No       | admin   | EDA username                                                  |
+| `--eda-password`        | No       | admin   | EDA password                                                  |
+| `--kc-user`             | No       | admin   | Keycloak master realm admin user                              |
+| `--kc-password`         | No       | admin   | Keycloak master realm admin password                          |
+| `--kc-secret`           | No       | None    | Use given EDA client secret and skip Keycloak flow            |
+| `--namespace`           | No       | None    | Override the namespace (instead of deriving from topology)    |
+| `--verbose`, `-v`       | No       | False   | Show detailed information about node status and API sources   |
+| `--wait`                | No       | False   | Wait for all nodes to be ready                                |
+| `--timeout`             | No       | 90      | Timeout in seconds when waiting for nodes to be ready         |
+| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)             |
+| `--log-file`, `-f`      | No       | None    | Optional log file path                                        |
+| `--verify`              | No       | False   | Enable certificate verification for EDA                       |
 
 #### Export a lab from EDA to Containerlab
 
@@ -216,8 +223,8 @@ clab-connector export-lab \
 |---------------------|----------|-----------|------------------------------------------------------------------------|
 | `--namespace`, `-n` | Yes      | None      | Namespace in which the lab is deployed in EDA                          |
 | `--output`, `-o`    | No       | None      | Output .clab.yaml file path                                            |
-| `--log-level`, `-l` | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                      |
-| `--log-file`        | No       | None     | Optional log file path                                                 |
+| `--log-level`, `-l` | No       | INFO      | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                      |
+| `--log-file`        | No       | None      | Optional log file path                                                 |
 
 #### Generate CR YAML Manifests
 The `generate-crs` command allows you to generate all the CR YAML manifests that would be applied to EDA—grouped by category. By default all manifests are concatenated into a single file. If you use the --separate flag, the manifests are written into separate files per category (e.g. `artifacts.yaml`, `init.yaml`, `node-security-profile.yaml`, etc.).
@@ -237,14 +244,16 @@ clab-connector generate-crs \
   --separate \
   --output manifests
 ```
+
 | Option                  | Required | Default | Description
-|-------------------------|----------|---------|-------------------------------------------------------|
-| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file      |
+|-------------------------|----------|---------|--------------------------------------------------------|
+| `--topology-data`, `-t` | Yes      | None    | Path to the Containerlab topology data JSON file       |
 | `--output`, `-o`        | No       | None    | Output file path or directory                          |
 | `--separate`            | No       | False   | Generate separate YAML files for each CR               |
-| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)     |
-| `--log-file`, `-f`      | No       | None    | Optional log file path                                |
-| `--skip-edge-intfs`     | No       | False   | Skip creation of edge links and their interfaces      |
+| `--log-level`, `-l`     | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)      |
+| `--log-file`, `-f`      | No       | None    | Optional log file path                                 |
+| `--skip-edge-intfs`     | No       | False   | Skip creation of edge links and their interfaces       |
+| `--namespace`, `-n`     | No       | None    | Namespace to use instead of deriving from the topology |
 
 
 

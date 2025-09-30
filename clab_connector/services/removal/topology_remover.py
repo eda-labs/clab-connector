@@ -23,7 +23,7 @@ class TopologyRemover:
         self.eda_client = eda_client
         self.topology = None
 
-    def run(self, topology_file):
+    def run(self, topology_file, namespace_override: str | None = None):
         """
         Parse the topology file and remove its associated namespace.
 
@@ -31,12 +31,16 @@ class TopologyRemover:
         ----------
         topology_file : str or Path
             The containerlab topology JSON file.
+        namespace_override : str | None
+            Optional namespace override to delete instead of the derived name.
 
         Returns
         -------
         None
         """
-        self.topology = parse_topology_file(str(topology_file))
+        self.topology = parse_topology_file(
+            str(topology_file), namespace=namespace_override
+        )
 
         logger.info("== Removing namespace ==")
         self.remove_namespace()
@@ -48,7 +52,7 @@ class TopologyRemover:
         """
         Delete the EDA namespace corresponding to this topology.
         """
-        ns = f"clab-{self.topology.name}"
+        ns = self.topology.namespace
         logger.info(f"{SUBSTEP_INDENT}Removing namespace {ns}")
         self.eda_client.add_delete_to_transaction(
             namespace="", kind="Namespace", name=ns

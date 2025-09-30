@@ -46,6 +46,7 @@ class TopologyIntegrator:
         self,
         topology_file,
         skip_edge_intfs: bool = False,
+        namespace_override: str | None = None,
     ):
         """
         Parse the topology, run connectivity checks, and create EDA resources.
@@ -57,6 +58,8 @@ class TopologyIntegrator:
         skip_edge_intfs : bool
             When True, omit edge link resources and their interfaces from the
             integration.
+        namespace_override : str | None
+            Optional namespace override to use instead of the derived name.
 
         Returns
         -------
@@ -70,7 +73,18 @@ class TopologyIntegrator:
             If any resource fails validation.
         """
         logger.info("Parsing topology for integration")
-        self.topology = parse_topology_file(str(topology_file))
+        self.topology = parse_topology_file(
+            str(topology_file), namespace=namespace_override
+        )
+
+        logger.info(
+            f"Using namespace: '{self.topology.namespace}'"
+            + (
+                " (overridden)"
+                if self.topology.namespace_overridden
+                else " (from topology)"
+            )
+        )
 
         logger.info("== Running pre-checks ==")
         self.prechecks()
@@ -148,7 +162,7 @@ class TopologyIntegrator:
         """
         Create and bootstrap a namespace for the topology in EDA.
         """
-        ns = f"clab-{self.topology.name}"
+        ns = self.topology.namespace
         try:
             edactl_namespace_bootstrap(ns)
             wait_for_namespace(ns)
@@ -228,7 +242,7 @@ class TopologyIntegrator:
         """
         data = {
             "name": "init-base",
-            "namespace": f"clab-{self.topology.name}",
+            "namespace": self.topology.namespace,
             "nodeselectors": ["containerlab=managedSrl", "containerlab=managedSros"],
         }
         yml = helpers.render_template("init.yaml.j2", data)
@@ -238,7 +252,7 @@ class TopologyIntegrator:
 
         ceos_data = {
             "name": "init-base-ceos",
-            "namespace": f"clab-{self.topology.name}",
+            "namespace": self.topology.namespace,
             "gateway": self.topology.mgmt_ipv4_gw,
             "nodeselectors": ["containerlab=managedEos"],
         }
@@ -251,10 +265,10 @@ class TopologyIntegrator:
         """
         Create a NodeSecurityProfile resource that references an EDA node issuer.
         """
-        data = {"namespace": f"clab-{self.topology.name}"}
+        data = {"namespace": self.topology.namespace}
         yaml_str = helpers.render_template("nodesecurityprofile.yaml.j2", data)
         try:
-            apply_manifest(yaml_str, namespace=f"clab-{self.topology.name}")
+            apply_manifest(yaml_str, namespace=self.topology.namespace)
             logger.info(f"{SUBSTEP_INDENT}Node security profile created.")
         except RuntimeError as ex:
             if "AlreadyExists" in str(ex):
@@ -268,7 +282,7 @@ class TopologyIntegrator:
         """
         Create a NodeGroup resource for user groups (like 'sudo').
         """
-        data = {"namespace": f"clab-{self.topology.name}"}
+        data = {"namespace": self.topology.namespace}
         node_user_group = helpers.render_template("node-user-group.yaml.j2", data)
         item = self.eda_client.add_replace_to_transaction(node_user_group)
         if not self.eda_client.is_transaction_item_valid(item):
@@ -286,7 +300,7 @@ class TopologyIntegrator:
 
         # Create SRL node user
         srl_data = {
-            "namespace": f"clab-{self.topology.name}",
+            "namespace": self.topology.namespace,
             "node_user": "admin",
             "username": "admin",
             "password": "NokiaSrl1!",
@@ -300,7 +314,7 @@ class TopologyIntegrator:
 
         # Create SROS node user
         sros_data = {
-            "namespace": f"clab-{self.topology.name}",
+            "namespace": self.topology.namespace,
             "node_user": "admin-sros",
             "username": "admin",
             "password": "NokiaSros1!",
@@ -314,7 +328,7 @@ class TopologyIntegrator:
 
         # Create cEOS node user
         ceos_data = {
-            "namespace": f"clab-{self.topology.name}",
+            "namespace": self.topology.namespace,
             "node_user": "admin-ceos",
             "username": "admin",
             "password": "admin",
@@ -447,7 +461,7 @@ class TopologyIntegrator:
         """
         Run any post-integration steps required for specific node types.
         """
-        namespace = f"clab-{self.topology.name}"
+        namespace = self.topology.namespace
         # Determine if we should be quiet based on the current log level
         quiet = logging.getLogger().getEffectiveLevel() > logging.INFO
 
@@ -500,7 +514,7 @@ class TopologyIntegrator:
             logger.warning("No nodes to check for synchronization")
             return
 
-        namespace = f"clab-{self.topology.name}"
+        namespace = self.topology.namespace
         node_names = [node.get_node_name(self.topology) for node in self.topology.nodes]
 
         sync_checker = NodeSyncChecker(self.eda_client, namespace)
