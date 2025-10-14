@@ -270,8 +270,11 @@ def _parse_nodes(nodes_data: dict) -> tuple[list[Node], dict[str, Node]]:
 def _parse_links(links: list, all_nodes: dict[str, Node]) -> list:
     link_objects = []
     for link_info in links:
-        a_name = link_info["a"]["node"]
-        z_name = link_info["z"]["node"]
+        link_endpoints_info = link_info.get(
+            "endpoints", link_info
+        )  # Backwards compatible with clab < 0.71.0
+        a_name = link_endpoints_info["a"]["node"]
+        z_name = link_endpoints_info["z"]["node"]
         if a_name not in all_nodes or z_name not in all_nodes:
             continue
         node_a = all_nodes[a_name]
@@ -279,8 +282,8 @@ def _parse_links(links: list, all_nodes: dict[str, Node]) -> list:
         if not (node_a.is_eda_supported() or node_z.is_eda_supported()):
             continue
         endpoints = [
-            f"{a_name}:{link_info['a']['interface']}",
-            f"{z_name}:{link_info['z']['interface']}",
+            f"{a_name}:{link_endpoints_info['a']['interface']}",
+            f"{z_name}:{link_endpoints_info['z']['interface']}",
         ]
         ln = create_link(endpoints, list(all_nodes.values()))
         link_objects.append(ln)
