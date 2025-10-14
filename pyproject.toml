@@ -9,16 +9,16 @@ description = "EDA Containerlab Connector"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "bcrypt==4.3.0",
-    "certifi==2025.8.3",
+    "bcrypt==5.0.0",
+    "certifi==2025.10.5",
     "cffi==2.0.0",
     "charset-normalizer==3.4.3",
-    "cryptography==46.0.1",
+    "cryptography==46.0.2",
     "idna==3.10",
     "jinja2==3.1.6",
     "kubernetes==33.1.0",
     "markupsafe==3.0.3",
-    "paramiko>=3.5.1",
+    "paramiko>=4.0.0",
     "pycparser==2.23",
     "pynacl==1.6.0",
     "pyyaml==6.0.3",
@@ -134,7 +134,7 @@ extend-exclude = '''
 dev = [
     "bandit>=1.8.6",
     "black>=25.9.0",
-    "isort>=6.0.1",
+    "isort>=7.0.0",
     "mypy>=1.18.2",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
