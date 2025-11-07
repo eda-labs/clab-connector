@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 import paramiko
+from rich.markup import escape
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +146,10 @@ def execute_ssh_commands(
     try:
         commands = script_path.read_text().splitlines()
 
+        # This will send 5 empty <enter> commands at the end, making sure everything gets executed till the last bit
+        for _i in range(5):
+            commands.append("")
+
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(
@@ -161,9 +166,15 @@ def execute_ssh_commands(
         time.sleep(2)
 
         for cmd in commands:
-            chan.send(cmd + "\n")
+            if cmd.strip() == "write":
+                time.sleep(2)  # Wait 2 seconds before sending write
 
-            time.sleep(0.5)
+            if cmd.strip() == "":
+                time.sleep(
+                    0.5
+                )  # Wait 0.5 seconds before sending <enter> on empty command
+
+            chan.send(cmd + "\n")
 
             while not chan.recv_ready():
                 pass
@@ -186,7 +197,8 @@ def execute_ssh_commands(
                 node_name,
                 sum(map(len, output)),
             )
-            logger.debug("Output: %s", output)
+            textoutput = escape("".join(output))
+            logger.debug("Output: %s", textoutput)
         return True
     except Exception as e:
         logger.error("SSH exec error on %s: %s", node_name, e)
@@ -287,12 +299,12 @@ def _copy_files_and_config(
 
         _build_post_script(postscript_p, root)
         post_success = transfer_file(
-            postscript_p, root + "copy_certs.sh", username, mgmt_ip, working_pw, quiet
+            postscript_p, root + "copy-certs.sh", username, mgmt_ip, working_pw, quiet
         )
         if post_success:
-            logger.info(f"Post script copied successfully to {root}copy_certs.sh")
+            logger.info(f"Post script copied successfully to {root}copy-certs.sh")
         else:
-            logger.warning(f"Failed to copy post script to {root}copy_certs.sh")
+            logger.warning(f"Failed to copy post script to {root}copy-certs.sh")
             continue
 
         cert_success = transfer_file(

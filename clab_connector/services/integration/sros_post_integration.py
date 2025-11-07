@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 import paramiko
+from rich.markup import escape
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,10 @@ def execute_ssh_commands(
     try:
         commands = script_path.read_text().splitlines()
 
+        # This will send 5 empty <enter> commands at the end, making sure everything gets executed till the last bit
+        for _i in range(5):
+            commands.append("")
+
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(
@@ -162,6 +167,11 @@ def execute_ssh_commands(
         for cmd in commands:
             if cmd.strip() == "commit":
                 time.sleep(2)  # Wait 2 seconds before sending commit
+
+            if cmd.strip() == "":
+                time.sleep(
+                    0.5
+                )  # Wait 0.5 seconds before sending <enter> on empty command
 
             chan.send(cmd + "\n")
             while not chan.recv_ready():
@@ -185,6 +195,8 @@ def execute_ssh_commands(
                 node_name,
                 sum(map(len, output)),
             )
+            textoutput = escape("".join(output))
+            logger.debug("Output: %s", textoutput)
         return True
     except Exception as e:
         logger.error("SSH exec error on %s: %s", node_name, e)
