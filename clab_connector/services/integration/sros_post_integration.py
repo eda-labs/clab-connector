@@ -110,6 +110,7 @@ def transfer_file(
     mgmt_ip: str,
     password: str,
     quiet: bool = False,
+    tries: int = 2,
 ) -> bool:
     """
     SCP file to the target node using Paramiko SFTP.
@@ -129,7 +130,25 @@ def transfer_file(
     except Exception as e:
         if not quiet:
             logger.debug("SCP failed: %s", e)
-        return False
+        tries -= 1
+        if tries > 0:
+            logger.info(
+                "SCP failed! Waiting 20 seconds before retrying. Retrying %s more time%s",
+                tries,
+                "s" if tries > 1 else "",
+            )
+            time.sleep(20)
+            return transfer_file(
+                src_path=src_path,
+                dest_path=dest_path,
+                username=username,
+                mgmt_ip=mgmt_ip,
+                password=password,
+                quiet=quiet,
+                tries=tries,
+            )
+        else:
+            return False
 
 
 def execute_ssh_commands(

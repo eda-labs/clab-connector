@@ -109,6 +109,7 @@ def transfer_file(
     mgmt_ip: str,
     password: str,
     quiet: bool = False,
+    tries: int = 2,
 ) -> bool:
     """
     SCP file to the target node using Paramiko SFTP.
@@ -128,7 +129,25 @@ def transfer_file(
     except Exception as e:
         if not quiet:
             logger.debug("SCP failed: %s", e)
-        return False
+        tries -= 1
+        if tries > 0:
+            logger.info(
+                "SCP failed! Waiting 20 seconds before retrying. Retrying %s more time%s",
+                tries,
+                "s" if tries > 1 else "",
+            )
+            time.sleep(20)
+            return transfer_file(
+                src_path=src_path,
+                dest_path=dest_path,
+                username=username,
+                mgmt_ip=mgmt_ip,
+                password=password,
+                quiet=quiet,
+                tries=tries,
+            )
+        else:
+            return False
 
 
 def execute_ssh_commands(
@@ -138,17 +157,25 @@ def execute_ssh_commands(
     node_name: str,
     password: str,
     quiet: bool = False,
+    prompt_terminator_chars: list[str] | None = None,
+    prompt_termination_offset: int = -1,
+    timeout: float = 30.0,
 ) -> bool:
     """
     Push the command file line-by-line over an interactive shell.
-    No timeouts version that will wait as long as needed for each command.
+    This waits for prompt after each command and raises exception if timeout is reached.
     """
+    if prompt_terminator_chars is None:
+        prompt_terminator_chars = [">", "#", "$"]
+
     try:
         commands = script_path.read_text().splitlines()
 
-        # This will send 5 empty <enter> commands at the end, making sure everything gets executed till the last bit
-        for _i in range(5):
-            commands.append("")
+        # This will add 1 empty <enter> commands at the end, making sure everything gets executed till the last bit
+        # 1 is enough because we check for prompt
+        commands.append("")
+        # This will insert 1 empty <enter> command at the beginning to wait for first prompt
+        commands.insert(0, "")
 
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -179,10 +206,31 @@ def execute_ssh_commands(
             while not chan.recv_ready():
                 pass
 
-            buffer = ""
-            while chan.recv_ready():
-                buffer += chan.recv(4096).decode()
-            output.append(buffer)
+            command_timeout = timeout
+            while command_timeout > 0:
+                buffer = ""
+                while chan.recv_ready():
+                    buffer += chan.recv(4096).decode()
+                output.append(buffer)
+
+                last_line = "".join(output).splitlines()[-1]
+                prompt_search_offset = (
+                    prompt_termination_offset if prompt_termination_offset < 0 else -1
+                )
+                if (
+                    len(last_line) >= -prompt_search_offset
+                    and last_line[prompt_search_offset] in prompt_terminator_chars
+                ):
+                    break
+                command_timeout -= 0.5
+                if command_timeout < 0:
+                    raise RuntimeError("Timeout reached while waiting for prompt!")
+                time.sleep(0.5)
+            logger.debug(
+                "Waited %s seconds for prompt after command '%s'",
+                timeout - command_timeout,
+                cmd,
+            )
 
         # Get any remaining output
         while chan.recv_ready():
