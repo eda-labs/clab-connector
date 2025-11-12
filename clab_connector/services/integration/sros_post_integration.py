@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 import paramiko
+from rich.markup import escape
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,7 @@ def transfer_file(
     mgmt_ip: str,
     password: str,
     quiet: bool = False,
+    tries: int = 2,
 ) -> bool:
     """
     SCP file to the target node using Paramiko SFTP.
@@ -128,7 +130,25 @@ def transfer_file(
     except Exception as e:
         if not quiet:
             logger.debug("SCP failed: %s", e)
-        return False
+        tries -= 1
+        if tries > 0:
+            logger.info(
+                "SCP failed! Waiting 20 seconds before retrying. Retrying %s more time%s",
+                tries,
+                "s" if tries > 1 else "",
+            )
+            time.sleep(20)
+            return transfer_file(
+                src_path=src_path,
+                dest_path=dest_path,
+                username=username,
+                mgmt_ip=mgmt_ip,
+                password=password,
+                quiet=quiet,
+                tries=tries,
+            )
+        else:
+            return False
 
 
 def execute_ssh_commands(
@@ -146,6 +166,10 @@ def execute_ssh_commands(
     try:
         commands = script_path.read_text().splitlines()
 
+        # This will send 5 empty <enter> commands at the end, making sure everything gets executed till the last bit
+        for _i in range(5):
+            commands.append("")
+
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(
@@ -162,6 +186,11 @@ def execute_ssh_commands(
         for cmd in commands:
             if cmd.strip() == "commit":
                 time.sleep(2)  # Wait 2 seconds before sending commit
+
+            if cmd.strip() == "":
+                time.sleep(
+                    0.5
+                )  # Wait 0.5 seconds before sending <enter> on empty command
 
             chan.send(cmd + "\n")
             while not chan.recv_ready():
@@ -185,6 +214,8 @@ def execute_ssh_commands(
                 node_name,
                 sum(map(len, output)),
             )
+            textoutput = escape("".join(output))
+            logger.debug("Output: %s", textoutput)
         return True
     except Exception as e:
         logger.error("SSH exec error on %s: %s", node_name, e)
