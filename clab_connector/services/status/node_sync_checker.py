@@ -563,7 +563,16 @@ class NodeSyncChecker:
             )
 
             if data:
-                return extract_k8s_names(data, lambda name: name.startswith("clab-"))
+                namespaces = extract_k8s_names(
+                    data, lambda name: name.startswith("clab-")
+                )
+                if endpoint:
+                    logger.info(
+                        "Found %d clab namespaces via endpoint %s",
+                        len(namespaces),
+                        endpoint,
+                    )
+                return namespaces
 
             return []
 
