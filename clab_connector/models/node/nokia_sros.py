@@ -50,6 +50,14 @@ class NokiaSROSNode(Node):
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-v25.7.r1/sros-25.7.r1.zip"
         ),
+        "25.7.r2": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-25.7.r2/sros-25.7.r2.zip"
+        ),
+        "25.10.r1": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-25.10.r1/sros-25.10.r1.zip"
+        ),
     }
 
     # Map of node types to their line card and MDA components
