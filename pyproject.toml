@@ -20,7 +20,7 @@ dependencies = [
     "markupsafe==3.0.3",
     "paramiko>=4.0.0",
     "pycparser==2.23",
-    "pynacl==1.6.0",
+    "pynacl==1.6.1",
     "pyyaml==6.0.3",
     "requests==2.32.5",
     "typer==0.19.2",
