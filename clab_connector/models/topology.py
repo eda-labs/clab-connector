@@ -7,6 +7,7 @@ import os
 from clab_connector.models.link import create_link
 from clab_connector.models.node.base import Node
 from clab_connector.models.node.factory import create_node
+from clab_connector.utils import helpers
 from clab_connector.utils.exceptions import ClabConnectorError, TopologyFileError
 
 logger = logging.getLogger(__name__)
@@ -244,12 +245,23 @@ def _parse_nodes(nodes_data: dict) -> tuple[list[Node], dict[str, Node]]:
     for node_name, node_data in nodes_data.items():
         image = node_data.get("image")
         version = image.split(":")[-1] if image and ":" in image else None
+        # Preserve any labels present in the containerlab node definition and
+        # pass them into the node constructors. Connector logic will use these
+        # labels (for example 'role' or 'eda.nokia.com/dc') to override
+        # computed defaults when rendering TopoNode resources.
+        raw_labels = node_data.get("labels", {}) or {}
+        # Produce a sanitized copy of labels for use in emitted CRs while
+        # preserving the raw labels separately. sanitize_labels transforms
+        # keys and values to be k8s-compliant without dropping information.
+        labels = helpers.sanitize_labels(raw_labels)
         config = {
             "kind": node_data["kind"],
-            "type": node_data["labels"].get("clab-node-type", "ixrd2"),
+            "type": labels.get("clab-node-type", "ixrd2"),
             "version": version,
             "mgmt_ipv4": node_data.get("mgmt-ipv4-address"),
             "mgmt_ipv4_prefix_length": node_data.get("mgmt-ipv4-prefix-length"),
+            "labels": labels,
+            "raw_labels": raw_labels,
         }
         node_obj = create_node(node_name, config) or Node(
             name=node_name,
@@ -258,6 +270,8 @@ def _parse_nodes(nodes_data: dict) -> tuple[list[Node], dict[str, Node]]:
             version=version,
             mgmt_ipv4=node_data.get("mgmt-ipv4-address"),
             mgmt_ipv4_prefix_length=node_data.get("mgmt-ipv4-prefix-length"),
+            labels=labels,
+            raw_labels=raw_labels,
         )
         if node_obj.is_eda_supported():
             if not node_obj.version:

@@ -1,3 +1,9 @@
+# TopoNode template
+# Inputs expected in the template context:
+# - namespace, node_name, topology_name
+# - role_value: the node role label (string)
+# - dc_value: optional datacenter label (string, must be quoted)
+# - node_profile, kind, platform, sw_version, mgmt_ip, containerlab_label
 apiVersion: core.eda.nokia.com/v1
 kind: TopoNode
 metadata:
@@ -8,6 +14,9 @@ metadata:
     eda-connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
     eda.nokia.com/security-profile: managed
     containerlab: {{ containerlab_label }}
+    {%- if dc_value %}
+    eda.nokia.com/dc: "{{ dc_value }}"
+    {%- endif %}
   namespace: {{ namespace }}
 spec:
   {% if components %}

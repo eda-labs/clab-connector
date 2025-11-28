@@ -224,7 +224,33 @@ class NokiaSROSNode(Node):
         """
         logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
         self._require_version()
+        # default role for SROS
         role_value = "backbone"
+
+        # Allow override from containerlab topology labels. Both 'role' and
+        # 'eda.nokia.com/role' are accepted; the short 'role' key is checked
+        # first to make the topology files more concise when desired.
+        role_override = None
+        if isinstance(self.labels, dict):
+            role_override = self.labels.get("role") or self.labels.get(
+                "eda.nokia.com/role"
+            )
+        if role_override:
+            role_value = str(role_override)
+        # Sanitize role label value for Kubernetes
+        role_value = helpers.sanitize_label_value(role_value)
+
+        # DC label from containerlab labels -> eda.nokia.com/dc
+        # Support both 'dc' and 'eda.nokia.com/dc'. Stringify the value to
+        # ensure the YAML/JSON rendered for EDA contains a string (EDA
+        # enforces label values to be strings).
+        dc_value = None
+        if isinstance(self.labels, dict):
+            dc_value = self.labels.get("dc") or self.labels.get(
+                "eda.nokia.com/dc"
+            )
+        if dc_value is not None:
+            dc_value = helpers.sanitize_label_value(dc_value)
 
         # Ensure all values are lowercase and valid
         node_name = self.get_node_name(topology)
@@ -239,6 +265,7 @@ class NokiaSROSNode(Node):
             "node_name": node_name,
             "topology_name": topo_name,
             "role_value": role_value,
+            "dc_value": dc_value,
             "node_profile": self.get_profile_name(topology),
             "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
@@ -321,17 +348,20 @@ class NokiaSROSNode(Node):
                 (r"^lo(\d+)$", lambda m: f"loopback-{m[0]}"),
             ],
         }
-        # Try each pattern
+        # Try each pattern; if no pattern matches, return a safe normalized
+        # name derived from the original interface string. This keeps the
+        # function tolerant to unexpected formats while ensuring the result
+        # is a valid resource name for EDA.
         patterns = kind_patterns.get(self.kind, [])
-        if not patterns:
-            return "Bollocks"
         for pattern, transformer in patterns:
             match = re.match(pattern, ifname)
             if match:
                 return transformer(match.groups())
 
-        # Return "bollocks" if no pattern matches
-        return "Bollocks"
+        # Fallback: return a sanitized version of the original ifname so
+        # callers get a stable, valid identifier instead of an opaque/error
+        # string.
+        return helpers.normalize_name(ifname)
 
     def get_topolink_interface_name(self, topology, ifname):
         """
@@ -375,7 +405,7 @@ class NokiaSROSNode(Node):
             "namespace": topology.namespace,
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
-            "label_value": role,
+            "label_value": helpers.sanitize_label_value(role),
             "encap_type": encap_type,
             "node_name": self.get_node_name(topology),
             "interface": self.get_interface_name_for_kind(ifname),

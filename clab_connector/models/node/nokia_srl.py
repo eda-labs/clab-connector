@@ -41,8 +41,14 @@ class NokiaSRLinuxNode(Node):
         version,
         mgmt_ipv4,
         mgmt_ipv4_prefix_length,
+        labels: dict | None = None,
+        raw_labels: dict | None = None,
     ):
-        """Initialize a Nokia SR Linux node and check for deprecated type syntax."""
+        """Initialize a Nokia SR Linux node and check for deprecated type syntax.
+
+        Accept both sanitized `labels` and the original `raw_labels` so the
+        base `Node` can preserve the original values for auditing.
+        """
         super().__init__(
             name,
             kind,
@@ -50,6 +56,8 @@ class NokiaSRLinuxNode(Node):
             version,
             mgmt_ipv4,
             mgmt_ipv4_prefix_length,
+            labels=labels,
+            raw_labels=raw_labels,
         )
 
         # Check if using old syntax (without dash) and warn about deprecation
@@ -216,6 +224,7 @@ class NokiaSRLinuxNode(Node):
         """
         logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
         self._require_version()
+        # default role
         role_value = "leaf"
         nl = self.name.lower()
         if "spine" in nl:
@@ -225,11 +234,38 @@ class NokiaSRLinuxNode(Node):
         elif "dcgw" in nl:
             role_value = "dcgw"
 
+        # Allow override from containerlab topology labels. Accept the
+        # short 'role' key and the fully-qualified 'eda.nokia.com/role'. The
+        # short key is checked first so topology authors can use a shorter
+        # form when preferred.
+        role_override = None
+        if isinstance(self.labels, dict):
+            role_override = self.labels.get("role") or self.labels.get(
+                "eda.nokia.com/role"
+            )
+        if role_override:
+            role_value = str(role_override)
+        # Sanitize role label value for Kubernetes
+        role_value = helpers.sanitize_label_value(role_value)
+        # DC label from containerlab labels -> eda.nokia.com/dc
+        # Accept both the short 'dc' label and the fully-qualified
+        # 'eda.nokia.com/dc'. Always convert to `str` to avoid YAML/JSON
+        # rendering that would emit numeric types (EDA expects string
+        # label values).
+        dc_value = None
+        if isinstance(self.labels, dict):
+            dc_value = self.labels.get("dc") or self.labels.get(
+                "eda.nokia.com/dc"
+            )
+        if dc_value is not None:
+            dc_value = helpers.sanitize_label_value(dc_value)
+
         data = {
             "namespace": topology.namespace,
             "node_name": self.get_node_name(topology),
             "topology_name": topology.get_eda_safe_name(),
             "role_value": role_value,
+            "dc_value": dc_value,
             "node_profile": self.get_profile_name(topology),
             "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
@@ -302,7 +338,7 @@ class NokiaSRLinuxNode(Node):
             "namespace": topology.namespace,
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
-            "label_value": role,
+            "label_value": helpers.sanitize_label_value(role),
             "encap_type": encap_type,
             "node_name": self.get_node_name(topology),
             "interface": self.get_interface_name_for_kind(ifname),
