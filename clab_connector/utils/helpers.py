@@ -3,7 +3,6 @@
 import logging
 import os
 import re
-from typing import Tuple
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -11,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 PACKAGE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(PACKAGE_ROOT, "templates")
+
+# Kubernetes constraints
+MAX_LABEL_VALUE_LEN = 63
+DNS1123_SUBDOMAIN_MAX = 253
 
 template_environment = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR), autoescape=select_autoescape()
@@ -100,9 +103,9 @@ def sanitize_label_value(value) -> str:
     # Trim non-alphanumeric from ends to satisfy k8s start/end rules
     s = re.sub(r"^[^A-Za-z0-9]+", "", s)
     s = re.sub(r"[^A-Za-z0-9]+$", "", s)
-    # Truncate to 63 characters
-    if len(s) > 63:
-        s = s[:63]
+    # Truncate to MAX_LABEL_VALUE_LEN characters
+    if len(s) > MAX_LABEL_VALUE_LEN:
+        s = s[:MAX_LABEL_VALUE_LEN]
 
     # Validate final form against k8s label value pattern:
     # begin and end with alnum, with [-_.a-z0-9] in between (lowercase)
@@ -135,7 +138,7 @@ def sanitize_label_key(key: str) -> str:
         dns_comp = r"[a-z0-9](?:[-a-z0-9]*[a-z0-9])?"
         dns_re = re.compile(rf"^(?:{dns_comp})(?:\.(?:{dns_comp}))*$")
 
-        if len(prefix) > 253 or not dns_re.fullmatch(prefix):
+        if len(prefix) > DNS1123_SUBDOMAIN_MAX or not dns_re.fullmatch(prefix):
             # Drop invalid prefix to avoid producing an invalid label key
             prefix = ""
 
