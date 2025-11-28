@@ -246,9 +246,7 @@ class NokiaSROSNode(Node):
         # enforces label values to be strings).
         dc_value = None
         if isinstance(self.labels, dict):
-            dc_value = self.labels.get("dc") or self.labels.get(
-                "eda.nokia.com/dc"
-            )
+            dc_value = self.labels.get("dc") or self.labels.get("eda.nokia.com/dc")
         if dc_value is not None:
             dc_value = helpers.sanitize_label_value(dc_value)
 

@@ -52,9 +52,10 @@ class EDAClient:
     kc_password : str
         Keycloak "master" realm admin password (default="admin").
     """
-        # Note: Transaction payloads may be logged at DEBUG level in
-        # `is_transaction_item_valid` to assist troubleshooting. Avoid
-        # enabling DEBUG logging in production unless necessary.
+
+    # Note: Transaction payloads may be logged at DEBUG level in
+    # `is_transaction_item_valid` to assist troubleshooting. Avoid
+    # enabling DEBUG logging in production unless necessary.
 
     KEYCLOAK_ADMIN_REALM = "master"
     KEYCLOAK_ADMIN_CLIENT_ID = "admin-cli"
@@ -346,14 +347,18 @@ class EDAClient:
             logger.debug("Using v1 transaction validation endpoint")
             # Log the payload for debugging
             try:
-                logger.debug(f"Transaction validation payload: {json.dumps(item, indent=2)}")
+                logger.debug(
+                    f"Transaction validation payload: {json.dumps(item, indent=2)}"
+                )
             except Exception:
                 logger.debug("Unable to dump transaction payload for logging")
             resp = self.post("core/transaction/v1/validate", item)
         else:
             logger.debug("Using v2 transaction validation endpoint")
             try:
-                logger.debug(f"Transaction validation payload: {json.dumps([item], indent=2)}")
+                logger.debug(
+                    f"Transaction validation payload: {json.dumps([item], indent=2)}"
+                )
             except Exception:
                 logger.debug("Unable to dump transaction payload for logging")
             resp = self.post("core/transaction/v2/validate", [item])
