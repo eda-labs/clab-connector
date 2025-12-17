@@ -210,7 +210,7 @@ def edactl_namespace_bootstrap(namespace: str) -> int | None:
     """
     toolbox = get_toolbox_pod()
     core_api = k8s_client.CoreV1Api()
-    cmd = ["edactl", "namespace", "bootstrap", namespace]
+    cmd = ["edactl", "namespace", "bootstrap","create", namespace]
     try:
         resp = stream(
             core_api.connect_get_namespaced_pod_exec,
