@@ -38,7 +38,6 @@ class Node:
         mgmt_ipv4,
         mgmt_ipv4_prefix_length,
         labels: dict | None = None,
-        raw_labels: dict | None = None,
     ):
         self.name = name
         self.kind = kind
@@ -46,12 +45,8 @@ class Node:
         self.version = version
         self.mgmt_ipv4 = mgmt_ipv4
         self.mgmt_ipv4_prefix_length = mgmt_ipv4_prefix_length
-        # Optional labels provided in the containerlab topology
-        # `labels` contains the sanitized key/value pairs used when
-        # rendering CRs. The original raw labels are preserved in
-        # `raw_labels` for auditing or future processing.
+        # Optional labels provided in the containerlab topology (sanitized for k8s)
         self.labels = labels or {}
-        self.raw_labels = raw_labels or {}
 
     def _require_version(self):
         """Raise an error if the node has no software version defined."""

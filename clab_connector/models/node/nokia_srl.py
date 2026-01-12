@@ -42,13 +42,8 @@ class NokiaSRLinuxNode(Node):
         mgmt_ipv4,
         mgmt_ipv4_prefix_length,
         labels: dict | None = None,
-        raw_labels: dict | None = None,
     ):
-        """Initialize a Nokia SR Linux node and check for deprecated type syntax.
-
-        Accept both sanitized `labels` and the original `raw_labels` so the
-        base `Node` can preserve the original values for auditing.
-        """
+        """Initialize a Nokia SR Linux node and check for deprecated type syntax."""
         super().__init__(
             name,
             kind,
@@ -57,7 +52,6 @@ class NokiaSRLinuxNode(Node):
             mgmt_ipv4,
             mgmt_ipv4_prefix_length,
             labels=labels,
-            raw_labels=raw_labels,
         )
 
         # Check if using old syntax (without dash) and warn about deprecation
@@ -237,11 +231,9 @@ class NokiaSRLinuxNode(Node):
         # Allow override from containerlab topology labels
         if isinstance(self.labels, dict) and self.labels.get("role"):
             role_value = str(self.labels["role"])
-        # Sanitize role label value for Kubernetes
-        role_value = helpers.sanitize_label_value(role_value)
 
-        # Filter user labels to pass through (excludes reserved labels)
-        user_labels = helpers.filter_user_labels(self.labels)
+        # Labels are already sanitized in topology.py
+        user_labels = self.labels
 
         data = {
             "namespace": topology.namespace,

@@ -118,11 +118,9 @@ class AristaCEOSNode(Node):
         # Allow override from containerlab topology labels
         if isinstance(self.labels, dict) and self.labels.get("role"):
             role_value = str(self.labels["role"])
-        # Sanitize role label value for Kubernetes
-        role_value = helpers.sanitize_label_value(role_value)
 
-        # Filter user labels to pass through (excludes reserved labels)
-        user_labels = helpers.filter_user_labels(self.labels)
+        # Labels are already sanitized in topology.py
+        user_labels = self.labels
 
         # Ensure all values are lowercase and valid
         node_name = self.get_node_name(topology)
