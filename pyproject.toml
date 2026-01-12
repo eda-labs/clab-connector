@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clab-connector"
-version = "0.8.5"
+version = "0.8.6"
 description = "EDA Containerlab Connector"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,10 +20,10 @@ dependencies = [
     "markupsafe==3.0.3",
     "paramiko>=4.0.0",
     "pycparser==2.23",
-    "pynacl==1.6.0",
+    "pynacl==1.6.1",
     "pyyaml==6.0.3",
     "requests==2.32.5",
-    "typer==0.19.2",
+    "typer==0.20.0",
     "urllib3==2.5.0",
     "click==8.3.0",
     "rich>=14.2.0",
@@ -132,11 +132,11 @@ extend-exclude = '''
 
 [dependency-groups]
 dev = [
-    "bandit>=1.8.6",
-    "black>=25.9.0",
+    "bandit>=1.9.2",
+    "black>=25.11.0",
     "isort>=7.0.0",
     "mypy>=1.18.2",
-    "pytest>=8.4.2",
+    "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
     "ruff>=0.14.2",
 ]
