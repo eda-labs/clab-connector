@@ -183,3 +183,31 @@ def sanitize_labels(labels: dict) -> dict:
         out[sk] = sv
         seen[k] = sk
     return out
+
+
+def filter_user_labels(labels: dict) -> dict:
+    """
+    Sanitize user-provided labels for Kubernetes compliance.
+
+    All labels pass through with their values sanitized.
+
+    Parameters
+    ----------
+    labels : dict
+        The labels dictionary from containerlab topology.
+
+    Returns
+    -------
+    dict
+        Labels with sanitized values for passthrough to EDA TopoNode.
+    """
+    if not labels:
+        return {}
+
+    result = {}
+    for key, value in labels.items():
+        sanitized_value = sanitize_label_value(value)
+        if sanitized_value:  # Only include non-empty values
+            result[key] = sanitized_value
+
+    return result

@@ -227,28 +227,14 @@ class NokiaSROSNode(Node):
         # default role for SROS
         role_value = "backbone"
 
-        # Allow override from containerlab topology labels. Both 'role' and
-        # 'eda.nokia.com/role' are accepted; the short 'role' key is checked
-        # first to make the topology files more concise when desired.
-        role_override = None
-        if isinstance(self.labels, dict):
-            role_override = self.labels.get("role") or self.labels.get(
-                "eda.nokia.com/role"
-            )
-        if role_override:
-            role_value = str(role_override)
+        # Allow override from containerlab topology labels
+        if isinstance(self.labels, dict) and self.labels.get("role"):
+            role_value = str(self.labels["role"])
         # Sanitize role label value for Kubernetes
         role_value = helpers.sanitize_label_value(role_value)
 
-        # DC label from containerlab labels -> eda.nokia.com/dc
-        # Support both 'dc' and 'eda.nokia.com/dc'. Stringify the value to
-        # ensure the YAML/JSON rendered for EDA contains a string (EDA
-        # enforces label values to be strings).
-        dc_value = None
-        if isinstance(self.labels, dict):
-            dc_value = self.labels.get("dc") or self.labels.get("eda.nokia.com/dc")
-        if dc_value is not None:
-            dc_value = helpers.sanitize_label_value(dc_value)
+        # Filter user labels to pass through (excludes reserved labels)
+        user_labels = helpers.filter_user_labels(self.labels)
 
         # Ensure all values are lowercase and valid
         node_name = self.get_node_name(topology)
@@ -263,14 +249,14 @@ class NokiaSROSNode(Node):
             "node_name": node_name,
             "topology_name": topo_name,
             "role_value": role_value,
-            "dc_value": dc_value,
+            "user_labels": user_labels,
             "node_profile": self.get_profile_name(topology),
             "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
             "sw_version": normalized_version,
             "mgmt_ip": self.mgmt_ipv4,
             "containerlab_label": "managedSros",
-            "components": components,  # Add component information
+            "components": components,
         }
         return helpers.render_template("toponode.j2", data)
 

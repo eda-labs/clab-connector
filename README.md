@@ -271,28 +271,32 @@ clab-connector -l INFO integrate -t topology-data.json -e https://eda.example.co
 
 Explore the [example-topologies](./example-topologies/) directory for sample Containerlab topology files to get started quickly.
 
-### Node labels mapping
+### Node labels passthrough
 
-You can provide node-level labels in your containerlab topology file under each node's `labels:` section. The connector will map `role` and `dc` labels from the Containerlab node to the EDA TopoNode resource:
+You can provide node-level labels in your containerlab topology file under each node's `labels:` section. The connector will pass through these labels to the EDA TopoNode resource exactly as specified:
 
 ```yaml
 nodes:
-  N7210-FONT:
-    kind: nokia_sros
+  spine1:
+    kind: nokia_srlinux
     labels:
-      role: backbone  # maps to eda.nokia.com/role
-      dc: paris       # maps to eda.nokia.com/dc
+      role: spine       # overrides the auto-detected role
+      dc: paris         # passed through as-is
+      env: production   # passed through as-is
 ```
 
 These labels will be rendered as `metadata.labels` on the `TopoNode`:
 
 ```yaml
 labels:
-  eda.nokia.com/role: "backbone"
-  eda.nokia.com/dc: "paris"
+  role: "spine"
+  dc: "paris"
+  env: "production"
 ```
 
-Note: EDA reserved labels such as `containerlab`, `eda.nokia.com/*` or `eda-connector.nokia.com/*` are not overwritten by the node-level labels. If you provide `role` in the node labels, it will be used to override the automatically computed role for the node.
+**Notes:**
+- The `role` label, if provided, overrides the automatically computed role based on node name
+- Label values are sanitized to comply with Kubernetes label value requirements (max 63 chars, alphanumeric with `-`, `_`, `.`)
 
 ## Requesting Support
 

@@ -234,36 +234,21 @@ class NokiaSRLinuxNode(Node):
         elif "dcgw" in nl:
             role_value = "dcgw"
 
-        # Allow override from containerlab topology labels. Accept the
-        # short 'role' key and the fully-qualified 'eda.nokia.com/role'. The
-        # short key is checked first so topology authors can use a shorter
-        # form when preferred.
-        role_override = None
-        if isinstance(self.labels, dict):
-            role_override = self.labels.get("role") or self.labels.get(
-                "eda.nokia.com/role"
-            )
-        if role_override:
-            role_value = str(role_override)
+        # Allow override from containerlab topology labels
+        if isinstance(self.labels, dict) and self.labels.get("role"):
+            role_value = str(self.labels["role"])
         # Sanitize role label value for Kubernetes
         role_value = helpers.sanitize_label_value(role_value)
-        # DC label from containerlab labels -> eda.nokia.com/dc
-        # Accept both the short 'dc' label and the fully-qualified
-        # 'eda.nokia.com/dc'. Always convert to `str` to avoid YAML/JSON
-        # rendering that would emit numeric types (EDA expects string
-        # label values).
-        dc_value = None
-        if isinstance(self.labels, dict):
-            dc_value = self.labels.get("dc") or self.labels.get("eda.nokia.com/dc")
-        if dc_value is not None:
-            dc_value = helpers.sanitize_label_value(dc_value)
+
+        # Filter user labels to pass through (excludes reserved labels)
+        user_labels = helpers.filter_user_labels(self.labels)
 
         data = {
             "namespace": topology.namespace,
             "node_name": self.get_node_name(topology),
             "topology_name": topology.get_eda_safe_name(),
             "role_value": role_value,
-            "dc_value": dc_value,
+            "user_labels": user_labels,
             "node_profile": self.get_profile_name(topology),
             "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
