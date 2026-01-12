@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "bcrypt==5.0.0",
-    "certifi==2025.10.5",
+    "certifi==2026.1.4",
     "cffi==2.0.0",
     "charset-normalizer==3.4.4",
     "cryptography==46.0.3",
@@ -20,12 +20,12 @@ dependencies = [
     "markupsafe==3.0.3",
     "paramiko>=4.0.0",
     "pycparser==2.23",
-    "pynacl==1.6.1",
+    "pynacl==1.6.2",
     "pyyaml==6.0.3",
     "requests==2.32.5",
-    "typer==0.20.0",
-    "urllib3==2.5.0",
-    "click==8.3.0",
+    "typer==0.21.1",
+    "urllib3==2.6.3",
+    "click==8.3.1",
     "rich>=14.2.0",
 ]
 
@@ -135,8 +135,8 @@ dev = [
     "bandit>=1.9.2",
     "black>=25.11.0",
     "isort>=7.0.0",
-    "mypy>=1.18.2",
+    "mypy>=1.19.1",
     "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
-    "ruff>=0.14.2",
+    "ruff>=0.14.11",
 ]
