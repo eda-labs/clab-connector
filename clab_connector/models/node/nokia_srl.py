@@ -28,7 +28,7 @@ class NokiaSRLinuxNode(Node):
     YANG_PATH = "https://eda-asvr.eda-system.svc/eda-system/clab-schemaprofiles/{artifact_name}/{filename}"
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
-    LLM_DB_PATH = "https://eda-asvr.eda-system.svc/eda-system/llm-dbs/llm-db-srlinux-ghcr-{version}/llm-embeddings-srl-{version}.tar.gz"
+    LLM_DB_PATH = "https://eda-asvr.eda-system.svc/eda-system/llm-dbs/llm-db-srlinux-ghcr-{version}/llm-embeddings-srl-{version_dashes}.tar.gz"
 
     # Mapping for EDA operating system
     EDA_OPERATING_SYSTEM: ClassVar[str] = "srl"
@@ -204,7 +204,9 @@ class NokiaSRLinuxNode(Node):
             "onboarding_username": self.SRL_USERNAME,
             "sw_image": self.SRL_IMAGE.format(version=self.version),
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),
-            "llm_db": self.LLM_DB_PATH.format(version=self.version),
+            "llm_db": self.LLM_DB_PATH.format(
+                version=self.version, version_dashes=self.version.replace(".", "-")
+            ),
         }
         return helpers.render_template("node-profile.j2", data)
 
