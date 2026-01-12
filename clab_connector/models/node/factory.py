@@ -50,4 +50,5 @@ def create_node(name: str, config: dict) -> Node:
         version=config.get("version"),
         mgmt_ipv4=config.get("mgmt_ipv4"),
         mgmt_ipv4_prefix_length=config.get("mgmt_ipv4_prefix_length"),
+        labels=config.get("labels"),
     )

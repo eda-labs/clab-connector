@@ -271,6 +271,33 @@ clab-connector -l INFO integrate -t topology-data.json -e https://eda.example.co
 
 Explore the [example-topologies](./example-topologies/) directory for sample Containerlab topology files to get started quickly.
 
+### Node labels passthrough
+
+You can provide node-level labels in your containerlab topology file under each node's `labels:` section. The connector will pass through these labels to the EDA TopoNode resource exactly as specified:
+
+```yaml
+nodes:
+  spine1:
+    kind: nokia_srlinux
+    labels:
+      role: spine       # overrides the auto-detected role
+      dc: paris         # passed through as-is
+      env: production   # passed through as-is
+```
+
+These labels will be rendered as `metadata.labels` on the `TopoNode`:
+
+```yaml
+labels:
+  role: "spine"
+  dc: "paris"
+  env: "production"
+```
+
+**Notes:**
+- The `role` label, if provided, overrides the automatically computed role based on node name
+- Label values are sanitized to comply with Kubernetes label value requirements (max 63 chars, alphanumeric with `-`, `_`, `.`)
+
 ## Requesting Support
 
 If you encounter issues or have questions, please reach out through the following channels:

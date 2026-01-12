@@ -105,6 +105,7 @@ class AristaCEOSNode(Node):
         """
         logger.info(f"{SUBSTEP_INDENT}Creating toponode for {self.name}")
         self._require_version()
+        # default role
         role_value = "leaf"
         nl = self.name.lower()
         if "spine" in nl:
@@ -113,6 +114,13 @@ class AristaCEOSNode(Node):
             role_value = "borderleaf"
         elif "dcgw" in nl:
             role_value = "dcgw"
+
+        # Allow override from containerlab topology labels
+        if isinstance(self.labels, dict) and self.labels.get("role"):
+            role_value = str(self.labels["role"])
+
+        # Labels are already sanitized in topology.py
+        user_labels = self.labels
 
         # Ensure all values are lowercase and valid
         node_name = self.get_node_name(topology)
@@ -124,6 +132,7 @@ class AristaCEOSNode(Node):
             "node_name": node_name,
             "topology_name": topo_name,
             "role_value": role_value,
+            "user_labels": user_labels,
             "node_profile": self.get_profile_name(topology),
             "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
@@ -195,7 +204,7 @@ class AristaCEOSNode(Node):
             "namespace": topology.namespace,
             "interface_name": self.get_topolink_interface_name(topology, ifname),
             "label_key": "eda.nokia.com/role",
-            "label_value": role,
+            "label_value": helpers.sanitize_label_value(role),
             "encap_type": encap_type,
             "node_name": self.get_node_name(topology),
             "interface": self.get_interface_name_for_kind(ifname),
