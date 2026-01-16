@@ -2,18 +2,30 @@ apiVersion: core.eda.nokia.com/v1
 kind: TopoNode
 metadata:
   name: {{ node_name }}
+  namespace: {{ namespace }}
   labels:
     eda.nokia.com/role: {{ role_value }}
     eda-connector.nokia.com/topology: {{ topology_name }}
-    eda-connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
+    eda-connector.nokia.com/role: {{ topology_name }}-{{ role_value }}
     eda.nokia.com/security-profile: managed
     containerlab: {{ containerlab_label }}
+
+    {#- Do not let user_labels override/duplicate the connector labels -#}
+    {%- set reserved = [
+      "eda.nokia.com/role",
+      "eda-connector.nokia.com/topology",
+      "eda-connector.nokia.com/role",
+      "eda.nokia.com/security-profile",
+      "containerlab"
+    ] %}
+
     {%- if user_labels %}
     {%- for key, value in user_labels.items() %}
+    {%- if (not key.startswith("clab-")) and (key not in reserved) %}
     {{ key }}: "{{ value }}"
+    {%- endif %}
     {%- endfor %}
     {%- endif %}
-  namespace: {{ namespace }}
 spec:
   {% if components %}
   component:
