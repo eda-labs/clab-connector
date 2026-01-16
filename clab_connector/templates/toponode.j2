@@ -8,11 +8,6 @@ metadata:
     eda-connector.nokia.com/role: {{ topology_name}}-{{ role_value }}
     eda.nokia.com/security-profile: managed
     containerlab: {{ containerlab_label }}
-    {%- if user_labels %}
-    {%- for key, value in user_labels.items() %}
-    {{ key }}: "{{ value }}"
-    {%- endfor %}
-    {%- endif %}
   namespace: {{ namespace }}
 spec:
   {% if components %}
