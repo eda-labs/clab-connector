@@ -96,10 +96,12 @@ def sanitize_label_value(value) -> str:
     # Collapse whitespace to single hyphen
     s = re.sub(r"\s+", "-", s)
     # Remove characters not allowed in label values (allow a-z0-9, -, _, .)
-    # Lowercase early to make subsequent checks simpler and to guarantee
-    # the emitted label is lowercase as required.
-    s = s.lower()
-    s = re.sub(r"[^a-z0-9\-_.]", "", s)
+    # NOTE: Kubernetes label *values* are case-sensitive and allow uppercase.
+    # Do not force-lowercase here, otherwise label selectors (also case-sensitive)
+    # can break (e.g. managedSrl -> managedsrl).
+    s = re.sub(r"[^A-Za-z0-9\-_.]", "", s)
+    # Truncation may introduce an invalid trailing character; trim again.
+    s = re.sub(r"^[^A-Za-z0-9]+", "", s)
     # Trim non-alphanumeric from ends to satisfy k8s start/end rules
     s = re.sub(r"^[^A-Za-z0-9]+", "", s)
     s = re.sub(r"[^A-Za-z0-9]+$", "", s)
@@ -109,7 +111,7 @@ def sanitize_label_value(value) -> str:
 
     # Validate final form against k8s label value pattern:
     # begin and end with alnum, with [-_.a-z0-9] in between (lowercase)
-    if re.fullmatch(r"[a-z0-9](?:[a-z0-9_.-]{0,61}[a-z0-9])?", s):
+    if re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,61}[A-Za-z0-9])?", s):
         return s
 
     # If sanitization failed to produce a valid value, return a stable
