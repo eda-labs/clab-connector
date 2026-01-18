@@ -100,8 +100,6 @@ def sanitize_label_value(value) -> str:
     # Do not force-lowercase here, otherwise label selectors (also case-sensitive)
     # can break (e.g. managedSrl -> managedsrl).
     s = re.sub(r"[^A-Za-z0-9\-_.]", "", s)
-    # Truncation may introduce an invalid trailing character; trim again.
-    s = re.sub(r"^[^A-Za-z0-9]+", "", s)
     # Trim non-alphanumeric from ends to satisfy k8s start/end rules
     s = re.sub(r"^[^A-Za-z0-9]+", "", s)
     s = re.sub(r"[^A-Za-z0-9]+$", "", s)
