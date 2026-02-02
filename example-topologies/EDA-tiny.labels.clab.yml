@@ -1,0 +1,50 @@
+name: eda_tiny_labels
+
+topology:
+  kinds:
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux:25.3.2
+    linux:
+      image: ghcr.io/srl-labs/network-multitool:latest
+  nodes:
+    spine1:
+      kind: nokia_srlinux
+      type: ixr-d5
+      labels:
+        eda.nokia.com/node-template: spine-template
+        eda.nokia.com/role: spine
+        eda.nokia.com/security-profile: managed
+    leaf1:
+      kind: nokia_srlinux
+      type: ixr-d3l
+      labels:
+        eda.nokia.com/node-profile: srlinux-ghcr-25.3.2
+        eda.nokia.com/platform: 7220 IXR-D3L
+        role: leaf
+    client1:
+      kind: linux
+      labels:
+        eda.nokia.com/sim-node-template: multitool-client
+        eda.nokia.com/sim-type: Linux
+        eda.nokia.com/sim-image: ghcr.io/srl-labs/network-multitool:latest
+
+  links:
+    - type: veth
+      endpoints:
+        - node: spine1
+          interface: e1-1
+        - node: leaf1
+          interface: e1-1
+      labels:
+        eda.nokia.com/link-template: fabric-100g
+        eda.nokia.com/link-speed: "100G"
+        eda.nokia.com/encap-type: dot1q
+    - type: veth
+      endpoints:
+        - node: leaf1
+          interface: e1-2
+        - node: client1
+          interface: eth1
+      labels:
+        eda.nokia.com/link-template: edge-host
+        eda.nokia.com/link-type: edge

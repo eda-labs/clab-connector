@@ -69,3 +69,19 @@ class YAMLProcessor:
         except OSError as e:
             logger.error(f"Error saving YAML file: {e!s}")
             raise
+
+    def save_yaml_documents(self, documents, output_file):
+        try:
+            with open(output_file, "w") as file:
+                yaml.dump_all(
+                    documents,
+                    file,
+                    Dumper=self.CustomDumper,
+                    sort_keys=False,
+                    default_flow_style=False,
+                    indent=2,
+                )
+            logger.info(f"{SUBSTEP_INDENT}YAML file saved as '{output_file}'.")
+        except OSError as e:
+            logger.error(f"Error saving YAML file: {e!s}")
+            raise

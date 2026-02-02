@@ -1,0 +1,49 @@
+name: eda_sros_labels
+
+topology:
+  kinds:
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux:25.7.1
+    nokia_srsim:
+      image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+      type: SR-1
+    linux:
+      image: ghcr.io/srl-labs/network-multitool:latest
+  nodes:
+    spine1:
+      kind: nokia_srlinux
+      type: ixr-d5
+      labels:
+        eda.nokia.com/node-template: spine-template
+        eda.nokia.com/role: spine
+    dc-gw-1:
+      kind: nokia_srsim
+      labels:
+        eda.nokia.com/node-template: sros-gw
+        eda.nokia.com/role: backbone
+        eda.nokia.com/security-profile: managed
+    host1:
+      kind: linux
+      labels:
+        eda.nokia.com/sim-node-template: multitool-host
+        eda.nokia.com/sim-image: ghcr.io/srl-labs/network-multitool:latest
+
+  links:
+    - type: veth
+      endpoints:
+        - node: spine1
+          interface: e1-1
+        - node: dc-gw-1
+          interface: 1/1/c1/1
+      labels:
+        eda.nokia.com/link-template: sros-core
+        eda.nokia.com/link-speed: "40G"
+    - type: veth
+      endpoints:
+        - node: spine1
+          interface: e1-2
+        - node: host1
+          interface: eth1
+      labels:
+        eda.nokia.com/link-template: host-edge
+        eda.nokia.com/link-type: edge

@@ -11,27 +11,27 @@ topology:
   nodes:
     spine-1:
       kind: nokia_srlinux
-      type: ixrd3l
+      type: ixr-d3l
       mgmt-ipv4: 10.58.2.115
     spine-2:
       kind: nokia_srlinux
-      type: ixrd3l
+      type: ixr-d3l
       mgmt-ipv4: 10.58.2.116
     leaf-1:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       mgmt-ipv4: 10.58.2.117
     leaf-2:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       mgmt-ipv4: 10.58.2.118
     leaf-3:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       mgmt-ipv4: 10.58.2.119
     leaf-4:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       mgmt-ipv4: 10.58.2.120
   links:
     # spine - leaf

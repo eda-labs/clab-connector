@@ -18,6 +18,9 @@ from clab_connector.services.integration.topology_integrator import (
 from clab_connector.services.manifest.manifest_generator import ManifestGenerator
 from clab_connector.services.removal.topology_remover import TopologyRemover
 from clab_connector.services.status.node_sync_checker import NodeSyncChecker
+from clab_connector.services.workflow.network_topology_generator import (
+    NetworkTopologyGenerator,
+)
 from clab_connector.utils.logging_config import setup_logging
 
 # Disable urllib3 warnings (optional)
@@ -38,6 +41,11 @@ class LogLevel(str, Enum):
 class InterfaceEncapsulation(str, Enum):
     UNTAGGED = "untagged"
     DOT1Q = "dot1q"
+
+
+class NetworkTopologyOperation(str, Enum):
+    CREATE = "create"
+    REPLACE_ALL = "replaceAll"
 
 
 app = typer.Typer(
@@ -84,6 +92,18 @@ def complete_json_files(
     if not current.is_dir():
         current = current.parent
     return [str(path) for path in current.glob("*.json") if incomplete in str(path)]
+
+
+def complete_yaml_files(
+    _ctx: typer.Context, _param: typer.Option, incomplete: str
+) -> list[str]:
+    """Complete YAML file paths for CLI autocomplete."""
+
+    current = Path(incomplete) if incomplete else Path.cwd()
+    if not current.is_dir():
+        current = current.parent
+    candidates = list(current.glob("*.yml")) + list(current.glob("*.yaml"))
+    return [str(path) for path in candidates if incomplete in str(path)]
 
 
 def complete_eda_url(
@@ -350,6 +370,84 @@ def export_lab_cmd(
         exporter.run()
     except Exception as e:
         logger.error(f"Failed to export lab from namespace '{namespace}': {e}")
+        raise typer.Exit(code=1) from e
+
+
+@app.command(
+    name="generate-topology",
+    help="Generate an EDA NetworkTopology workflow YAML from a containerlab .clab.yml file.",
+)
+def generate_topology_cmd(
+    topology_file: Annotated[
+        Path,
+        typer.Option(
+            "--topology-file",
+            "-t",
+            help="Path to containerlab topology YAML file (.clab.yml)",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            shell_complete=complete_yaml_files,
+        ),
+    ],
+    output_file: str | None = typer.Option(
+        None, "--output", "-o", help="Output NetworkTopology YAML file path"
+    ),
+    nodeprofiles_output: str | None = typer.Option(
+        None,
+        "--nodeprofiles-output",
+        help="Optional output file for generated NodeProfile YAML",
+    ),
+    namespace: str = typer.Option(
+        "eda",
+        "--namespace",
+        "-n",
+        help="Namespace to set on metadata (default: eda)",
+    ),
+    operation: NetworkTopologyOperation | None = typer.Option(
+        None,
+        "--operation",
+        help="Optional NetworkTopology operation (e.g. replaceAll)",
+        case_sensitive=False,
+    ),
+    resolve_nodeprofiles: bool = typer.Option(
+        True,
+        "--resolve-nodeprofiles/--no-resolve-nodeprofiles",
+        help="Resolve SRL/SROS nodeProfiles from EDA if available (ignored when creating nodeProfiles)",
+    ),
+    create_nodeprofiles: bool = typer.Option(
+        True,
+        "--create-nodeprofiles/--no-create-nodeprofiles",
+        help="Create NodeProfile manifests and reference them in the workflow",
+    ),
+    log_level: LogLevel = log_level_option,
+    log_file: str | None = log_file_option,
+):
+    """
+    Generate EDA NetworkTopology workflow YAML from a containerlab YAML file.
+
+    Label overrides (node labels): eda.nokia.com/node-template, node-profile,
+    platform, role, security-profile, sim-node-template, sim-type, sim-image,
+    nodeprofile-container-image, nodeprofile-image-pull-secret.
+    Label overrides (link labels): eda.nokia.com/link-template, link-type,
+    link-speed, encap-type.
+    """
+
+    setup_logging(log_level.value, log_file)
+    try:
+        generator = NetworkTopologyGenerator(
+            topology_file=topology_file,
+            output=output_file,
+            nodeprofiles_output=nodeprofiles_output,
+            namespace=namespace,
+            operation=operation.value if operation else None,
+            resolve_nodeprofiles=resolve_nodeprofiles,
+            create_nodeprofiles=create_nodeprofiles,
+        )
+        generator.run()
+    except Exception as e:
+        rprint(f"[red]Error: {e!s}[/red]")
         raise typer.Exit(code=1) from e
 
 

@@ -228,6 +228,51 @@ clab-connector export-lab \
 | `--log-level`, `-l` | No       | INFO      | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)                      |
 | `--log-file`        | No       | None      | Optional log file path                                                 |
 
+#### Generate a NetworkTopology workflow from Containerlab YAML
+
+The `generate-topology` command converts an undeployed `.clab.yml` file into an
+EDA `NetworkTopology` workflow YAML (no apply).
+
+```
+clab-connector generate-topology \
+  --topology-file path/to/topology.clab.yml \
+  --output topology.network-topology.yaml
+```
+
+Label overrides (node labels):
+`eda.nokia.com/node-template`, `eda.nokia.com/node-profile`,
+`eda.nokia.com/platform`, `eda.nokia.com/role` (or `role`),
+`eda.nokia.com/security-profile`,
+`eda.nokia.com/nodeprofile-container-image`,
+`eda.nokia.com/nodeprofile-image-pull-secret`.
+
+Label overrides (link labels):
+`eda.nokia.com/link-template`, `eda.nokia.com/link-type`,
+`eda.nokia.com/link-speed`, `eda.nokia.com/encap-type`.
+
+Linux nodes are exported as `simulation.simNodes` using a `Linux` simNodeTemplate.
+If no image is set on the node, the default is `ghcr.io/srl-labs/network-multitool:latest`.
+You can override the sim template via node labels:
+`eda.nokia.com/sim-node-template`, `eda.nokia.com/sim-type`, `eda.nokia.com/sim-image`.
+
+By default, `generate-topology` creates **custom NodeProfile CRs** (prefixed with the
+topology name) and references them in the NetworkTopology workflow. If
+`--nodeprofiles-output` is not set, the output file will contain multiple YAML
+documents: NodeProfiles first, then the NetworkTopology workflow. Use
+`--no-create-nodeprofiles` to keep referencing existing NodeProfiles in EDA.
+
+| Option                      | Required | Default | Description                                                |
+|-----------------------------|----------|---------|------------------------------------------------------------|
+| `--topology-file`, `-t`     | Yes      | None    | Path to the containerlab topology YAML file                |
+| `--output`, `-o`            | No       | None    | Output NetworkTopology YAML file path                      |
+| `--nodeprofiles-output`     | No       | None    | Optional output file for generated NodeProfiles            |
+| `--namespace`, `-n`         | No       | eda     | Namespace to set on the NetworkTopology metadata           |
+| `--operation`               | No       | None    | Optional workflow operation (e.g. `replaceAll`)            |
+| `--create-nodeprofiles`     | No       | True    | Create NodeProfile manifests and reference them            |
+| `--resolve-nodeprofiles`    | No       | True    | Resolve SRL/SROS nodeProfiles from EDA if available        |
+| `--log-level`, `-l`         | No       | INFO    | Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)          |
+| `--log-file`, `-f`          | No       | None    | Optional log file path                                     |
+
 #### Generate CR YAML Manifests
 The `generate-crs` command allows you to generate all the CR YAML manifests that would be applied to EDA—grouped by category. By default all manifests are concatenated into a single file. If you use the --separate flag, the manifests are written into separate files per category (e.g. `artifacts.yaml`, `init.yaml`, `node-security-profile.yaml`, etc.).
 You can also use `--skip-edge-intfs` to omit edge link resources and their interfaces.
@@ -270,6 +315,7 @@ clab-connector -l INFO integrate -t topology-data.json -e https://eda.example.co
 ## Example Topologies
 
 Explore the [example-topologies](./example-topologies/) directory for sample Containerlab topology files to get started quickly.
+Label override examples: `example-topologies/EDA-tiny.labels.clab.yml` and `example-topologies/EDA-sros.labels.clab.yml`.
 
 ### Node labels passthrough
 
@@ -392,4 +438,3 @@ Our CI pipeline will automatically verify that your code passes all ruff checks.
 
 - [Containerlab](https://containerlab.dev/) for providing an excellent network emulation platform.
 - [EDA (Event-Driven Automation)](https://docs.eda.dev/) for the robust automation capabilities.
-

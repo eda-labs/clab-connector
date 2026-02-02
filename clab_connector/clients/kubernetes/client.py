@@ -193,6 +193,34 @@ def apply_manifest(yaml_str: str, namespace: str = "eda-system") -> None:
         raise RuntimeError(f"Failed to apply manifest: {exc}") from exc
 
 
+def list_nodeprofiles(namespace: str = "eda") -> list[dict]:
+    """
+    List NodeProfile custom resources in the given namespace.
+
+    Parameters
+    ----------
+    namespace : str
+        Kubernetes namespace containing NodeProfile CRs.
+
+    Returns
+    -------
+    list[dict]
+        A list of NodeProfile objects (dicts).
+    """
+    try:
+        custom_api = k8s_client.CustomObjectsApi()
+        resp = custom_api.list_namespaced_custom_object(
+            group="core.eda.nokia.com",
+            version="v1",
+            namespace=namespace,
+            plural="nodeprofiles",
+        )
+        return resp.get("items", [])
+    except ApiException as exc:
+        logger.error(f"{SUBSTEP_INDENT}Failed to list NodeProfiles: {exc}")
+        return []
+
+
 def edactl_namespace_bootstrap(namespace: str) -> int | None:
     """
     Emulate `kubectl exec <toolbox_pod> -- edactl namespace bootstrap <namespace>`
