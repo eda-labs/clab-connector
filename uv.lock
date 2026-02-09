@@ -283,7 +283,7 @@ wheels = [
 
 [[package]]
 name = "clab-connector"
-version = "0.8.7"
+version = "0.8.8"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
