@@ -1,7 +1,7 @@
 # clab_connector/cli/main.py
 
 import logging
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
@@ -27,7 +27,7 @@ SUPPORTED_KINDS = ["nokia_srlinux", "nokia_sros", "nokia_srsim", "arista_ceos"]
 NODE_DISPLAY_LIMIT = 5
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -35,7 +35,7 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-class InterfaceEncapsulation(str, Enum):
+class InterfaceEncapsulation(StrEnum):
     UNTAGGED = "untagged"
     DOT1Q = "dot1q"
 

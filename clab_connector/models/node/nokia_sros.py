@@ -289,14 +289,18 @@ class NokiaSROSNode(Node):
                 # Pattern: "1-2-c3-4" -> conditional format
                 (
                     r"^e(\d+)-(\d+)-c(\d+)-(\d+)$",
-                    lambda m: f"ethernet-{m[0]}-{m[2]}-{m[3]}"
-                    if m[2] == "1"
-                    else f"ethernet-{m[0]}-{mda_to_letter(m[1])}-{m[2]}-{m[3]}",
+                    lambda m: (
+                        f"ethernet-{m[0]}-{m[2]}-{m[3]}"
+                        if m[2] == "1"
+                        else f"ethernet-{m[0]}-{mda_to_letter(m[1])}-{m[2]}-{m[3]}"
+                    ),
                 ),
                 # Pattern: "1-x2-1-c3-1" -> "ethernet-1-2-1-c3-1"
                 (
                     r"^e(\d+)-x(\d+)-(\d+)-c(\d+)-(\d+)$",
-                    lambda m: f"ethernet-{m[0]}-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-{m[4]}",
+                    lambda m: (
+                        f"ethernet-{m[0]}-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-{m[4]}"
+                    ),
                 ),
                 # Pattern: "1-x2-1-3" -> "ethernet-1-2-1-3"
                 (
@@ -313,14 +317,18 @@ class NokiaSROSNode(Node):
                 # Pattern: "1/2/c3/4" -> conditional format
                 (
                     r"^(\d+)/(\d+)/c(\d+)/(\d+)$",
-                    lambda m: f"ethernet-{m[0]}-{m[2]}-{m[3]}"
-                    if m[2] == "1"
-                    else f"ethernet-{m[0]}-{mda_to_letter(m[1])}-{m[2]}-{m[3]}",
+                    lambda m: (
+                        f"ethernet-{m[0]}-{m[2]}-{m[3]}"
+                        if m[2] == "1"
+                        else f"ethernet-{m[0]}-{mda_to_letter(m[1])}-{m[2]}-{m[3]}"
+                    ),
                 ),
                 # Pattern: "1/x2/1/c3/1" -> "ethernet-1-2-1-c3-1"
                 (
                     r"^(\d+)/x(\d+)/(\d+)/c(\d+)/(\d+)$",
-                    lambda m: f"ethernet-{m[0]}-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-{m[4]}",
+                    lambda m: (
+                        f"ethernet-{m[0]}-{m[1]}-{mda_to_letter(m[2])}-{m[3]}-{m[4]}"
+                    ),
                 ),
                 # Pattern: "eth1" -> "ethernet-1-a-1-1"
                 (r"^eth(\d+)$", lambda m: f"ethernet-1-a-{m[0]}-1"),
