@@ -68,7 +68,7 @@ class NokiaSROSNode(Node):
             "connectors": 12,  # Number of connectors
         },
         "sr-1s": {
-            "lineCard": {"slot": "1", "type": "xcm-1s"},   
+            "lineCard": {"slot": "1", "type": "xcm-1s"},
             "powerShelf": {"slot": "1", "type": "ps-a4-shelf-dc"},
             "powerModule": {"slot": "1-1,1-2,1-3,1-4", "type": "ps-a-dc-6000"},
             "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
@@ -138,9 +138,7 @@ class NokiaSROSNode(Node):
             if "mda" in component_info
             else []
         )
-        mda_slots = (
-            [m["slot"] for m in mda_entries] if mda_entries else ["1-a"]
-        )
+        mda_slots = [m["slot"] for m in mda_entries] if mda_entries else ["1-a"]
         for mda_slot in mda_slots:
             for i in range(1, num_connectors + 1):
                 components.append(

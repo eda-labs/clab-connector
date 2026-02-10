@@ -54,7 +54,14 @@ def _log_k8s_debug_context():
         logger.debug("Kubernetes API host: %s", cfg.host or "(none)")
     except Exception as e:
         logger.debug("Could not get Kubernetes API host: %s", e)
-    for key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "NO_PROXY", "no_proxy"):
+    for key in (
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "NO_PROXY",
+        "no_proxy",
+    ):
         val = os.environ.get(key)
         if val is not None:
             logger.debug("Env %s=%s", key, val)
