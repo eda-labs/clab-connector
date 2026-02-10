@@ -99,6 +99,16 @@ class NokiaSROSNode(Node):
         # },
     }
 
+    # Component kinds that accept a single dict or list of dicts (slot, type)
+    _TYPED_COMPONENT_KINDS: ClassVar[list[tuple[str, str]]] = [
+        ("lineCard", "lineCard"),
+        ("fabric", "fabric"),
+        ("xiom", "xiom"),
+        ("powerShelf", "powerShelf"),
+        ("powerModule", "powerModule"),
+        ("mda", "mda"),
+    ]
+
     @staticmethod
     def _normalize_component_list(
         value: dict[str, str] | list[dict[str, str]],
@@ -107,6 +117,39 @@ class NokiaSROSNode(Node):
         if isinstance(value, list):
             return value
         return [value]
+
+    def _append_typed_components(self, components, component_info):
+        """Append all typed components (lineCard, fabric, xiom, etc.) from component_info."""
+        for key, kind in self._TYPED_COMPONENT_KINDS:
+            if key not in component_info:
+                continue
+            for item in self._normalize_component_list(component_info[key]):
+                components.append(
+                    {"kind": kind, "slot": item["slot"], "type": item["type"]}
+                )
+
+    def _append_connector_components(self, components, component_info):
+        """Append connector components — one set per MDA (slot like '{mda_slot}-{i}')."""
+        if "connectors" not in component_info:
+            return
+        num_connectors = component_info["connectors"]
+        mda_entries = (
+            self._normalize_component_list(component_info["mda"])
+            if "mda" in component_info
+            else []
+        )
+        mda_slots = (
+            [m["slot"] for m in mda_entries] if mda_entries else ["1-a"]
+        )
+        for mda_slot in mda_slots:
+            for i in range(1, num_connectors + 1):
+                components.append(
+                    {
+                        "kind": "connector",
+                        "slot": f"{mda_slot}-{i}",
+                        "type": "c1-100g",
+                    }
+                )
 
     def _get_components(self):
         """
@@ -117,116 +160,13 @@ class NokiaSROSNode(Node):
         list
             A list of component dictionaries for the TopoNode resource.
         """
-        # Default to empty component list
         components = []
-
-        # Normalize node type for lookup
         node_type = self.node_type.lower() if self.node_type else ""
-
-        # Check if node type is in the mapping
-        if node_type in self.SROS_COMPONENTS:
-            # Get component info for this node type
-            component_info = self.SROS_COMPONENTS[node_type]
-
-            # Add line card component(s) — single dict or list of dicts
-            if "lineCard" in component_info:
-                for lc in self._normalize_component_list(
-                    component_info["lineCard"]
-                ):
-                    components.append(
-                        {
-                            "kind": "lineCard",
-                            "slot": lc["slot"],
-                            "type": lc["type"],
-                        }
-                    )
-
-            # Add fabric component(s) — single dict or list of dicts
-            if "fabric" in component_info:
-                for fab in self._normalize_component_list(
-                    component_info["fabric"]
-                ):
-                    components.append(
-                        {
-                            "kind": "fabric",
-                            "slot": fab["slot"],
-                            "type": fab["type"],
-                        }
-                    )
-
-            # Add xiom component(s) — single dict or list of dicts
-            if "xiom" in component_info:
-                for xiom in self._normalize_component_list(
-                    component_info["xiom"]
-                ):
-                    components.append(
-                        {
-                            "kind": "xiom",
-                            "slot": xiom["slot"],
-                            "type": xiom["type"],
-                        }
-                    )
-
-            # Add power shelf component(s) — single dict or list of dicts
-            if "powerShelf" in component_info:
-                for ps in self._normalize_component_list(
-                    component_info["powerShelf"]
-                ):
-                    components.append(
-                        {
-                            "kind": "powerShelf",
-                            "slot": ps["slot"],
-                            "type": ps["type"],
-                        }
-                    )
-
-            # Add power module component(s) — single dict or list of dicts
-            if "powerModule" in component_info:
-                for pm in self._normalize_component_list(
-                    component_info["powerModule"]
-                ):
-                    components.append(
-                        {
-                            "kind": "powerModule",
-                            "slot": pm["slot"],
-                            "type": pm["type"],
-                        }
-                    )
-
-            # Add MDA component(s) — single dict or list of dicts
-            if "mda" in component_info:
-                for mda in self._normalize_component_list(
-                    component_info["mda"]
-                ):
-                    components.append(
-                        {
-                            "kind": "mda",
-                            "slot": mda["slot"],
-                            "type": mda["type"],
-                        }
-                    )
-
-            # Add connector components — one set per MDA (slot like "{mda_slot}-{i}")
-            if "connectors" in component_info:
-                num_connectors = component_info["connectors"]
-                mda_entries = (
-                    self._normalize_component_list(component_info["mda"])
-                    if "mda" in component_info
-                    else []
-                )
-                mda_slots = (
-                    [m["slot"] for m in mda_entries] if mda_entries else ["1-a"]
-                )
-                for mda_slot in mda_slots:
-                    for i in range(1, num_connectors + 1):
-                        components.append(
-                            {
-                                "kind": "connector",
-                                "slot": f"{mda_slot}-{i}",
-                                "type": "c1-100g",  # Default connector type
-                            }
-                        )
-
+        if node_type not in self.SROS_COMPONENTS:
+            return components
+        component_info = self.SROS_COMPONENTS[node_type]
+        self._append_typed_components(components, component_info)
+        self._append_connector_components(components, component_info)
         return components
 
     def get_default_node_type(self):
