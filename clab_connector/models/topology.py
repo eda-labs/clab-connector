@@ -116,6 +116,9 @@ class Topology:
         RuntimeError
             If any node fails to respond to ping.
         """
+        logger.info(
+            "Checking node reachability (pings from EDA bootstrapserver pod via Kubernetes API)..."
+        )
         for node in self.nodes:
             node.ping()
 

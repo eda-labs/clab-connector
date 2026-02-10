@@ -60,29 +60,53 @@ class NokiaSROSNode(Node):
         ),
     }
 
-    # Map of node types to their line card and MDA components
-    SROS_COMPONENTS: ClassVar[dict[str, dict[str, dict[str, str]] | dict[str, int]]] = {
+    # Map of node types to their line card, power, MDA and connector components
+    SROS_COMPONENTS: ClassVar[dict[str, dict[str, dict[str, str] | int]]] = {
         "sr-1": {
             "lineCard": {"slot": "1", "type": "iom-1"},
             "mda": {"slot": "1-a", "type": "me12-100gb-qsfp28"},
             "connectors": 12,  # Number of connectors
         },
         "sr-1s": {
-            "lineCard": {"slot": "1", "type": "xcm-1s"},
+            "lineCard": {"slot": "1", "type": "xcm-1s"},   
+            "powerShelf": {"slot": "1", "type": "ps-a4-shelf-dc"},
+            "powerModule": {"slot": "1-1,1-2,1-3,1-4", "type": "ps-a-dc-6000"},
             "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
             "connectors": 36,
         },
         "sr-2s": {
             "lineCard": {"slot": "1", "type": "xcm-2s"},
-            "mda": {"slot": "1-a", "type": "ms8-100gb-sfpdd+2-100gb-qsfp28"},
-            "connectors": 10,
-        },
-        "sr-7s": {
-            "lineCard": {"slot": "1", "type": "xcm-7s"},
+            "fabric": {"slot": "1", "type": "sfm-2s"},
+            "powerShelf": {"slot": "1", "type": "ps-a4-shelf-dc"},
+            "powerModule": {"slot": "1-1,1-2,1-3,1-4", "type": "ps-a-dc-6000"},
             "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
             "connectors": 36,
         },
+        ## TODO: It doesn't work for some reason
+        # "sr-7s": {
+        #     "lineCard": {"slot": "1", "type": "xcm2-7s"},
+        #     "fabric": {"slot": "1", "type": "sfm2-s"},
+        #     "powerShelf": [
+        #          {"slot": "1", "type": "ps-a10-shelf-dc"},
+        #          {"slot": "2", "type": "ps-a10-shelf-dc"},
+        #     ],
+        #     "powerModule": [
+        #        {"slot": "1-1,1,2", "type": "ps-a-dc-6000"},
+        #        {"slot": "1-3,1-4", "type": "ps-a-dc-6000"},
+        #     ],
+        #     "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
+        #     "connectors": 36,
+        # },
     }
+
+    @staticmethod
+    def _normalize_component_list(
+        value: dict[str, str] | list[dict[str, str]],
+    ) -> list[dict[str, str]]:
+        """Return a list of component dicts (slot, type). Accepts one dict or a list."""
+        if isinstance(value, list):
+            return value
+        return [value]
 
     def _get_components(self):
         """
@@ -104,31 +128,104 @@ class NokiaSROSNode(Node):
             # Get component info for this node type
             component_info = self.SROS_COMPONENTS[node_type]
 
-            # Add line card component
+            # Add line card component(s) — single dict or list of dicts
             if "lineCard" in component_info:
-                lc = component_info["lineCard"]
-                components.append(
-                    {"kind": "lineCard", "slot": lc["slot"], "type": lc["type"]}
-                )
-
-            # Add MDA component
-            if "mda" in component_info:
-                mda = component_info["mda"]
-                components.append(
-                    {"kind": "mda", "slot": mda["slot"], "type": mda["type"]}
-                )
-
-            # Add connector components
-            if "connectors" in component_info:
-                num_connectors = component_info["connectors"]
-                for i in range(1, num_connectors + 1):
+                for lc in self._normalize_component_list(
+                    component_info["lineCard"]
+                ):
                     components.append(
                         {
-                            "kind": "connector",
-                            "slot": f"1-a-{i}",
-                            "type": "c1-100g",  # Default connector type
+                            "kind": "lineCard",
+                            "slot": lc["slot"],
+                            "type": lc["type"],
                         }
                     )
+
+            # Add fabric component(s) — single dict or list of dicts
+            if "fabric" in component_info:
+                for fab in self._normalize_component_list(
+                    component_info["fabric"]
+                ):
+                    components.append(
+                        {
+                            "kind": "fabric",
+                            "slot": fab["slot"],
+                            "type": fab["type"],
+                        }
+                    )
+
+            # Add xiom component(s) — single dict or list of dicts
+            if "xiom" in component_info:
+                for xiom in self._normalize_component_list(
+                    component_info["xiom"]
+                ):
+                    components.append(
+                        {
+                            "kind": "xiom",
+                            "slot": xiom["slot"],
+                            "type": xiom["type"],
+                        }
+                    )
+
+            # Add power shelf component(s) — single dict or list of dicts
+            if "powerShelf" in component_info:
+                for ps in self._normalize_component_list(
+                    component_info["powerShelf"]
+                ):
+                    components.append(
+                        {
+                            "kind": "powerShelf",
+                            "slot": ps["slot"],
+                            "type": ps["type"],
+                        }
+                    )
+
+            # Add power module component(s) — single dict or list of dicts
+            if "powerModule" in component_info:
+                for pm in self._normalize_component_list(
+                    component_info["powerModule"]
+                ):
+                    components.append(
+                        {
+                            "kind": "powerModule",
+                            "slot": pm["slot"],
+                            "type": pm["type"],
+                        }
+                    )
+
+            # Add MDA component(s) — single dict or list of dicts
+            if "mda" in component_info:
+                for mda in self._normalize_component_list(
+                    component_info["mda"]
+                ):
+                    components.append(
+                        {
+                            "kind": "mda",
+                            "slot": mda["slot"],
+                            "type": mda["type"],
+                        }
+                    )
+
+            # Add connector components — one set per MDA (slot like "{mda_slot}-{i}")
+            if "connectors" in component_info:
+                num_connectors = component_info["connectors"]
+                mda_entries = (
+                    self._normalize_component_list(component_info["mda"])
+                    if "mda" in component_info
+                    else []
+                )
+                mda_slots = (
+                    [m["slot"] for m in mda_entries] if mda_entries else ["1-a"]
+                )
+                for mda_slot in mda_slots:
+                    for i in range(1, num_connectors + 1):
+                        components.append(
+                            {
+                                "kind": "connector",
+                                "slot": f"{mda_slot}-{i}",
+                                "type": "c1-100g",  # Default connector type
+                            }
+                        )
 
         return components
 
