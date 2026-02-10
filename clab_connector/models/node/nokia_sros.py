@@ -60,8 +60,8 @@ class NokiaSROSNode(Node):
         ),
     }
 
-    # Map of node types to their line card and MDA components
-    SROS_COMPONENTS: ClassVar[dict[str, dict[str, dict[str, str]] | dict[str, int]]] = {
+    # Map of node types to their line card, power, MDA and connector components
+    SROS_COMPONENTS: ClassVar[dict[str, dict[str, dict[str, str] | int]]] = {
         "sr-1": {
             "lineCard": {"slot": "1", "type": "iom-1"},
             "mda": {"slot": "1-a", "type": "me12-100gb-qsfp28"},
@@ -69,20 +69,85 @@ class NokiaSROSNode(Node):
         },
         "sr-1s": {
             "lineCard": {"slot": "1", "type": "xcm-1s"},
+            "powerShelf": {"slot": "1", "type": "ps-a4-shelf-dc"},
+            "powerModule": {"slot": "1-1,1-2,1-3,1-4", "type": "ps-a-dc-6000"},
             "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
             "connectors": 36,
         },
         "sr-2s": {
             "lineCard": {"slot": "1", "type": "xcm-2s"},
-            "mda": {"slot": "1-a", "type": "ms8-100gb-sfpdd+2-100gb-qsfp28"},
-            "connectors": 10,
-        },
-        "sr-7s": {
-            "lineCard": {"slot": "1", "type": "xcm-7s"},
+            "fabric": {"slot": "1", "type": "sfm-2s"},
+            "powerShelf": {"slot": "1", "type": "ps-a4-shelf-dc"},
+            "powerModule": {"slot": "1-1,1-2,1-3,1-4", "type": "ps-a-dc-6000"},
             "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
             "connectors": 36,
         },
+        ## TODO: It doesn't work for some reason
+        # "sr-7s": {
+        #     "lineCard": {"slot": "1", "type": "xcm2-7s"},
+        #     "fabric": {"slot": "1", "type": "sfm2-s"},
+        #     "powerShelf": [
+        #          {"slot": "1", "type": "ps-a10-shelf-dc"},
+        #          {"slot": "2", "type": "ps-a10-shelf-dc"},
+        #     ],
+        #     "powerModule": [
+        #        {"slot": "1-1,1,2", "type": "ps-a-dc-6000"},
+        #        {"slot": "1-3,1-4", "type": "ps-a-dc-6000"},
+        #     ],
+        #     "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
+        #     "connectors": 36,
+        # },
     }
+
+    # Component kinds that accept a single dict or list of dicts (slot, type)
+    _TYPED_COMPONENT_KINDS: ClassVar[list[tuple[str, str]]] = [
+        ("lineCard", "lineCard"),
+        ("fabric", "fabric"),
+        ("xiom", "xiom"),
+        ("powerShelf", "powerShelf"),
+        ("powerModule", "powerModule"),
+        ("mda", "mda"),
+    ]
+
+    @staticmethod
+    def _normalize_component_list(
+        value: dict[str, str] | list[dict[str, str]],
+    ) -> list[dict[str, str]]:
+        """Return a list of component dicts (slot, type). Accepts one dict or a list."""
+        if isinstance(value, list):
+            return value
+        return [value]
+
+    def _append_typed_components(self, components, component_info):
+        """Append all typed components (lineCard, fabric, xiom, etc.) from component_info."""
+        for key, kind in self._TYPED_COMPONENT_KINDS:
+            if key not in component_info:
+                continue
+            for item in self._normalize_component_list(component_info[key]):
+                components.append(
+                    {"kind": kind, "slot": item["slot"], "type": item["type"]}
+                )
+
+    def _append_connector_components(self, components, component_info):
+        """Append connector components — one set per MDA (slot like '{mda_slot}-{i}')."""
+        if "connectors" not in component_info:
+            return
+        num_connectors = component_info["connectors"]
+        mda_entries = (
+            self._normalize_component_list(component_info["mda"])
+            if "mda" in component_info
+            else []
+        )
+        mda_slots = [m["slot"] for m in mda_entries] if mda_entries else ["1-a"]
+        for mda_slot in mda_slots:
+            for i in range(1, num_connectors + 1):
+                components.append(
+                    {
+                        "kind": "connector",
+                        "slot": f"{mda_slot}-{i}",
+                        "type": "c1-100g",
+                    }
+                )
 
     def _get_components(self):
         """
@@ -93,43 +158,13 @@ class NokiaSROSNode(Node):
         list
             A list of component dictionaries for the TopoNode resource.
         """
-        # Default to empty component list
         components = []
-
-        # Normalize node type for lookup
         node_type = self.node_type.lower() if self.node_type else ""
-
-        # Check if node type is in the mapping
-        if node_type in self.SROS_COMPONENTS:
-            # Get component info for this node type
-            component_info = self.SROS_COMPONENTS[node_type]
-
-            # Add line card component
-            if "lineCard" in component_info:
-                lc = component_info["lineCard"]
-                components.append(
-                    {"kind": "lineCard", "slot": lc["slot"], "type": lc["type"]}
-                )
-
-            # Add MDA component
-            if "mda" in component_info:
-                mda = component_info["mda"]
-                components.append(
-                    {"kind": "mda", "slot": mda["slot"], "type": mda["type"]}
-                )
-
-            # Add connector components
-            if "connectors" in component_info:
-                num_connectors = component_info["connectors"]
-                for i in range(1, num_connectors + 1):
-                    components.append(
-                        {
-                            "kind": "connector",
-                            "slot": f"1-a-{i}",
-                            "type": "c1-100g",  # Default connector type
-                        }
-                    )
-
+        if node_type not in self.SROS_COMPONENTS:
+            return components
+        component_info = self.SROS_COMPONENTS[node_type]
+        self._append_typed_components(components, component_info)
+        self._append_connector_components(components, component_info)
         return components
 
     def get_default_node_type(self):

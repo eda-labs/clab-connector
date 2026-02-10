@@ -1,14 +1,17 @@
 # clab_connector/clients/kubernetes/client.py
 
 import logging
+import os
 import re
 import time
 
 import yaml
 
 import kubernetes as k8s
+from clab_connector.clients.eda.http_client import should_bypass_proxy
 from clab_connector.utils.constants import SUBSTEP_INDENT
 from kubernetes import config
+from kubernetes.client import configuration
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 from kubernetes.utils import create_from_yaml
@@ -33,6 +36,41 @@ except Exception:
     except Exception:
         logger.debug("Kubernetes configuration could not be loaded")
 
+# Kubernetes client often ignores NO_PROXY; if API host is in NO_PROXY, disable proxy
+try:
+    cfg = configuration.Configuration.get_default_copy()
+    if cfg.host and should_bypass_proxy(cfg.host):
+        cfg.proxy = ""
+        configuration.Configuration.set_default(cfg)
+        logger.debug("Kubernetes client: disabled proxy for API host (in NO_PROXY).")
+except Exception as e:
+    logger.debug("Could not apply NO_PROXY to Kubernetes config: %s", e)
+
+
+def _log_k8s_debug_context():
+    """Log Kubernetes API and proxy context at DEBUG for troubleshooting."""
+    try:
+        cfg = configuration.Configuration.get_default_copy()
+        logger.debug("Kubernetes API host: %s", cfg.host or "(none)")
+    except Exception as e:
+        logger.debug("Could not get Kubernetes API host: %s", e)
+    for key in (
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "NO_PROXY",
+        "no_proxy",
+    ):
+        val = os.environ.get(key)
+        if val is not None:
+            logger.debug("Env %s=%s", key, val)
+    if os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy"):
+        logger.debug(
+            "Proxy is set; if you see 'Tunnel connection failed: 403', "
+            "try unset HTTPS_PROXY/HTTP_PROXY for local API (e.g. kubectl proxy), or add API host to NO_PROXY."
+        )
+
 
 def get_toolbox_pod() -> str:
     """
@@ -49,9 +87,20 @@ def get_toolbox_pod() -> str:
     RuntimeError
         If no toolbox pod is found.
     """
+    _log_k8s_debug_context()
     v1 = k8s_client.CoreV1Api()
     label_selector = "eda.nokia.com/app=eda-toolbox"
-    pods = v1.list_namespaced_pod("eda-system", label_selector=label_selector)
+    logger.debug("Listing pods in eda-system with labelSelector=%s", label_selector)
+    try:
+        pods = v1.list_namespaced_pod("eda-system", label_selector=label_selector)
+    except Exception as e:
+        logger.error(
+            "Kubernetes API call failed (namespace=eda-system, labelSelector=%s): %s. "
+            "If using a proxy (HTTP_PROXY/HTTPS_PROXY), try unsetting it for local API or add the API host to NO_PROXY.",
+            label_selector,
+            e,
+        )
+        raise
     if not pods.items:
         raise RuntimeError("No toolbox pod found in 'eda-system' namespace.")
     return pods.items[0].metadata.name
@@ -72,9 +121,20 @@ def get_bsvr_pod() -> str:
     RuntimeError
         If no bsvr pod is found.
     """
+    _log_k8s_debug_context()
     v1 = k8s_client.CoreV1Api()
     label_selector = "eda.nokia.com/app=bootstrapserver"
-    pods = v1.list_namespaced_pod("eda-system", label_selector=label_selector)
+    logger.debug("Listing pods in eda-system with labelSelector=%s", label_selector)
+    try:
+        pods = v1.list_namespaced_pod("eda-system", label_selector=label_selector)
+    except Exception as e:
+        logger.error(
+            "Kubernetes API call failed (namespace=eda-system, labelSelector=%s): %s. "
+            "If using a proxy (HTTP_PROXY/HTTPS_PROXY), try unsetting it for local API or add the API host to NO_PROXY.",
+            label_selector,
+            e,
+        )
+        raise
     if not pods.items:
         raise RuntimeError("No bsvr pod found in 'eda-system' namespace.")
     return pods.items[0].metadata.name
