@@ -71,41 +71,6 @@ def _log_k8s_debug_context():
             "try unset HTTPS_PROXY/HTTP_PROXY for local API (e.g. kubectl proxy), or add API host to NO_PROXY."
         )
 
-
-def get_toolbox_pod() -> str:
-    """
-    Retrieves the name of the toolbox pod in the eda-system namespace,
-    identified by labelSelector: eda.nokia.com/app=eda-toolbox.
-
-    Returns
-    -------
-    str
-        The name of the first matching toolbox pod.
-
-    Raises
-    ------
-    RuntimeError
-        If no toolbox pod is found.
-    """
-    _log_k8s_debug_context()
-    v1 = k8s_client.CoreV1Api()
-    label_selector = "eda.nokia.com/app=eda-toolbox"
-    logger.debug("Listing pods in eda-system with labelSelector=%s", label_selector)
-    try:
-        pods = v1.list_namespaced_pod("eda-system", label_selector=label_selector)
-    except Exception as e:
-        logger.error(
-            "Kubernetes API call failed (namespace=eda-system, labelSelector=%s): %s. "
-            "If using a proxy (HTTP_PROXY/HTTPS_PROXY), try unsetting it for local API or add the API host to NO_PROXY.",
-            label_selector,
-            e,
-        )
-        raise
-    if not pods.items:
-        raise RuntimeError("No toolbox pod found in 'eda-system' namespace.")
-    return pods.items[0].metadata.name
-
-
 def get_toolbox_pod() -> str:
     """
     Retrieves the name of the toolbox pod in eda-system,
