@@ -71,6 +71,7 @@ def _log_k8s_debug_context():
             "try unset HTTPS_PROXY/HTTP_PROXY for local API (e.g. kubectl proxy), or add API host to NO_PROXY."
         )
 
+
 def get_toolbox_pod() -> str:
     """
     Retrieves the name of the toolbox pod in eda-system,
