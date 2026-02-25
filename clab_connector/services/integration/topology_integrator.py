@@ -265,6 +265,7 @@ class TopologyIntegrator:
             "namespace": self.topology.namespace,
             "gateway": self.topology.mgmt_ipv4_gw,
             "nodeselectors": ["containerlab=managedEos"],
+            "dhcp": "false",
         }
         ceos_yml = helpers.render_template("init.yaml.j2", ceos_data)
         ceos_item = self.eda_client.add_replace_to_transaction(ceos_yml)
