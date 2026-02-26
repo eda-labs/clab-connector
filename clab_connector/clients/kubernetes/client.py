@@ -74,7 +74,7 @@ def _log_k8s_debug_context():
 
 def get_toolbox_pod() -> str:
     """
-    Retrieves the name of the toolbox pod in the eda-system namespace,
+    Retrieves the name of the toolbox pod in eda-system,
     identified by labelSelector: eda.nokia.com/app=eda-toolbox.
 
     Returns
@@ -106,43 +106,9 @@ def get_toolbox_pod() -> str:
     return pods.items[0].metadata.name
 
 
-def get_bsvr_pod() -> str:
+def ping_from_toolbox(target_ip: str) -> bool:
     """
-    Retrieves the name of the bootstrapserver (bsvr) pod in eda-system,
-    identified by labelSelector: eda.nokia.com/app=bootstrapserver.
-
-    Returns
-    -------
-    str
-        The name of the first matching bsvr pod.
-
-    Raises
-    ------
-    RuntimeError
-        If no bsvr pod is found.
-    """
-    _log_k8s_debug_context()
-    v1 = k8s_client.CoreV1Api()
-    label_selector = "eda.nokia.com/app=bootstrapserver"
-    logger.debug("Listing pods in eda-system with labelSelector=%s", label_selector)
-    try:
-        pods = v1.list_namespaced_pod("eda-system", label_selector=label_selector)
-    except Exception as e:
-        logger.error(
-            "Kubernetes API call failed (namespace=eda-system, labelSelector=%s): %s. "
-            "If using a proxy (HTTP_PROXY/HTTPS_PROXY), try unsetting it for local API or add the API host to NO_PROXY.",
-            label_selector,
-            e,
-        )
-        raise
-    if not pods.items:
-        raise RuntimeError("No bsvr pod found in 'eda-system' namespace.")
-    return pods.items[0].metadata.name
-
-
-def ping_from_bsvr(target_ip: str) -> bool:
-    """
-    Ping a target IP from the bsvr pod.
+    Ping a target IP from the toolbox pod.
 
     Parameters
     ----------
@@ -154,14 +120,14 @@ def ping_from_bsvr(target_ip: str) -> bool:
     bool
         True if ping indicates success, False otherwise.
     """
-    logger.debug(f"Pinging '{target_ip}' from the bsvr pod...")
-    bsvr_name = get_bsvr_pod()
+    logger.debug(f"Pinging '{target_ip}' from the toolbox pod...")
+    toolbox_name = get_toolbox_pod()
     core_api = k8s_client.CoreV1Api()
     command = ["ping", "-c", "1", target_ip]
     try:
         resp = stream(
             core_api.connect_get_namespaced_pod_exec,
-            name=bsvr_name,
+            name=toolbox_name,
             namespace="eda-system",
             command=command,
             stderr=True,
@@ -171,11 +137,11 @@ def ping_from_bsvr(target_ip: str) -> bool:
         )
         # A quick check for "1 packets transmitted, 1 received"
         if "1 packets transmitted, 1 received" in resp:
-            logger.info(f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} succeeded")
+            logger.info(f"{SUBSTEP_INDENT}Ping from toolbox to {target_ip} succeeded")
             return True
         else:
             logger.error(
-                f"{SUBSTEP_INDENT}Ping from bsvr to {target_ip} failed:\n{resp}"
+                f"{SUBSTEP_INDENT}Ping from toolbox to {target_ip} failed:\n{resp}"
             )
             return False
     except ApiException as exc:

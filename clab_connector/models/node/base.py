@@ -2,7 +2,7 @@
 
 import logging
 
-from clab_connector.clients.kubernetes.client import ping_from_bsvr
+from clab_connector.clients.kubernetes.client import ping_from_toolbox
 from clab_connector.utils import helpers
 from clab_connector.utils.exceptions import ClabConnectorError
 
@@ -69,7 +69,7 @@ class Node:
 
     def ping(self):
         """
-        Attempt to ping the node from the EDA bootstrap server (bsvr).
+        Attempt to ping the node from the EDA bootstrap server (toolbox).
 
         Returns
         -------
@@ -77,7 +77,7 @@ class Node:
             True if the ping is successful, raises a RuntimeError otherwise.
         """
         logger.debug(f"Pinging node '{self.name}' IP {self.mgmt_ipv4}")
-        if ping_from_bsvr(self.mgmt_ipv4):
+        if ping_from_toolbox(self.mgmt_ipv4):
             logger.debug(f"Ping to '{self.name}' ({self.mgmt_ipv4}) successful")
             return True
         else:
