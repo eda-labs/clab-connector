@@ -123,6 +123,7 @@ class ManifestGenerator:
                 "namespace": namespace,
                 "gateway": self.topology.mgmt_ipv4_gw,
                 "nodeselectors": ["containerlab=managedEos"],
+                "dhcp": "false",
             },
         )
 

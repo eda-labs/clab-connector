@@ -6,8 +6,8 @@ metadata:
 spec:
   commitSave: true
   mgmt:
-    ipv4DHCP: true
-    ipv6DHCP: true
+    ipv4DHCP: {{ dhcp | default("true") }}
+    ipv6DHCP: {{ dhcp | default("true") }}
 {%- if gateway is defined %}
     staticRoutes:
     - nextHop: {{ gateway }}
