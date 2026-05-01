@@ -23,7 +23,9 @@ There are two primary methods to create and experiment with network functions pr
 > [!IMPORTANT]
 > **EDA Installation Mode:** This tool **requires EDA to be installed with `Simulate=False`**. Ensure that your EDA deployment is configured accordingly.
 >
-> **Hardware License:** A valid **`hardware license` for EDA version 24.12.1** is mandatory for using this connector tool.
+> **Hardware License:** A valid **`hardware license` for EDA version 26.4.1** is mandatory for using this connector tool.
+>
+> **EDA 25.12 Support:** `clab-connector` **0.8.11** was the last version supporting EDA 25.12. Newer connector versions target EDA 26.4 and later.
 >
 > **Containerlab Topologies:** Your Containerlab nodes **should NOT have startup-configs defined**. Nodes with startup-configs are not EDA-ready and will not integrate properly.
 
@@ -33,7 +35,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 
 - **EDA Setup:**
   - Installed without simulation (`Simulate=False`).
-  - Contains a valid `hardware license` for version 24.12.1.
+  - Contains a valid `hardware license` for version 26.4.1.
 - **Network Connectivity:**
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab:**
@@ -64,6 +66,11 @@ Follow these steps to set up the Containerlab EDA Connector tool:
 2. **Install clab-connector**
     ```
     uv tool install git+https://github.com/eda-labs/clab-connector.git
+    ```
+
+    To install a specific version, pin the Git tag with `@`:
+    ```
+    uv tool install git+https://github.com/eda-labs/clab-connector.git@0.8.11
     ```
 
 3. **Run the Connector**
@@ -346,9 +353,6 @@ make fix
 # Run all checks (required before committing)
 make check
 
-# Run tests
-make test
-
 # See all available commands
 make help
 ```
@@ -375,13 +379,7 @@ uv run ruff format .
    ```bash
    make check
    ```
-
-2. **Run tests:**
-   ```bash
-   make test
-   ```
-
-3. **Format your code:**
+2. **Format your code:**
    ```bash
    make format
    ```
@@ -392,4 +390,3 @@ Our CI pipeline will automatically verify that your code passes all ruff checks.
 
 - [Containerlab](https://containerlab.dev/) for providing an excellent network emulation platform.
 - [EDA (Event-Driven Automation)](https://docs.eda.dev/) for the robust automation capabilities.
-

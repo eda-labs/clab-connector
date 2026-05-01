@@ -1,9 +1,10 @@
-apiVersion: aaa.eda.nokia.com/v1alpha1
+apiVersion: aaa.eda.nokia.com/v1
 kind: NodeGroup
 metadata:
   name: sudo
   namespace: {{ namespace }}
 spec:
+  rules: []
   services:
     - GNMI
     - CLI
@@ -11,4 +12,3 @@ spec:
     - GNOI
     - GNSI
   superuser: true
-

@@ -58,6 +58,10 @@ class NokiaSROSNode(Node):
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-sros-25.10.r1/sros-25.10.r1.zip"
         ),
+        "26.3.r1": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-sros-26.3.r1/sros-26.3.r1.zip"
+        ),
     }
 
     # Map of node types to their line card, power, MDA and connector components
@@ -287,7 +291,7 @@ class NokiaSROSNode(Node):
             "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
             "sw_version": normalized_version,
-            "mgmt_ip": self.mgmt_ipv4,
+            "mgmt_ip": self.get_mgmt_ipv4_prefix(),
             "containerlab_label": "managedSros",
             "components": components,
         }
@@ -422,9 +426,9 @@ class NokiaSROSNode(Node):
             else "external-endpoint"
         )
         if role == "edge":
-            encap_type = "dot1q" if edge_encapsulation == "dot1q" else None
+            encap_type = "Dot1q" if edge_encapsulation == "dot1q" else None
         else:
-            encap_type = "dot1q" if isl_encapsulation == "dot1q" else None
+            encap_type = "Dot1q" if isl_encapsulation == "dot1q" else None
 
         data = {
             "namespace": topology.namespace,
