@@ -1,4 +1,4 @@
-apiVersion: interfaces.eda.nokia.com/v1alpha1
+apiVersion: interfaces.eda.nokia.com/v1
 kind: Interface
 metadata:
   name: {{ interface_name }}
@@ -21,6 +21,5 @@ spec:
       interface: {{ interface }}
       lacpPortPriority: 32768
       node: {{ node_name }}
-  type: interface
+  type: Interface
   description: '{{ description }}'
-

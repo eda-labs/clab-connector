@@ -101,6 +101,14 @@ class Node:
         """
         return helpers.normalize_name(self.name)
 
+    def get_mgmt_ipv4_prefix(self) -> str | None:
+        """Return the management IPv4 address in prefix form when possible."""
+        if not self.mgmt_ipv4:
+            return None
+        if self.mgmt_ipv4_prefix_length is None or self.mgmt_ipv4_prefix_length == "":
+            return self.mgmt_ipv4
+        return f"{self.mgmt_ipv4}/{self.mgmt_ipv4_prefix_length}"
+
     def get_default_node_type(self):
         """
         Get the default node type if none is specified.

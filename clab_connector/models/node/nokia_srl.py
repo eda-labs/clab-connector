@@ -249,7 +249,7 @@ class NokiaSRLinuxNode(Node):
             "kind": self.EDA_OPERATING_SYSTEM,
             "platform": self.get_platform(),
             "sw_version": self.version,
-            "mgmt_ip": self.mgmt_ipv4,
+            "mgmt_ip": self.get_mgmt_ipv4_prefix(),
             "containerlab_label": "managedSrl",
         }
         return helpers.render_template("toponode.j2", data)
@@ -309,9 +309,9 @@ class NokiaSRLinuxNode(Node):
             else "external-endpoint"
         )
         if role == "edge":
-            encap_type = "dot1q" if edge_encapsulation == "dot1q" else None
+            encap_type = "Dot1q" if edge_encapsulation == "dot1q" else None
         else:
-            encap_type = "dot1q" if isl_encapsulation == "dot1q" else None
+            encap_type = "Dot1q" if isl_encapsulation == "dot1q" else None
 
         data = {
             "namespace": topology.namespace,

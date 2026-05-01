@@ -417,7 +417,10 @@ class EDAClient:
         if major == MAJOR_V1_THRESHOLD:
             details_path = f"core/transaction/v1/details/{tx_id}?waitForComplete=true&failOnErrors=true"
         else:
-            details_path = f"core/transaction/v2/result/summary/{tx_id}"
+            details_path = (
+                f"core/transaction/v2/result/summary/{tx_id}"
+                "?waitForComplete=true&failOnErrors=true"
+            )
         details_resp = self.get(details_path)
         if details_resp.status != HTTP_OK:
             raise EDAConnectionError(
@@ -425,7 +428,7 @@ class EDAClient:
             )
 
         details = json.loads(details_resp.data.decode("utf-8"))
-        if "code" in details:
+        if "code" in details or details.get("success") is False:
             logger.error(f"Transaction commit failed: {details}")
             raise EDAConnectionError(f"Transaction commit failed: {details}")
 

@@ -1,4 +1,4 @@
-apiVersion: bootstrap.eda.nokia.com/v1alpha1
+apiVersion: bootstrap.eda.nokia.com/v1
 kind: Init
 metadata:
   name: {{ name }}
@@ -6,15 +6,15 @@ metadata:
 spec:
   commitSave: true
   mgmt:
-    ipv4DHCP: {{ dhcp | default("true") }}
-    ipv6DHCP: {{ dhcp | default("true") }}
 {%- if gateway is defined %}
     staticRoutes:
     - nextHop: {{ gateway }}
       prefix: 0.0.0.0/0
+{%- else %}
+    staticRoutes: []
 {%- endif %}
 {%- if nodeselectors is defined and nodeselectors is iterable and (nodeselectors is not string and nodeselectors is not mapping) %}
-  nodeSelector:
+  nodeSelectors:
   {%- for nodeselector in nodeselectors %}
     - {{ nodeselector }}
   {%- endfor %}
