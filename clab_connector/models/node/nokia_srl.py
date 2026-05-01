@@ -114,6 +114,14 @@ class NokiaSRLinuxNode(Node):
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-srl-25.10.1/srlinux-25.10.1-399.zip"
         ),
+        "25.10.2": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-srl-25.10.2/srlinux-25.10.2-527.zip"
+        ),
+        "25.10.3": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-srl-25.10.3/srlinux-25.10.3-449.zip"
+        ),
         "26.3.1": (
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-srl-26.3.1/srlinux-26.3.1-410.zip"
