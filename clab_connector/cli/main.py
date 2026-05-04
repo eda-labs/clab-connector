@@ -1,15 +1,28 @@
 # clab_connector/cli/main.py
 
 import logging
+from collections.abc import Callable
 from enum import StrEnum
+from functools import wraps
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, ParamSpec, TypeVar
 
 import typer
 import urllib3
 from rich import print as rprint
 
 from clab_connector.cli.common import create_eda_client
+from clab_connector.cli.versioning import (
+    AUTO_VERSION_CHECK_TIMEOUT,
+    EXPLICIT_VERSION_CHECK_TIMEOUT,
+    LATEST_RELEASE_URL,
+    REPO_URL,
+    UPGRADE_COMMAND,
+    fetch_latest_release_tag,
+    get_cli_version,
+    get_upgrade_notice,
+    is_newer_version,
+)
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.services.export.topology_exporter import TopologyExporter
 from clab_connector.services.integration.topology_integrator import (
@@ -25,6 +38,9 @@ urllib3.disable_warnings()
 
 SUPPORTED_KINDS = ["nokia_srlinux", "nokia_sros", "nokia_srsim", "arista_ceos"]
 NODE_DISPLAY_LIMIT = 5
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 class LogLevel(StrEnum):
@@ -44,6 +60,13 @@ app = typer.Typer(
     name="clab-connector",
     help="Integrate or remove an existing containerlab topology with EDA (Event-Driven Automation)",
     add_completion=True,
+)
+
+version_app = typer.Typer(
+    name="version",
+    help="Show clab-connector version or check for updates",
+    invoke_without_command=True,
+    no_args_is_help=False,
 )
 
 log_level_option = typer.Option(
@@ -75,6 +98,34 @@ isl_encapsulation_option = typer.Option(
 )
 
 
+def print_cli_version() -> None:
+    """Print the installed CLI version for command diagnostics."""
+
+    typer.echo(f"clab-connector version: {get_cli_version()}", err=True)
+
+
+def print_upgrade_notice(timeout: float = AUTO_VERSION_CHECK_TIMEOUT) -> None:
+    """Print a newer-version notice when one is available."""
+
+    notice = get_upgrade_notice(timeout=timeout)
+    if notice:
+        typer.echo(notice, err=True)
+
+
+def with_cli_lifecycle(command: Callable[P, T]) -> Callable[P, T]:
+    """Add common version diagnostics around a CLI command."""
+
+    @wraps(command)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        print_cli_version()
+        try:
+            return command(*args, **kwargs)
+        finally:
+            print_upgrade_notice()
+
+    return wrapper
+
+
 def complete_json_files(
     _ctx: typer.Context, _param: typer.Option, incomplete: str
 ) -> list[str]:
@@ -100,6 +151,7 @@ def complete_eda_url(
 
 
 @app.command(name="integrate", help="Integrate containerlab with EDA")
+@with_cli_lifecycle
 def integrate_cmd(  # noqa: PLR0913
     topology_data: Annotated[
         Path,
@@ -234,6 +286,7 @@ def integrate_cmd(  # noqa: PLR0913
 
 
 @app.command(name="remove", help="Remove containerlab integration from EDA")
+@with_cli_lifecycle
 def remove_cmd(
     topology_data: Annotated[
         Path,
@@ -324,6 +377,7 @@ def remove_cmd(
     name="export-lab",
     help="Export an EDA-managed topology from a namespace to a .clab.yaml file",
 )
+@with_cli_lifecycle
 def export_lab_cmd(
     namespace: str = typer.Option(
         ...,
@@ -357,6 +411,7 @@ def export_lab_cmd(
     name="generate-crs",
     help="Generate CR YAML manifests from a containerlab topology without applying them to EDA.",
 )
+@with_cli_lifecycle
 def generate_crs_cmd(
     topology_data: Annotated[
         Path,
@@ -437,6 +492,7 @@ def generate_crs_cmd(
 
 
 @app.command(name="check-sync", help="Check synchronization status of nodes in EDA")
+@with_cli_lifecycle
 def check_sync_cmd(
     topology_data: Annotated[
         Path,
@@ -587,6 +643,56 @@ def check_sync_cmd(
     except Exception as e:
         rprint(f"[red]Error: {e!s}[/red]")
         raise typer.Exit(code=1) from e
+
+
+@version_app.callback(invoke_without_command=True)
+def version_cmd(
+    ctx: typer.Context,
+    short: bool = typer.Option(
+        False,
+        "--short",
+        "-s",
+        help="Print just the version number",
+    ),
+):
+    """Show the installed clab-connector CLI version."""
+
+    if ctx.invoked_subcommand:
+        return
+
+    cli_version = get_cli_version()
+    if short:
+        typer.echo(cli_version)
+        return
+
+    typer.echo("clab-connector")
+    typer.echo(f"    version: {cli_version}")
+    typer.echo(f"     source: {REPO_URL}")
+    typer.echo(f"     latest: {LATEST_RELEASE_URL}")
+
+
+@version_app.command(name="check", help="Check if a new clab-connector version exists")
+def version_check_cmd():
+    """Check GitHub releases/latest for a newer clab-connector release."""
+
+    current_version = get_cli_version()
+    latest_version = fetch_latest_release_tag(timeout=EXPLICIT_VERSION_CHECK_TIMEOUT)
+
+    if not latest_version:
+        typer.echo("Failed fetching latest clab-connector version information")
+        return
+
+    if is_newer_version(current_version, latest_version):
+        typer.echo(
+            f"A newer clab-connector version ({latest_version}) is available. "
+            f"Upgrade with: {UPGRADE_COMMAND}"
+        )
+        return
+
+    typer.echo(f"You are on the latest clab-connector version ({current_version})")
+
+
+app.add_typer(version_app)
 
 
 if __name__ == "__main__":

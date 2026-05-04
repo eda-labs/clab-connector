@@ -87,7 +87,25 @@ Follow these steps to set up the Containerlab EDA Connector tool:
 To check the currently installed version of clab-connector:
 
 ```
-uv tool list
+clab-connector version
+```
+
+To print just the version number:
+
+```
+clab-connector version --short
+```
+
+To check whether a newer release is available:
+
+```
+clab-connector version check
+```
+
+To disable the automatic latest-release check:
+
+```
+export CLAB_CONNECTOR_VERSION_CHECK=disable
 ```
 
 To upgrade clab-connector to the latest version:
@@ -123,7 +141,8 @@ If you'd rather use pip or can't install uv:
 
 ## Usage
 
-The tool offers two primary subcommands: `integrate` and `remove`.
+The tool offers commands for integration, removal, sync checks, exporting,
+manifest generation, and version diagnostics.
 
 #### Integrate Containerlab with EDA
 
