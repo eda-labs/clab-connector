@@ -255,6 +255,8 @@ class TopologyIntegrator:
             "namespace": self.topology.namespace,
             "nodeselectors": ["containerlab=managedSrl", "containerlab=managedSros"],
         }
+        if self.topology.mgmt_ipv4_gw:
+            data["gateway"] = self.topology.mgmt_ipv4_gw
         yml = helpers.render_template("init.yaml.j2", data)
         item = self.eda_client.add_replace_to_transaction(yml)
         if not self.eda_client.is_transaction_item_valid(item):
@@ -263,9 +265,10 @@ class TopologyIntegrator:
         ceos_data = {
             "name": "init-base-ceos",
             "namespace": self.topology.namespace,
-            "gateway": self.topology.mgmt_ipv4_gw,
             "nodeselectors": ["containerlab=managedEos"],
         }
+        if self.topology.mgmt_ipv4_gw:
+            ceos_data["gateway"] = self.topology.mgmt_ipv4_gw
         ceos_yml = helpers.render_template("init.yaml.j2", ceos_data)
         ceos_item = self.eda_client.add_replace_to_transaction(ceos_yml)
         if not self.eda_client.is_transaction_item_valid(ceos_item):
