@@ -102,6 +102,4 @@ def test_manifest_generator_keeps_empty_static_routes_without_gateway(monkeypatc
     cr_groups = generator.generate()
 
     resources = [yaml.safe_load(item) for item in cr_groups["init"]]
-    assert all(
-        resource["spec"]["mgmt"]["staticRoutes"] == [] for resource in resources
-    )
+    assert all(resource["spec"]["mgmt"]["staticRoutes"] == [] for resource in resources)
