@@ -104,29 +104,7 @@ class ManifestGenerator:
         if artifacts:
             self.cr_groups["artifacts"] = artifacts
 
-        # --- Init resource
-        init_yaml = helpers.render_template(
-            "init.yaml.j2",
-            {
-                "name": "init-base",
-                "namespace": namespace,
-                "nodeselectors": [
-                    "containerlab=managedSrl",
-                    "containerlab=managedSros",
-                ],
-            },
-        )
-        init_ceos_yaml = helpers.render_template(
-            "init.yaml.j2",
-            {
-                "name": "init-base-ceos",
-                "namespace": namespace,
-                "gateway": self.topology.mgmt_ipv4_gw,
-                "nodeselectors": ["containerlab=managedEos"],
-            },
-        )
-
-        self.cr_groups["init"] = [init_yaml, init_ceos_yaml]
+        self.cr_groups["init"] = self._generate_init_resources(namespace)
 
         # --- Node Security Profile
         nsp_yaml = helpers.render_template(
@@ -202,6 +180,29 @@ class ManifestGenerator:
             self.cr_groups["topolinks"] = list(links)
 
         return self.cr_groups
+
+    def _generate_init_resources(self, namespace):
+        init_data = {
+            "name": "init-base",
+            "namespace": namespace,
+            "nodeselectors": [
+                "containerlab=managedSrl",
+                "containerlab=managedSros",
+            ],
+        }
+        init_ceos_data = {
+            "name": "init-base-ceos",
+            "namespace": namespace,
+            "nodeselectors": ["containerlab=managedEos"],
+        }
+        if self.topology.mgmt_ipv4_gw:
+            init_data["gateway"] = self.topology.mgmt_ipv4_gw
+            init_ceos_data["gateway"] = self.topology.mgmt_ipv4_gw
+
+        return [
+            helpers.render_template("init.yaml.j2", init_data),
+            helpers.render_template("init.yaml.j2", init_ceos_data),
+        ]
 
     def output_manifests(self):
         """Output the generated CR YAML documents either as one combined file or as separate files per category."""
