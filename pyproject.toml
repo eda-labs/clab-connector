@@ -22,7 +22,7 @@ dependencies = [
     "pycparser==3.0",
     "pynacl==1.6.2",
     "pyyaml==6.0.3",
-    "requests==2.34.0",
+    "requests==2.34.2",
     "typer==0.25.1",
     "urllib3==2.7.0",
     "click==8.3.3",
