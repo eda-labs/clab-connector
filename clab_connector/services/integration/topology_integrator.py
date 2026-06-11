@@ -278,10 +278,10 @@ class TopologyIntegrator:
         """
         Create a NodeSecurityProfile resource that references an EDA node issuer.
         """
-        data = {"namespace": self.topology.namespace}
+        data = {"namespace": "eda-system"}
         yaml_str = helpers.render_template("nodesecurityprofile.yaml.j2", data)
         try:
-            apply_manifest(yaml_str, namespace=self.topology.namespace)
+            apply_manifest(yaml_str, namespace="eda-system")
             logger.info(f"{SUBSTEP_INDENT}Node security profile created.")
         except RuntimeError as ex:
             if "AlreadyExists" in str(ex):

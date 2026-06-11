@@ -108,7 +108,7 @@ class ManifestGenerator:
 
         # --- Node Security Profile
         nsp_yaml = helpers.render_template(
-            "nodesecurityprofile.yaml.j2", {"namespace": namespace}
+            "nodesecurityprofile.yaml.j2", {"namespace": "eda-system"}
         )
         self.cr_groups["node-security-profile"] = [nsp_yaml]
 
