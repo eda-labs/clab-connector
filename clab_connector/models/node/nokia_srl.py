@@ -28,6 +28,8 @@ class NokiaSRLinuxNode(Node):
     YANG_PATH = "https://eda-asvr.eda-system.svc/eda-system/clab-schemaprofiles/{artifact_name}/{filename}"
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
+    IMAGE_PULL_SECRET = "core"
+    LICENSE = "cx-srl-{version_dashes}-ghcr-license"
     LLM_DB_PATH = "https://eda-asvr.eda-system.svc/eda-system/llm-dbs/llm-db-srlinux-ghcr-{version}/llm-embeddings-srl-{version_dashes}.tar.gz"
 
     # Mapping for EDA operating system
@@ -42,6 +44,7 @@ class NokiaSRLinuxNode(Node):
         mgmt_ipv4,
         mgmt_ipv4_prefix_length,
         labels: dict | None = None,
+        container_image: str | None = None,
     ):
         """Initialize a Nokia SR Linux node and check for deprecated type syntax."""
         super().__init__(
@@ -52,6 +55,7 @@ class NokiaSRLinuxNode(Node):
             mgmt_ipv4,
             mgmt_ipv4_prefix_length,
             labels=labels,
+            container_image=container_image,
         )
 
         # Check if using old syntax (without dash) and warn about deprecation
@@ -218,6 +222,11 @@ class NokiaSRLinuxNode(Node):
             "onboarding_username": self.SRL_USERNAME,
             "sw_image": self.SRL_IMAGE.format(version=self.version),
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),
+            "license": self.LICENSE.format(
+                version_dashes=self.version.replace(".", "-")
+            ),
+            "image_pull_secret": self.IMAGE_PULL_SECRET,
+            "container_image": self.container_image,
             "llm_db": self.LLM_DB_PATH.format(
                 version=self.version, version_dashes=self.version.replace(".", "-")
             ),

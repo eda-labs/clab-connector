@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import yaml
 
+from clab_connector.services.integration import topology_integrator as integrator_module
 from clab_connector.services.integration.topology_integrator import TopologyIntegrator
 from clab_connector.services.manifest import manifest_generator as manifest_module
 from clab_connector.services.manifest.manifest_generator import ManifestGenerator
@@ -89,6 +90,38 @@ def test_manifest_generator_adds_mgmt_default_route_to_init_base(monkeypatch):
     assert resources["init-base-ceos"]["spec"]["mgmt"]["staticRoutes"] == [
         {"nextHop": "172.20.20.1", "prefix": "0.0.0.0/0"}
     ]
+
+
+def test_manifest_generator_places_node_security_profile_in_eda_system(monkeypatch):
+    monkeypatch.setattr(
+        manifest_module,
+        "parse_topology_file",
+        lambda *_args, **_kwargs: FakeTopology(),
+    )
+
+    generator = ManifestGenerator("dummy.json")
+    cr_groups = generator.generate()
+
+    nsp = yaml.safe_load(cr_groups["node-security-profile"][0])
+    assert nsp["metadata"]["namespace"] == "eda-system"
+
+
+def test_create_node_security_profile_applies_to_eda_system(monkeypatch):
+    captured = {}
+
+    def fake_apply_manifest(resource_yaml, namespace):
+        captured["resource"] = yaml.safe_load(resource_yaml)
+        captured["namespace"] = namespace
+
+    monkeypatch.setattr(integrator_module, "apply_manifest", fake_apply_manifest)
+
+    integrator = TopologyIntegrator(FakeEDAClient())
+    integrator.topology = SimpleNamespace(namespace="clab-clos01")
+
+    integrator.create_node_security_profile()
+
+    assert captured["namespace"] == "eda-system"
+    assert captured["resource"]["metadata"]["namespace"] == "eda-system"
 
 
 def test_manifest_generator_keeps_empty_static_routes_without_gateway(monkeypatch):

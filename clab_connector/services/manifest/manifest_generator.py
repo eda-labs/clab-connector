@@ -5,7 +5,7 @@ import os
 
 from clab_connector.models.topology import parse_topology_file
 from clab_connector.utils import helpers
-from clab_connector.utils.constants import SUBSTEP_INDENT
+from clab_connector.utils.constants import EDA_SYSTEM_NAMESPACE, SUBSTEP_INDENT
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class ManifestGenerator:
 
         # --- Node Security Profile
         nsp_yaml = helpers.render_template(
-            "nodesecurityprofile.yaml.j2", {"namespace": namespace}
+            "nodesecurityprofile.yaml.j2", {"namespace": EDA_SYSTEM_NAMESPACE}
         )
         self.cr_groups["node-security-profile"] = [nsp_yaml]
 
