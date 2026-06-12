@@ -42,6 +42,7 @@ class NokiaSRLinuxNode(Node):
         mgmt_ipv4,
         mgmt_ipv4_prefix_length,
         labels: dict | None = None,
+        container_image: str | None = None,
     ):
         """Initialize a Nokia SR Linux node and check for deprecated type syntax."""
         super().__init__(
@@ -52,6 +53,7 @@ class NokiaSRLinuxNode(Node):
             mgmt_ipv4,
             mgmt_ipv4_prefix_length,
             labels=labels,
+            container_image=container_image,
         )
 
         # Check if using old syntax (without dash) and warn about deprecation
@@ -218,6 +220,9 @@ class NokiaSRLinuxNode(Node):
             "onboarding_username": self.SRL_USERNAME,
             "sw_image": self.SRL_IMAGE.format(version=self.version),
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),
+            "license": f"cx-srl-{self.version.replace('.', '-')}-ghcr-license",
+            "image_pull_secret": "core",
+            "container_image": self.container_image,
             "llm_db": self.LLM_DB_PATH.format(
                 version=self.version, version_dashes=self.version.replace(".", "-")
             ),

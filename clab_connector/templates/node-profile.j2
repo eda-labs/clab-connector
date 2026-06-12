@@ -29,6 +29,12 @@ spec:
 {% if license is defined %}
   license: {{ license }}
 {% endif %}
+{% if image_pull_secret is defined and image_pull_secret %}
+  imagePullSecret: {{ image_pull_secret }}
+{% endif %}
+{% if container_image is defined and container_image %}
+  containerImage: {{ container_image }}
+{% endif %}
 {% if llm_db is defined %}
   llmDb: {{ llm_db }}
 {% endif %}
