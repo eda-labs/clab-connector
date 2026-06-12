@@ -15,7 +15,7 @@ from clab_connector.services.integration.ceos_post_integration import prepare_ce
 from clab_connector.services.integration.sros_post_integration import prepare_sros_node
 from clab_connector.services.status.node_sync_checker import NodeSyncChecker
 from clab_connector.utils import helpers
-from clab_connector.utils.constants import SUBSTEP_INDENT
+from clab_connector.utils.constants import EDA_SYSTEM_NAMESPACE, SUBSTEP_INDENT
 from clab_connector.utils.exceptions import ClabConnectorError, EDAConnectionError
 
 logger = logging.getLogger(__name__)
@@ -278,10 +278,10 @@ class TopologyIntegrator:
         """
         Create a NodeSecurityProfile resource that references an EDA node issuer.
         """
-        data = {"namespace": self.topology.namespace}
+        data = {"namespace": EDA_SYSTEM_NAMESPACE}
         yaml_str = helpers.render_template("nodesecurityprofile.yaml.j2", data)
         try:
-            apply_manifest(yaml_str, namespace=self.topology.namespace)
+            apply_manifest(yaml_str, namespace=EDA_SYSTEM_NAMESPACE)
             logger.info(f"{SUBSTEP_INDENT}Node security profile created.")
         except RuntimeError as ex:
             if "AlreadyExists" in str(ex):

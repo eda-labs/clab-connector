@@ -28,6 +28,8 @@ class NokiaSRLinuxNode(Node):
     YANG_PATH = "https://eda-asvr.eda-system.svc/eda-system/clab-schemaprofiles/{artifact_name}/{filename}"
     SRL_IMAGE = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin"
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
+    IMAGE_PULL_SECRET = "core"
+    LICENSE = "cx-srl-{version_dashes}-ghcr-license"
     LLM_DB_PATH = "https://eda-asvr.eda-system.svc/eda-system/llm-dbs/llm-db-srlinux-ghcr-{version}/llm-embeddings-srl-{version_dashes}.tar.gz"
 
     # Mapping for EDA operating system
@@ -220,8 +222,10 @@ class NokiaSRLinuxNode(Node):
             "onboarding_username": self.SRL_USERNAME,
             "sw_image": self.SRL_IMAGE.format(version=self.version),
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),
-            "license": f"cx-srl-{self.version.replace('.', '-')}-ghcr-license",
-            "image_pull_secret": "core",
+            "license": self.LICENSE.format(
+                version_dashes=self.version.replace(".", "-")
+            ),
+            "image_pull_secret": self.IMAGE_PULL_SECRET,
             "container_image": self.container_image,
             "llm_db": self.LLM_DB_PATH.format(
                 version=self.version, version_dashes=self.version.replace(".", "-")
