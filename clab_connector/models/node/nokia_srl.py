@@ -30,6 +30,7 @@ class NokiaSRLinuxNode(Node):
     SRL_IMAGE_MD5 = "eda-system/srlimages/srlinux-{version}-bin/srlinux.bin.md5"
     CONTAINER_IMAGE = "ghcr.io/nokia/srlinux:{version}"
     IMAGE_PULL_SECRET = "core"
+    LICENSE = "cx-srl-{version_dashes}-ghcr-license"
     LLM_DB_PATH = "https://eda-asvr.eda-system.svc/eda-system/llm-dbs/llm-db-srlinux-ghcr-{version}/llm-embeddings-srl-{version_dashes}.tar.gz"
 
     # Mapping for EDA operating system
@@ -222,6 +223,9 @@ class NokiaSRLinuxNode(Node):
             "sw_image_md5": self.SRL_IMAGE_MD5.format(version=self.version),
             "container_image": self.CONTAINER_IMAGE.format(version=self.version),
             "image_pull_secret": self.IMAGE_PULL_SECRET,
+            "license": self.LICENSE.format(
+                version_dashes=self.version.replace(".", "-")
+            ),
             "llm_db": self.LLM_DB_PATH.format(
                 version=self.version, version_dashes=self.version.replace(".", "-")
             ),
