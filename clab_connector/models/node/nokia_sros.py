@@ -88,8 +88,8 @@ class NokiaSROSNode(Node):
         },
         ## TODO: It doesn't work for some reason
          "sr-7s": {
-             "lineCard": {"slot": "1", "type": "xcm2-7s"},
-             "fabric": {"slot": "1", "type": "sfm2-s"},
+             "lineCard": {"slot": "1", "type": "xcm-7s"},
+             "fabric": {"slot": "1", "type": "sfm-s"},
              "powerShelf": [
                   {"slot": "1", "type": "ps-a10-shelf-dc"},
                   {"slot": "2", "type": "ps-a10-shelf-dc"},
