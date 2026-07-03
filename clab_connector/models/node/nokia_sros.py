@@ -66,6 +66,7 @@ class NokiaSROSNode(Node):
 
     # Map of node types to their line card, power, MDA and connector components
     SROS_COMPONENTS: ClassVar[dict[str, dict[str, dict[str, str] | int]]] = {
+        ### FP4 models
         "sr-1": {
             "lineCard": {"slot": "1", "type": "iom-1"},
             "mda": {"slot": "1-a", "type": "me12-100gb-qsfp28"},
@@ -86,8 +87,7 @@ class NokiaSROSNode(Node):
             "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
             "connectors": 36,
         },
-        ## TODO: It doesn't work for some reason
-         "sr-7s": {
+         "sr-7s": {   ### This is the FP4 only variant!! Does not support any FP5 related components 
              "lineCard": {"slot": "1", "type": "xcm-7s"},
              "fabric": {"slot": "1", "type": "sfm-s"},
              "powerShelf": [
@@ -101,6 +101,7 @@ class NokiaSROSNode(Node):
              "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
              "connectors": 36,
          },
+         ### FP5 modules - TODO
     }
 
     # Component kinds that accept a single dict or list of dicts (slot, type)
