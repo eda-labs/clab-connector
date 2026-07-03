@@ -87,20 +87,20 @@ class NokiaSROSNode(Node):
             "connectors": 36,
         },
         ## TODO: It doesn't work for some reason
-        # "sr-7s": {
-        #     "lineCard": {"slot": "1", "type": "xcm2-7s"},
-        #     "fabric": {"slot": "1", "type": "sfm2-s"},
-        #     "powerShelf": [
-        #          {"slot": "1", "type": "ps-a10-shelf-dc"},
-        #          {"slot": "2", "type": "ps-a10-shelf-dc"},
-        #     ],
-        #     "powerModule": [
-        #        {"slot": "1-1,1,2", "type": "ps-a-dc-6000"},
-        #        {"slot": "1-3,1-4", "type": "ps-a-dc-6000"},
-        #     ],
-        #     "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
-        #     "connectors": 36,
-        # },
+         "sr-7s": {
+             "lineCard": {"slot": "1", "type": "xcm2-7s"},
+             "fabric": {"slot": "1", "type": "sfm2-s"},
+             "powerShelf": [
+                  {"slot": "1", "type": "ps-a10-shelf-dc"},
+                  {"slot": "2", "type": "ps-a10-shelf-dc"},
+             ],
+             "powerModule": [
+                {"slot": "1-1,1-2", "type": "ps-a-dc-6000"},
+                {"slot": "1-3,1-4", "type": "ps-a-dc-6000"},
+             ],
+             "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
+             "connectors": 36,
+         },
     }
 
     # Component kinds that accept a single dict or list of dicts (slot, type)
