@@ -105,11 +105,11 @@ class NokiaSROSNode(Node):
          ### SR-1
         "sr-1x-48d": {
             #"lineCard": {"slot": "1", "type": "i48-800g-qsfpdd-1x"},
-            "mda": {"slot": "1-a", "type": "m48-800g-qsfpdd-1x"},
+            #"mda": {"slot": "1-a", "type": "m48-800g-qsfpdd-1x"},
             "connectors": 48,  # Number of connectors
         },
         "sr-1-24d": {
-            #"lineCard": {"slot": "1", "type": "i24-800g-qsfpdd-1"},
+            "lineCard": {"slot": "1", "type": "i24-800g-qsfpdd-1"},
             "mda": {"slot": "1-a", "type": "m24-800g-qsfpdd-1"},
             "connectors": 24,  # Number of connectors
         },
