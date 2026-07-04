@@ -136,8 +136,6 @@ class NokiaSROSNode(Node):
         ### SR-1se
         "sr-1se": {
             "lineCard": {"slot": "1", "type": "imm36-800g-qsfpdd"},
-            "powerShelf": {"slot": "1", "type": "ps-a4-shelf-dc"},
-            "powerModule": {"slot": "1-1,1-2,1-3,1-4", "type": "ps-a-dc-6000"},
             "mda": {"slot": "1-a", "type": "ms36-800g-qsfpdd"},
             "connectors": 36,
         },
