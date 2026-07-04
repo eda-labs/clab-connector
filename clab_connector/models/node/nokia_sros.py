@@ -124,12 +124,12 @@ class NokiaSROSNode(Node):
             "connectors": 12,  # Number of connectors
         },
         "sr-1-46s": {
-            "lineCard": {"slot": "1", "type": "cpm-1x/i40-200g-sfpdd+6-800g-qsfpdd-1"},
+            "lineCard": {"slot": "1", "type": "i40-200g-sfpdd+6-800g-qsfpdd-1"},
             "mda": {"slot": "1-a", "type": "m40-200g-sfpdd+6-800g-qsfpdd-1"},
             "connectors": 12,  # Number of connectors
         },
         "sr-1x-92s": {
-            "lineCard": {"slot": "1", "type": "cpm-1x/i80-200g-sfpdd+12-800g-qsfpdd-1x"},
+            "lineCard": {"slot": "1", "type": "i80-200g-sfpdd+12-800g-qsfpdd-1x"},
             "mda": {"slot": "1-a", "type": "m80-200g-sfpdd+12-800g-qsfpdd-1x"},
             "connectors": 12,  # Number of connectors
         },
