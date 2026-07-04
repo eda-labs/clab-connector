@@ -104,32 +104,32 @@ class NokiaSROSNode(Node):
          ##### FP5 modules 
          ### SR-1
         "sr-1x-48d": {
-            "lineCard": {"slot": "1", "type": "iom-1"},
+            "lineCard": {"slot": "1", "type": "i48-800g-qsfpdd-1x"},
             "mda": {"slot": "1-a", "type": "m48-800g-qsfpdd-1x"},
             "connectors": 12,  # Number of connectors
         },
         "sr-1-24d": {
-            "lineCard": {"slot": "1", "type": "iom-1"},
+            "lineCard": {"slot": "1", "type": "i24-800g-qsfpdd-1"},
             "mda": {"slot": "1-a", "type": "m24-800g-qsfpdd-1"},
             "connectors": 12,  # Number of connectors
         },
         "sr-1-48d": {
-            "lineCard": {"slot": "1", "type": "iom-1"},
+            "lineCard": {"slot": "1", "type": "i48-400g-qsfpdd-1"},
             "mda": {"slot": "1-a", "type": "m48-400g-qsfpdd-1"},
             "connectors": 12,  # Number of connectors
         },
         "sr-1-92s": {
-            "lineCard": {"slot": "1", "type": "iom-1"},
+            "lineCard": {"slot": "1", "type": "i80-200g-sfpdd+12-400g-qsfpdd-1"},
             "mda": {"slot": "1-a", "type": "m80-200g-sfpdd+12-400g-qsfpdd-1"},
             "connectors": 12,  # Number of connectors
         },
         "sr-1-46s": {
-            "lineCard": {"slot": "1", "type": "iom-1"},
+            "lineCard": {"slot": "1", "type": "cpm-1x/i40-200g-sfpdd+6-800g-qsfpdd-1"},
             "mda": {"slot": "1-a", "type": "m40-200g-sfpdd+6-800g-qsfpdd-1"},
             "connectors": 12,  # Number of connectors
         },
         "sr-1x-92s": {
-            "lineCard": {"slot": "1", "type": "iom-1"},
+            "lineCard": {"slot": "1", "type": "cpm-1x/i80-200g-sfpdd+12-800g-qsfpdd-1x"},
             "mda": {"slot": "1-a", "type": "m80-200g-sfpdd+12-800g-qsfpdd-1x"},
             "connectors": 12,  # Number of connectors
         },
@@ -151,7 +151,7 @@ class NokiaSROSNode(Node):
             "connectors": 36,
         },
          "sr-14s": {   ### This is the FP5 only variant!! Does not support any FP4 related components 
-             "lineCard": {"slot": "1", "type": "xcm2-7s"},
+             "lineCard": {"slot": "1", "type": "xcm2-14s"},
              "fabric": {"slot": "1", "type": "sfm2-s"},
              "powerShelf": [
                   {"slot": "1", "type": "ps-a10-shelf-dc"},
