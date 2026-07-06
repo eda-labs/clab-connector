@@ -104,14 +104,13 @@ class NokiaSROSNode(Node):
          ##### FP5 models 
          ### SR-1
         "sr-1x-48d": {
-            #"lineCard": {"slot": "1", "type": "i48-800g-qsfpdd-1x"},
-            #"mda": {"slot": "1-a", "type": "m48-800g-qsfpdd-1x"},
-            #"connectors": 48,  # Number of connectors
+            "lineCard": {"slot": "1", "type": "i48-800g-qsfpdd-1x"},
+            "mda": {"slot": "1-a", "type": "m48-800g-qsfpdd-1x"},
+            "connectors": 48,  # Number of connectors
         },
         "sr-1-24d": {
             "lineCard": {"slot": "1", "type": "i24-800g-qsfpdd-1"},
             "mda": {"slot": "1-a", "type": "m24-800g-qsfpdd-1"},
-            "powerModule": {"slot": "1-1,1-2,1-3", "type": "ps-a-dc-6000"},
             "connectors": 24,  # Number of connectors
         },
         "sr-1-48d": {
@@ -242,23 +241,44 @@ class NokiaSROSNode(Node):
         """
         return "sr7750"  # Default to 7750 SR router type
 
-    def get_platform(self):
-        """
-        Return the platform name based on node type.
+def get_platform(self):
+    """
+    Return the platform name based on node type.
 
-        Returns
-        -------
-        str
-            The platform name (e.g. '7750 SR-1').
-        """
-        if self.node_type and self.node_type.lower().startswith("sr-"):
-            # For SR-1, SR-7, SR-1s, etc. - preserve the exact case
-            # Only uppercase the "SR" part, keep the suffix as-is
-            if "-" in self.node_type:
-                parts = self.node_type.split("-", 1)
-                return f"7750 {parts[0].upper()}-{parts[1]}"
-            return f"7750 {self.node_type.upper()}"
-        return "7750 SR"  # Default fallback
+    Returns
+    -------
+    str
+        The platform name (e.g. '7750 SR-1', 'SR-1-48D', 'SR-2se').
+    """
+    if self.node_type and self.node_type.lower().startswith("sr-"):
+        # The platform string must match exactly the type reported by gNMIc, as EDA performs a case-sensitive platform comparison.
+        #
+        # Examples:
+        #   sr-1-48d   -> 7750 SR-1-48D
+        #   SR-1X-92S  -> 7750 SR-1x-92S
+        #   sr-1s      -> 7750 SR-1s
+        #   SR-2SE     -> 7750 SR-2se
+        #
+        # Rules:
+        # - Always uppercase the "SR" prefix.
+        # - For fixed-port platforms (SR-1-* and SR-1x-*), normalize the family to lowercase (1x) and uppercase only the final port designator (D/S), matching the value reported by gNMI.
+        # - For chassis platforms (SR-1s, SR-2se, SR-14s, ...), normalize the model suffix to lowercase.
+
+        node = self.node_type.strip()
+
+        # Normalize the SR prefix.
+        node = "SR-" + node[3:]
+
+        # Fixed-port platforms: SR-1-* and SR-1x-*.
+        match = re.fullmatch(r"SR-(1x|1)-(\d+)([a-z])", node, re.IGNORECASE)
+        if match:
+            family, ports, suffix = match.groups()
+            return f"7750 SR-{family.lower()}-{ports}{suffix.upper()}"
+
+        # Chassis platforms: normalize everything after "SR-" to lowercase.
+        return f"7750 SR-{node[3:].lower()}"
+
+    return "7750 SR"  # Default fallback
 
     def is_eda_supported(self):
         """
