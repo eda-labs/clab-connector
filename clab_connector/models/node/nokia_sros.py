@@ -101,16 +101,17 @@ class NokiaSROSNode(Node):
              "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
              "connectors": 36,
          },
-         ##### FP5 modules 
+         ##### FP5 models 
          ### SR-1
         "sr-1x-48d": {
-            "lineCard": {"slot": "1", "type": "i48-800g-qsfpdd-1x"},
-            "mda": {"slot": "1-a", "type": "m48-800g-qsfpdd-1x"},
-            "connectors": 48,  # Number of connectors
+            #"lineCard": {"slot": "1", "type": "i48-800g-qsfpdd-1x"},
+            #"mda": {"slot": "1-a", "type": "m48-800g-qsfpdd-1x"},
+            #"connectors": 48,  # Number of connectors
         },
         "sr-1-24d": {
             "lineCard": {"slot": "1", "type": "i24-800g-qsfpdd-1"},
             "mda": {"slot": "1-a", "type": "m24-800g-qsfpdd-1"},
+            "powerModule": {"slot": "1-1,1-2,1-3", "type": "ps-a-dc-6000"},
             "connectors": 24,  # Number of connectors
         },
         "sr-1-48d": {
@@ -150,6 +151,7 @@ class NokiaSROSNode(Node):
             "mda": {"slot": "1-a", "type": "x2-s36-800g-qsfpdd-18.0t"},
             "connectors": 36,
         },
+        ### SR-14s
          "sr-14s": {   ### This is the FP5 only variant!! Does not support any FP4 related components 
              "lineCard": {"slot": "1", "type": "xcm2-14s"},
              "fabric": {"slot": "1", "type": "sfm2-s"},
