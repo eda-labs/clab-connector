@@ -1,0 +1,107 @@
+name: sros_fp5
+
+mgmt:
+  network: eda_mgmt
+  ipv4-subnet: 172.40.40.0/24
+
+topology:
+  kinds:
+    nokia_srsim:
+      #type: sr-1-46s
+      image: registry.srlinux.dev/pub/nokia_srsim:26.3.R1
+      license: ${SROS_LIC_PATH:-/opt/nokia/sros/sr-sim_r25_license.key}
+
+  nodes:
+    ### SR-1 FP5 
+    sr-1x-48d:
+      kind: nokia_srsim
+      type: sr-1x-48d
+      mgmt-ipv4: 172.40.40.151
+      #license: /opt/nokia/sros/sr-sim_r25_license.key
+      components:
+        - slot: A
+        - slot: 1
+    sr-1-24d:
+      kind: nokia_srsim
+      type: sr-1-24d
+      mgmt-ipv4: 172.40.40.152
+      components:
+        - slot: A
+        - slot: 1
+    sr-1-48d:
+      kind: nokia_srsim
+      type: sr-1-48d
+      mgmt-ipv4: 172.40.40.153
+      components:
+        - slot: A
+        - slot: 1
+    sr-1-92s:
+      kind: nokia_srsim
+      type: sr-1-92s
+      mgmt-ipv4: 172.40.40.154
+      components:
+        - slot: A
+        - slot: 1
+    sr-1-46s:
+      kind: nokia_srsim
+      type: sr-1-46s
+      mgmt-ipv4: 172.40.40.155
+      components:
+        - slot: A
+        - slot: 1
+    sr-1x-92s:
+      kind: nokia_srsim
+      type: sr-1x-92s
+      mgmt-ipv4: 172.40.40.156
+      components:
+        - slot: A
+        - slot: 1
+    ### SR-1se FP5 
+    sr-1se:
+      kind: nokia_srsim
+      type: sr-1se
+      mgmt-ipv4: 172.40.40.161
+      components:
+        - slot: A
+        - slot: 1
+    ### SR-2se FP5 
+    sr-2se:
+      kind: nokia_srsim
+      type: sr-2se
+      mgmt-ipv4: 172.40.40.171
+      env:
+        NOKIA_SROS_SFM: sfm-2se 
+      components:
+        - slot: A
+          type: cpm-2se
+        - slot: 1
+          type: xcm-2se #
+          mda:
+            - slot: 1
+              type: x2-s36-800g-qsfpdd-18.0t
+          #xiom:
+          #  - slot: 1 # XIOM slot x1
+          #    type: x2-s36-800g-qsfpdd-6.0t # maps to NOKIA_SROS_XIOM_X1 env var
+          #    mda:  # mdas are nested *under* the XIOM
+          #      - slot: 1 # mda x1/1
+          #        type: m36-800g-qsfpdd # maps to NOKIA_SROS_MDA_X1_1 env var
+    ### SR-14s FP5
+    sr-14s:
+      kind: nokia_srsim
+      type: sr-14s
+      mgmt-ipv4: 172.40.40.181
+      env:
+        NOKIA_SROS_SFM: sfm2-s
+      components:
+        - slot: A
+          type: cpm2-s
+          sfm: sfm2-s
+        - slot: 1
+          type: xcm2-14s #
+          mda:
+            - slot: 1
+              type: x2-s36-800g-qsfpdd-18.0t 
+
+
+
+
