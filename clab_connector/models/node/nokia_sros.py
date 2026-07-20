@@ -66,6 +66,7 @@ class NokiaSROSNode(Node):
 
     # Map of node types to their line card, power, MDA and connector components
     SROS_COMPONENTS: ClassVar[dict[str, dict[str, dict[str, str] | int]]] = {
+        ### FP4 models
         "sr-1": {
             "lineCard": {"slot": "1", "type": "iom-1"},
             "mda": {"slot": "1-a", "type": "me12-100gb-qsfp28"},
@@ -86,21 +87,84 @@ class NokiaSROSNode(Node):
             "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
             "connectors": 36,
         },
-        ## TODO: It doesn't work for some reason
-        # "sr-7s": {
-        #     "lineCard": {"slot": "1", "type": "xcm2-7s"},
-        #     "fabric": {"slot": "1", "type": "sfm2-s"},
-        #     "powerShelf": [
-        #          {"slot": "1", "type": "ps-a10-shelf-dc"},
-        #          {"slot": "2", "type": "ps-a10-shelf-dc"},
-        #     ],
-        #     "powerModule": [
-        #        {"slot": "1-1,1,2", "type": "ps-a-dc-6000"},
-        #        {"slot": "1-3,1-4", "type": "ps-a-dc-6000"},
-        #     ],
-        #     "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
-        #     "connectors": 36,
+        "sr-7s": {  ### This is the FP4 only variant!! Does not support any FP5 related components
+            "lineCard": {"slot": "1", "type": "xcm-7s"},
+            "fabric": {"slot": "1", "type": "sfm-s"},
+            "powerShelf": [
+                {"slot": "1", "type": "ps-a10-shelf-dc"},
+                {"slot": "2", "type": "ps-a10-shelf-dc"},
+            ],
+            "powerModule": [
+                {"slot": "1-1,1-2", "type": "ps-a-dc-6000"},
+                {"slot": "1-3,1-4", "type": "ps-a-dc-6000"},
+            ],
+            "mda": {"slot": "1-a", "type": "s36-100gb-qsfp28"},
+            "connectors": 36,
+        },
+        ##### FP5 models - TODO
+        ### SR-1
+        # "sr-1x-48d": {
+        #    "lineCard": {"slot": "1", "type": "i48-800g-qsfpdd-1x"},
+        #    "mda": {"slot": "1-a", "type": "m48-800g-qsfpdd-1x"},
+        #    "connectors": 48,  # Number of connectors
         # },
+        # "sr-1-24d": {
+        #    "lineCard": {"slot": "1", "type": "i24-800g-qsfpdd-1"},
+        #    "mda": {"slot": "1-a", "type": "m24-800g-qsfpdd-1"},
+        #    "connectors": 24,  # Number of connectors
+        # },
+        # "sr-1-48d": {
+        #    "lineCard": {"slot": "1", "type": "i48-400g-qsfpdd-1"},
+        #    "mda": {"slot": "1-a", "type": "m48-400g-qsfpdd-1"},
+        #    "connectors": 48,  # Number of connectors
+        # },
+        # "sr-1-92s": {
+        #    "lineCard": {"slot": "1", "type": "i80-200g-sfpdd+12-400g-qsfpdd-1"},
+        #    "mda": {"slot": "1-a", "type": "m80-200g-sfpdd+12-400g-qsfpdd-1"},
+        #    "connectors": 92,  # Number of connectors
+        # },
+        # "sr-1-46s": {
+        #    "lineCard": {"slot": "1", "type": "i40-200g-sfpdd+6-800g-qsfpdd-1"},
+        #    "mda": {"slot": "1-a", "type": "m40-200g-sfpdd+6-800g-qsfpdd-1"},
+        #    "connectors": 46,  # Number of connectors
+        # },
+        # "sr-1x-92s": {
+        #    "lineCard": {"slot": "1", "type": "i80-200g-sfpdd+12-800g-qsfpdd-1x"},
+        #    "mda": {"slot": "1-a", "type": "m80-200g-sfpdd+12-800g-qsfpdd-1x"},
+        #    "connectors": 92,  # Number of connectors
+        # },
+        ### SR-1se
+        "sr-1se": {
+            "lineCard": {"slot": "1", "type": "imm36-800g-qsfpdd"},
+            "powerShelf": {"slot": "1", "type": "ps-a4-shelf-dc"},
+            "powerModule": {"slot": "1-1,1-2,1-3,1-4", "type": "ps-a-dc-6000"},
+            "mda": {"slot": "1-a", "type": "ms36-800g-qsfpdd"},
+            "connectors": 36,
+        },
+        ### SR-2se
+        "sr-2se": {
+            "lineCard": {"slot": "1", "type": "xcm-2se"},
+            "fabric": {"slot": "1", "type": "sfm-2se"},
+            "powerShelf": {"slot": "1", "type": "ps-a4-shelf-dc"},
+            "powerModule": {"slot": "1-1,1-2,1-3,1-4", "type": "ps-a-dc-6000"},
+            "mda": {"slot": "1-a", "type": "x2-s36-800g-qsfpdd-18.0t"},
+            "connectors": 36,
+        },
+        ### SR-14s
+        "sr-14s": {  ### This is the FP5 only variant!! Does not support any FP4 related components
+            "lineCard": {"slot": "1", "type": "xcm2-14s"},
+            "fabric": {"slot": "1", "type": "sfm2-s"},
+            "powerShelf": [
+                {"slot": "1", "type": "ps-a10-shelf-dc"},
+                {"slot": "2", "type": "ps-a10-shelf-dc"},
+            ],
+            "powerModule": [
+                {"slot": "1-1,1-2", "type": "ps-a-dc-6000"},
+                {"slot": "1-3,1-4", "type": "ps-a-dc-6000"},
+            ],
+            "mda": {"slot": "1-a", "type": "x2-s36-800g-qsfpdd-18.0t"},
+            "connectors": 36,
+        },
     }
 
     # Component kinds that accept a single dict or list of dicts (slot, type)
