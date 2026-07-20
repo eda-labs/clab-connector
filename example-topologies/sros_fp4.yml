@@ -1,0 +1,179 @@
+name: sros_fp4
+
+mgmt:
+  network: eda_mgmt
+  ipv4-subnet: 172.40.40.0/24
+
+topology:
+  kinds:
+    nokia_srlinux:
+      type: ixr-d3l
+      image: ghcr.io/nokia/srlinux:26.3.1
+      license: /opt/nokia/srl/srl_r25.10_license.key
+    linux:
+      image: ghcr.io/srl-labs/network-multitool
+    nokia_srsim:
+      type: sr-1-46s
+      image: registry.srlinux.dev/pub/nokia_srsim:26.3.R1
+      license: ${SROS_LIC_PATH:-/opt/nokia/sros/sr-sim_r25_license.key}
+
+  nodes:
+    ### DC A/100
+    dc-gw-101:
+      kind: nokia_srsim
+      type: sr-1
+      mgmt-ipv4: 172.40.40.101
+      license: /opt/nokia/sros/sr-sim_r25_license.key
+      #image: registry.srlinux.dev/pub/nokia_srsim:26.3.R1
+      #startup-config: configs/core/r1.partial.cfg
+    dc-gw-102:
+      kind: nokia_srsim
+      type: sr-1s
+      mgmt-ipv4: 172.40.40.102
+      license: /opt/nokia/sros/sr-sim_r25_license.key
+      #image: registry.srlinux.dev/pub/nokia_srsim:26.3.R1
+      #startup-config: configs/core/r2.partial.cfg
+
+      
+    spine-111:
+      kind: nokia_srlinux
+      type: ixr-d3l
+      mgmt-ipv4: 172.40.40.111
+      startup-config: config/all.partial.cfg
+    spine-112:
+      kind: nokia_srlinux
+      type: ixr-d3l
+      mgmt-ipv4: 172.40.40.112
+      startup-config: config/all.partial.cfg
+    leaf-121:
+      kind: nokia_srlinux
+      type: ixr-d3l
+      mgmt-ipv4: 172.40.40.121
+      startup-config: config/all.partial.cfg
+    leaf-122:
+      kind: nokia_srlinux
+      type: ixr-d3l
+      mgmt-ipv4: 172.40.40.122
+      startup-config: config/all.partial.cfg
+
+
+    ### DC B/200
+    dc-gw-201:
+      kind: nokia_srsim
+      type: sr-2s
+      license: /opt/nokia/sros/sr-sim_r25_license.key
+      env:
+        NOKIA_SROS_SFM: sfm-s 
+      components:
+        - slot: A
+          type: cpm-2s
+        - slot: 1
+      #image: ghcr.io/nokia/srlinux:25.10.3
+      mgmt-ipv4: 172.40.40.201
+      #startup-config: config/all.partial.cfg
+    # FP4 chassis
+    dc-gw-202:
+      kind: nokia_srsim
+      type: sr-7s
+      license: /opt/nokia/sros/sr-sim_r25_license.key
+      env:
+        NOKIA_SROS_SFM: sfm-s 
+      components:
+        - slot: A
+          sfm: sfm-s # FP4
+          type: cpm2-s
+        - slot: 1
+          type: xcm-7s # FP4
+          mda:
+            - slot: 1
+              type: s36-100gb-qsfp28 # FP4
+
+      #image: ghcr.io/nokia/srlinux:25.10.3
+      mgmt-ipv4: 172.40.40.202
+      #startup-config: config/all.partial.cfg
+    spine-211:
+      kind: nokia_srlinux
+      type: ixr-d3l
+      mgmt-ipv4: 172.40.40.211
+      startup-config: config/all.partial.cfg
+    leaf-221:
+      kind: nokia_srlinux
+      type: ixr-d3l
+      mgmt-ipv4: 172.40.40.221
+      startup-config: config/all.partial.cfg
+
+
+    ### CLIENTS ###
+    linux1:
+      kind: linux
+      exec:
+        - ip -6 address add 2002::192:168:51:1/96 dev eth1
+        - ip address add 192.168.51.1/24 dev eth1
+        - ip address add 192.168.52.1/24 dev eth2
+        - ip address add 192.168.53.1/24 dev eth3
+        - ip route add 192.168.63.0/24 via 192.168.53.254
+      mgmt-ipv4: 172.40.40.151
+      group: server
+    linux2:
+      kind: linux
+      exec:
+        - ip -6 address add 2002::192:168:51:2/96 dev eth1
+        - ip address add 192.168.51.2/24 dev eth1
+        - ip address add 192.168.52.2/24 dev eth2
+        - ip address add 192.168.63.2/24 dev eth3
+        - ip route add 192.168.53.0/24 via 192.168.63.254
+      mgmt-ipv4: 172.40.40.152
+      group: server
+    linux3:
+      kind: linux
+      exec:
+        - ip -6 address add 2002::192:168:51:2/96 dev eth1
+        - ip address add 192.168.51.3/24 dev eth1
+        - ip address add 192.168.52.3/24 dev eth2
+        - ip address add 192.168.63.3/24 dev eth3
+        - ip route add 192.168.53.0/24 via 192.168.63.254
+      mgmt-ipv4: 172.40.40.153
+      group: server
+
+  links:
+    # Interconnect DC-GWs
+    # dc-gw-101
+    - endpoints: ["dc-gw-101:1/1/c1/1", "dc-gw-102:1/1/c1/1"]
+    - endpoints: ["dc-gw-101:1/1/c2/1", "dc-gw-201:1/1/c2/1"]
+    - endpoints: ["dc-gw-101:1/1/c3/1", "spine-111:e1-1"]
+    - endpoints: ["dc-gw-101:1/1/c4/1", "spine-112:e1-2"]
+    # dc-gw-102
+    - endpoints: ["dc-gw-102:1/1/c2/1", "dc-gw-202:1/1/c2/1"]
+    - endpoints: ["dc-gw-102:1/1/c3/1", "spine-111:e1-2"]
+    - endpoints: ["dc-gw-102:1/1/c4/1", "spine-112:e1-1"]
+    # dc-gw-201
+    - endpoints: ["dc-gw-201:1/1/c1/1", "dc-gw-202:1/1/c1/1"]
+    - endpoints: ["dc-gw-201:1/1/c3/1", "spine-211:e1-1"]
+    # dc-gw-202
+    - endpoints: ["dc-gw-202:1/1/c3/1", "spine-211:e1-2"]
+
+
+    # DC A/100
+    # spine-111
+    - endpoints: ["spine-111:e1-3", "leaf-121:e1-1"]
+    - endpoints: ["spine-111:e1-4", "leaf-122:e1-2"]
+    # spine-112
+    - endpoints: ["spine-112:e1-3", "leaf-122:e1-1"]
+    - endpoints: ["spine-112:e1-4", "leaf-121:e1-2"]
+    # leaf-121
+    - endpoints: ["leaf-121:e1-3", "linux1:eth1"]
+    - endpoints: ["leaf-121:e1-4", "linux1:eth2"]
+    - endpoints: ["leaf-121:e1-5", "linux1:eth3"]
+    #- endpoints: ["leaf-122:e1-4", "linux1:eth2"]
+    - endpoints: ["leaf-122:e1-3", "linux2:eth1"]
+    - endpoints: ["leaf-122:e1-4", "linux2:eth2"]
+    - endpoints: ["leaf-122:e1-5", "linux2:eth3"]
+
+
+    # DC B/200
+    # spine-211
+    - endpoints: ["spine-211:e1-3", "leaf-221:e1-1"]
+    # leaf-221
+    - endpoints: ["leaf-221:e1-3", "linux3:eth1"]
+    - endpoints: ["leaf-221:e1-4", "linux3:eth2"]
+    - endpoints: ["leaf-221:e1-5", "linux3:eth3"]
