@@ -27,6 +27,15 @@ HTTP_OK = 200
 HTTP_NO_CONTENT = 204
 MAJOR_V1_THRESHOLD = 24
 
+# Oldest EDA release this connector targets. EDA 25.12 and earlier expose the
+# bootstrap/interfaces/aaa CRDs as v1alpha1 with a different schema, so the
+# manifests rendered here do not apply cleanly to them.
+MIN_SUPPORTED_EDA_VERSION = (26, 4)
+
+# Newest EDA release this connector has been validated against. Anything newer
+# is allowed but reported, since the CRD schemas may have moved on.
+MAX_TESTED_EDA_VERSION = (26, 8)
+
 logger = logging.getLogger(__name__)
 
 
@@ -281,7 +290,45 @@ class EDAClient:
         raw_ver = data["eda"]["version"]
         self.version = raw_ver.split("-")[0]
         logger.debug(f"EDA version: {self.version}")
+        self._warn_on_unsupported_version()
         return self.version
+
+    def get_version_parts(self) -> tuple[int, int]:
+        """
+        Return the connected EDA version as a (major, minor) tuple.
+
+        Unparseable components fall back to 0 so callers can keep using the
+        v2 API surface, which is the default for everything past 24.x.
+        """
+        version = self.get_version().lstrip("vV")
+        parts = version.split(".")
+        major = int(parts[0]) if parts and parts[0].isdigit() else 0
+        minor = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+        return (major, minor)
+
+    def _warn_on_unsupported_version(self) -> None:
+        """Log a warning when the connected EDA release is outside the tested range."""
+        version = self.version.lstrip("vV")
+        parts = version.split(".")
+        if not parts or not parts[0].isdigit():
+            return
+        major = int(parts[0])
+        minor = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+
+        if (major, minor) < MIN_SUPPORTED_EDA_VERSION:
+            min_str = ".".join(str(part) for part in MIN_SUPPORTED_EDA_VERSION)
+            logger.warning(
+                f"{SUBSTEP_INDENT}EDA {self.version} is older than the minimum "
+                f"supported release ({min_str}). Integration is likely to fail; "
+                "use clab-connector 0.8.11 for EDA 25.12 and earlier."
+            )
+        elif (major, minor) > MAX_TESTED_EDA_VERSION:
+            max_str = ".".join(str(part) for part in MAX_TESTED_EDA_VERSION)
+            logger.warning(
+                f"{SUBSTEP_INDENT}EDA {self.version} is newer than the latest "
+                f"tested release ({max_str}). Proceeding, but resource schemas "
+                "may have changed."
+            )
 
     def is_authenticated(self) -> bool:
         try:
@@ -333,14 +380,8 @@ class EDAClient:
         logger.debug("Validating transaction item")
 
         # Determine which validation endpoint to use based on the EDA version
-        version = self.get_version()
-        logger.debug(f"EDA version for validation: {version}")
-
-        if version.startswith("v"):
-            version = version[1:]
-
-        parts = version.split(".")
-        major = int(parts[0]) if parts[0].isdigit() else 0
+        major, _ = self.get_version_parts()
+        logger.debug(f"EDA version for validation: {self.version}")
 
         # v2 is the default. Only 24.x releases still use the v1 endpoint.
         if major == MAJOR_V1_THRESHOLD:
@@ -378,14 +419,8 @@ class EDAClient:
         result_type: str = "normal",
         retain: bool = True,
     ) -> str:
-        version = self.get_version()
-        logger.debug(f"EDA version for transaction: {version}")
-
-        if version.startswith("v"):
-            version = version[1:]
-
-        parts = version.split(".")
-        major = int(parts[0]) if parts[0].isdigit() else 0
+        major, _ = self.get_version_parts()
+        logger.debug(f"EDA version for transaction: {self.version}")
 
         payload = {
             "description": description,

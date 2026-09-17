@@ -130,6 +130,14 @@ class NokiaSRLinuxNode(Node):
             "https://github.com/nokia-eda/schema-profiles/"
             "releases/download/nokia-srl-26.3.1/srlinux-26.3.1-410.zip"
         ),
+        "26.7.1": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-srl-26.7.1/srlinux-26.7.1-554.zip"
+        ),
+        "26.7.2": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/nokia-srl-26.7.2/srlinux-26.7.2-519.zip"
+        ),
     }
 
     def get_default_node_type(self):
