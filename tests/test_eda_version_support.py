@@ -58,11 +58,41 @@ def test_warns_above_last_tested_version(caplog):
     assert "newer than the latest tested release" in caplog.text
 
 
-@pytest.mark.parametrize(
-    ("version", "build"),
-    [("26.7.1", "554"), ("26.7.2", "519")],
-)
-def test_srl_26_7_schema_profiles_are_registered(version, build):
+# Every SR Linux release published to nokia-eda/schema-profiles, with the build
+# number of its schema zip. Kept in sync with the releases of that repository.
+SCHEMA_PROFILE_BUILDS = {
+    "24.10.4": "244",
+    "24.10.5": "344",
+    "24.10.6": "209",
+    "24.10.7": "191",
+    "25.3.2": "312",
+    "25.3.3": "158",
+    "25.7.1": "187",
+    "25.7.2": "266",
+    "25.10.1": "399",
+    "25.10.2": "527",
+    "25.10.3": "449",
+    "25.10.4": "336",
+    "25.10.5": "111",
+    "26.3.1": "410",
+    "26.3.2": "426",
+    "26.3.3": "392",
+    "26.7.1": "554",
+    "26.7.2": "519",
+}
+
+# Older releases predate nokia-eda/schema-profiles and still live in the
+# srlinux-yang-models repository under a differently shaped tag.
+LEGACY_SCHEMA_PROFILES = {
+    "24.10.1": "v24.10.1/srlinux-24.10.1-492.zip",
+    "24.10.2": "v24.10.2/srlinux-24.10.2-357.zip",
+    "24.10.3": "v24.10.3/srlinux-24.10.3-201.zip",
+    "25.3.1": "v25.3.1/srlinux-25.3.1-149.zip",
+}
+
+
+@pytest.mark.parametrize(("version", "build"), sorted(SCHEMA_PROFILE_BUILDS.items()))
+def test_schema_profile_urls(version, build):
     url = NokiaSRLinuxNode.SUPPORTED_SCHEMA_PROFILES[version]
     assert url == (
         "https://github.com/nokia-eda/schema-profiles/"
@@ -70,8 +100,22 @@ def test_srl_26_7_schema_profiles_are_registered(version, build):
     )
 
 
-@pytest.mark.parametrize("version", ["26.7.1", "26.7.2"])
-def test_srl_26_7_artifact_info(version):
+@pytest.mark.parametrize(("version", "suffix"), sorted(LEGACY_SCHEMA_PROFILES.items()))
+def test_legacy_schema_profile_urls(version, suffix):
+    assert NokiaSRLinuxNode.SUPPORTED_SCHEMA_PROFILES[version] == (
+        f"https://github.com/nokia/srlinux-yang-models/releases/download/{suffix}"
+    )
+
+
+def test_no_unregistered_schema_profiles():
+    """Every registered version is accounted for by one of the maps above."""
+    assert set(NokiaSRLinuxNode.SUPPORTED_SCHEMA_PROFILES) == (
+        set(SCHEMA_PROFILE_BUILDS) | set(LEGACY_SCHEMA_PROFILES)
+    )
+
+
+@pytest.mark.parametrize("version", sorted(NokiaSRLinuxNode.SUPPORTED_SCHEMA_PROFILES))
+def test_artifact_info(version):
     node = NokiaSRLinuxNode(
         name="leaf1",
         kind="nokia_srlinux",
