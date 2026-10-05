@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import re
 import subprocess
 import tempfile
 import time
@@ -150,6 +151,17 @@ def transfer_file(
             return False
 
 
+def _wait_for_output(chan: paramiko.Channel, timeout: float) -> None:
+    """Block until the channel has data, raising if it closes or times out."""
+    deadline = time.monotonic() + timeout
+    while not chan.recv_ready():
+        if chan.closed or chan.exit_status_ready():
+            raise RuntimeError("SSH channel closed while waiting for output")
+        if time.monotonic() > deadline:
+            raise RuntimeError("Timeout reached while waiting for output!")
+        time.sleep(0.1)
+
+
 def execute_ssh_commands(
     script_path: Path,
     username: str,
@@ -203,8 +215,7 @@ def execute_ssh_commands(
 
             chan.send(cmd + "\n")
 
-            while not chan.recv_ready():
-                pass
+            _wait_for_output(chan, timeout)
 
             command_timeout = timeout
             while command_timeout > 0:
@@ -213,7 +224,8 @@ def execute_ssh_commands(
                     buffer += chan.recv(4096).decode()
                 output.append(buffer)
 
-                last_line = "".join(output).splitlines()[-1]
+                lines = "".join(output).splitlines()
+                last_line = lines[-1] if lines else ""
                 prompt_search_offset = (
                     prompt_termination_offset if prompt_termination_offset < 0 else -1
                 )
@@ -320,11 +332,32 @@ def _extract_cert_and_config(
     _extract_file(extract_cmd, cfg_p, "Startup-config", quiet)
 
 
+def _check_mgmt_interface(cfg_p: Path, node_name: str, mgmt_intf: str | None) -> bool:
+    """
+    Return False if the EDA init config targets a different management
+    interface than the node uses. Applying it would remove the management IP
+    and cut the node off the management network.
+    """
+    match = re.search(r"^interface (Management\S+)", cfg_p.read_text(), re.MULTILINE)
+    if not match or not mgmt_intf or match.group(1) == mgmt_intf:
+        return True
+    logger.error(
+        "%s: the EDA init config uses %s but the node's management interface is %s. "
+        "Map eth0 to %s with an EosIntfMapping.json bind in the containerlab "
+        "topology (see example-topologies/EDA-ceos.clab.yml), redeploy the lab "
+        "and integrate again.",
+        node_name,
+        match.group(1),
+        mgmt_intf,
+        match.group(1),
+    )
+    return False
+
+
 def _copy_files_and_config(
     dest_roots: tuple[str, str],
     cert_p: Path,
     key_p: Path,
-    postscript_p: Path,
     config_p: Path,
     username: str,
     mgmt_ip: str,
@@ -343,16 +376,6 @@ def _copy_files_and_config(
             logger.info(f"Config copied successfully to {root}startup-config")
         else:
             logger.warning(f"Failed to copy config to {root}startup-config")
-            continue
-
-        _build_post_script(postscript_p, root)
-        post_success = transfer_file(
-            postscript_p, root + "copy-certs.sh", username, mgmt_ip, working_pw, quiet
-        )
-        if post_success:
-            logger.info(f"Post script copied successfully to {root}copy-certs.sh")
-        else:
-            logger.warning(f"Failed to copy post script to {root}copy-certs.sh")
             continue
 
         cert_success = transfer_file(
@@ -386,35 +409,69 @@ def _build_enable_scp_script(script_p: Path) -> None:
         f.write("write\n")
 
 
-def _build_command_script(script_p: Path, dest_root: str) -> None:
+def _build_cert_script(script_p: Path, dest_root: str) -> None:
+    # Certificates must be installed before the config replace, as the SSH
+    # session does not survive it.
     with script_p.open("w") as f:
         f.write("enable\n")
-        f.write("configure replace startup-config ignore-errors\n")
         f.write(f"copy file:{dest_root}edaboot.crt certificate:\n")
         f.write(f"copy file:{dest_root}edaboot.key sslkey:\n")
-        f.write("configure terminal\n")
-        f.write("management api gnmi\n")
-        f.write("    transport grpc discovery\n")
-        f.write("    ssl profile edaboot\n")
-        f.write("management api gnmi\n")
-        f.write("    transport grpc mgmt\n")
-        f.write("    ssl profile EDA\n")
-        f.write("exit\n")
-        f.write("write\n")
 
 
-def _build_post_script(script_p: Path, dest_root: str) -> None:
-    with script_p.open("w") as f:
-        f.write("#!/usr/bin/Cli -p2\n")
-        f.write(f"copy file:{dest_root}edaboot.crt certificate:\n")
-        f.write(f"copy file:{dest_root}edaboot.key sslkey:\n")
-        f.write("configure terminal\n")
-        f.write("management api gnmi\n")
-        f.write("    transport grpc discovery\n")
-        f.write("    ssl profile edaboot\n")
-        f.write("management api gnmi\n")
-        f.write("    transport grpc mgmt\n")
-        f.write("    ssl profile EDA\n")
+def _replace_running_config(
+    username: str,
+    mgmt_ip: str,
+    node_name: str,
+    password: str,
+    timeout: float = 10.0,
+) -> bool:
+    """
+    Replace the running config with the EDA startup-config.
+
+    The EDA init config moves the management interface into the 'management'
+    VRF, which silently drops this SSH session, so a returning prompt is not
+    required. The replace completes on the device regardless of this session.
+    The startup-config already holds the EDA config, so no save is needed.
+    """
+    try:
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(
+            hostname=mgmt_ip,
+            username=username,
+            password=password,
+            allow_agent=False,
+            look_for_keys=False,
+        )
+        chan = client.invoke_shell()
+        chan.send("enable\n")
+        time.sleep(2)
+        while chan.recv_ready():
+            chan.recv(4096)
+
+        chan.send("configure replace startup-config ignore-errors\n")
+        output = ""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline and not chan.closed:
+            if chan.recv_ready():
+                output += chan.recv(4096).decode(errors="replace")
+                # Prompt is back: the replace finished without dropping the session
+                if output.rstrip().endswith("#") and "\n" in output.strip():
+                    break
+            else:
+                time.sleep(0.5)
+
+        logger.debug("Config replace output on %s: %s", node_name, escape(output))
+        if "% " in output:
+            logger.warning(
+                "Config replace on %s reported errors: %s", node_name, escape(output)
+            )
+        with contextlib.suppress(Exception):
+            client.close()
+        return True
+    except Exception as e:
+        logger.error("SSH exec error on %s: %s", node_name, e)
+        return False
 
 
 # --------------------------------------------------------------------------- #
@@ -428,6 +485,7 @@ def prepare_ceos_node(
     username: str = "admin",
     password: str | None = None,
     quiet: bool = True,
+    mgmt_intf: str | None = None,
 ) -> bool:
     """
     Perform EOS-specific post-integration steps.
@@ -450,14 +508,16 @@ def prepare_ceos_node(
         cert_p = tdir_path / "edaboot.crt"
         key_p = tdir_path / "edaboot.key"
         cfg_p = tdir_path / "startup-config"
-        post_p = tdir_path / "copy-certs.sh"
         prescript_p = tdir_path / "ceos_enable_scp.txt"
-        script_p = tdir_path / "ceos_integrate_commands.txt"
+        script_p = tdir_path / "ceos_install_certs.txt"
 
         try:
             _extract_cert_and_config(
                 node_name, namespace, version, cert_p, key_p, cfg_p, quiet
             )
+
+            if not _check_mgmt_interface(cfg_p, node_name, mgmt_intf):
+                return False
 
             _build_enable_scp_script(prescript_p)
 
@@ -470,7 +530,6 @@ def prepare_ceos_node(
                 ("/mnt/flash/", "/"),
                 cert_p,
                 key_p,
-                post_p,
                 cfg_p,
                 username,
                 mgmt_ip,
@@ -478,12 +537,16 @@ def prepare_ceos_node(
                 quiet,
             )
 
-            _build_command_script(script_p, dest_root)
+            _build_cert_script(script_p, dest_root)
 
-            logger.info("Pushing configuration to %s …", node_name)
-            return execute_ssh_commands(
+            logger.info("Installing certificates on %s …", node_name)
+            if not execute_ssh_commands(
                 script_p, username, mgmt_ip, node_name, working_pw, quiet
-            )
+            ):
+                raise RuntimeError("Unable to install certificates")
+
+            logger.info("Applying EDA startup-config on %s …", node_name)
+            return _replace_running_config(username, mgmt_ip, node_name, working_pw)
 
         except (
             subprocess.CalledProcessError,

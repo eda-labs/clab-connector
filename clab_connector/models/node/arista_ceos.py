@@ -26,14 +26,10 @@ class AristaCEOSNode(Node):
     # Mapping for EDA operating system
     EDA_OPERATING_SYSTEM: ClassVar[str] = "eos"
 
-    SUPPORTED_SCHEMA_PROFILES: ClassVar[dict[str, tuple[str, str]]] = {
-        "4.33.2f": (
-            "https://github.com/hellt/tmp/"
-            "releases/download/v0.0.1-test1/eos-4.33.2f-v1.zip"
-        ),
-        "4.34.2f": (
-            "https://github.com/hellt/tmp/"
-            "releases/download/v0.0.1-test1/eos-4.34.2f-v1.zip"
+    SUPPORTED_SCHEMA_PROFILES: ClassVar[dict[str, str]] = {
+        "4.36.2f": (
+            "https://github.com/nokia-eda/schema-profiles/"
+            "releases/download/arista-eos-4.36.2f/eos-4.36.2f-v3.zip"
         ),
     }
 

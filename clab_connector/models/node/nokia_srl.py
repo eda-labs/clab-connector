@@ -45,6 +45,7 @@ class NokiaSRLinuxNode(Node):
         mgmt_ipv4_prefix_length,
         labels: dict | None = None,
         container_image: str | None = None,
+        mgmt_intf: str | None = None,
     ):
         """Initialize a Nokia SR Linux node and check for deprecated type syntax."""
         super().__init__(
@@ -56,6 +57,7 @@ class NokiaSRLinuxNode(Node):
             mgmt_ipv4_prefix_length,
             labels=labels,
             container_image=container_image,
+            mgmt_intf=mgmt_intf,
         )
 
         # Check if using old syntax (without dash) and warn about deprecation

@@ -27,6 +27,8 @@ class Node:
         The management IPv4 address of the node.
     mgmt_ipv4_prefix_length : str
         The management IPv4 address prefix length of the node.
+    mgmt_intf : str, optional
+        The management interface name reported by containerlab (e.g. Management0).
     """
 
     def __init__(
@@ -39,6 +41,7 @@ class Node:
         mgmt_ipv4_prefix_length,
         labels: dict | None = None,
         container_image: str | None = None,
+        mgmt_intf: str | None = None,
     ):
         self.name = name
         self.kind = kind
@@ -46,6 +49,7 @@ class Node:
         self.version = version
         self.mgmt_ipv4 = mgmt_ipv4
         self.mgmt_ipv4_prefix_length = mgmt_ipv4_prefix_length
+        self.mgmt_intf = mgmt_intf
         self.container_image = container_image
         # Optional labels provided in the containerlab topology (sanitized for k8s)
         self.labels = labels or {}

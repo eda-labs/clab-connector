@@ -258,6 +258,7 @@ def _parse_nodes(nodes_data: dict) -> tuple[list[Node], dict[str, Node]]:
             "container_image": image,
             "mgmt_ipv4": node_data.get("mgmt-ipv4-address"),
             "mgmt_ipv4_prefix_length": node_data.get("mgmt-ipv4-prefix-length"),
+            "mgmt_intf": node_data.get("mgmt-intf"),
             "labels": labels,
         }
         node_obj = create_node(node_name, config) or Node(
