@@ -25,6 +25,7 @@ from clab_connector.utils.exceptions import EDAConnectionError
 
 HTTP_OK = 200
 HTTP_NO_CONTENT = 204
+HTTP_UNAUTHORIZED = 401
 MAJOR_V1_THRESHOLD = 24
 
 # Oldest EDA release this connector targets. EDA 25.12 and earlier expose the
@@ -260,26 +261,40 @@ class EDAClient:
             headers["Authorization"] = f"Bearer {self.access_token}"
         return headers
 
-    def get(self, api_path: str, requires_auth: bool = True):
+    def _request(
+        self,
+        method: str,
+        api_path: str,
+        body: bytes | None = None,
+        requires_auth: bool = True,
+    ):
         url = f"{self.url}/{api_path}"
-        logger.debug(f"GET {url}")
-        return self.http.request("GET", url, headers=self.get_headers(requires_auth))
+        logger.debug(f"{method} {url}")
+
+        def send():
+            headers = self.get_headers(requires_auth)
+            if body is not None:
+                headers["Content-Type"] = "application/json"
+            return self.http.request(method, url, headers=headers, body=body)
+
+        resp = send()
+        # Access tokens are short-lived (5 minutes by default), while an
+        # integration with post-integration steps can run much longer.
+        if requires_auth and resp.status == HTTP_UNAUTHORIZED:
+            logger.debug("Access token rejected; logging in again")
+            self.login()
+            resp = send()
+        return resp
+
+    def get(self, api_path: str, requires_auth: bool = True):
+        return self._request("GET", api_path, requires_auth=requires_auth)
 
     def post(self, api_path: str, payload: dict, requires_auth: bool = True):
-        url = f"{self.url}/{api_path}"
-        logger.debug(f"POST {url}")
         body = json.dumps(payload).encode("utf-8")
-        headers = self.get_headers(requires_auth)
-        headers["Content-Type"] = "application/json"
-        return self.http.request("POST", url, headers=headers, body=body)
+        return self._request("POST", api_path, body, requires_auth)
 
     def patch(self, api_path: str, payload: str, requires_auth: bool = True):
-        url = f"{self.url}/{api_path}"
-        logger.debug(f"PATCH {url}")
-        body = payload.encode("utf-8")
-        headers = self.get_headers(requires_auth)
-        headers["Content-Type"] = "application/json"
-        return self.http.request("PATCH", url, headers=headers, body=body)
+        return self._request("PATCH", api_path, payload.encode("utf-8"), requires_auth)
 
     def is_up(self) -> bool:
         logger.info(f"{SUBSTEP_INDENT}Checking EDA health")
@@ -433,7 +448,7 @@ class EDAClient:
 
         payload = {
             "description": description,
-            "dryrun": dryrun,
+            "dryRun": dryrun,
             "resultType": result_type,
             "retain": retain,
             "crs": self.transactions,
@@ -473,9 +488,41 @@ class EDAClient:
 
         details = json.loads(details_resp.data.decode("utf-8"))
         if "code" in details or details.get("success") is False:
+            errors = (
+                []
+                if major == MAJOR_V1_THRESHOLD
+                else self.get_transaction_errors(tx_id)
+            )
+            for error in errors:
+                logger.error(f"{SUBSTEP_INDENT}{error}")
             logger.error(f"Transaction commit failed: {details}")
-            raise EDAConnectionError(f"Transaction commit failed: {details}")
+            reason = "; ".join(errors) if errors else str(details)
+            raise EDAConnectionError(f"Transaction {tx_id} commit failed: {reason}")
 
         logger.info(f"{SUBSTEP_INDENT}Commit successful.")
         self.transactions = []
         return tx_id
+
+    def get_transaction_errors(self, tx_id) -> list[str]:
+        """
+        Collect the error messages of a v2 transaction.
+
+        The summary endpoint only reports success/failure; the reasons
+        (e.g. node config validation errors) live in the execution result.
+        """
+        resp = self.get(f"core/transaction/v2/result/execution/{tx_id}")
+        if resp.status != HTTP_OK:
+            logger.debug(
+                f"Could not fetch execution result for transaction {tx_id}: "
+                f"{resp.data.decode()}"
+            )
+            return []
+
+        data = json.loads(resp.data.decode("utf-8"))
+        errors = [str(e) for e in data.get("generalErrors") or []]
+        for node in data.get("nodesWithConfigChanges") or []:
+            errors += [f"{node.get('name')}: {e}" for e in node.get("errors") or []]
+        for intent in data.get("intentsRun") or []:
+            name = (intent.get("intentName") or {}).get("name")
+            errors += [f"{name}: {e}" for e in intent.get("errors") or []]
+        return errors

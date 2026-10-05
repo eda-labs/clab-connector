@@ -52,4 +52,5 @@ def create_node(name: str, config: dict) -> Node:
         mgmt_ipv4_prefix_length=config.get("mgmt_ipv4_prefix_length"),
         labels=config.get("labels"),
         container_image=config.get("container_image"),
+        mgmt_intf=config.get("mgmt_intf"),
     )

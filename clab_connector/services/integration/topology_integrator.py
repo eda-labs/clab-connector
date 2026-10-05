@@ -475,6 +475,7 @@ class TopologyIntegrator:
             username="admin",
             password=password,
             quiet=quiet,
+            mgmt_intf=node.mgmt_intf,
         )
 
     def run_post_integration(self):
