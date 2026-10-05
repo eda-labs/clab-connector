@@ -152,7 +152,7 @@ def complete_eda_url(
 
 @app.command(name="integrate", help="Integrate containerlab with EDA")
 @with_cli_lifecycle
-def integrate_cmd(  # noqa: PLR0913
+def integrate_cmd(  # noqa: PLR0913, PLR0917
     topology_data: Annotated[
         Path,
         typer.Option(
