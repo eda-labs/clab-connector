@@ -23,7 +23,9 @@ There are two primary methods to create and experiment with network functions pr
 > [!IMPORTANT]
 > **EDA Installation Mode:** This tool **requires EDA to be installed with `Simulate=False`**. Ensure that your EDA deployment is configured accordingly.
 >
-> **Hardware License:** A valid **`hardware license` for EDA version 26.4.1** is mandatory for using this connector tool.
+> **Hardware License:** A valid **`hardware license` for EDA version 26.8.1** is mandatory for using this connector tool.
+>
+> **Supported EDA Releases:** This connector targets **EDA 26.4 through 26.8**. Connecting to an EDA release outside that range logs a warning and may fail, because the bootstrap, interfaces and aaa CRD schemas differ.
 >
 > **EDA 25.12 Support:** `clab-connector` **0.8.11** was the last version supporting EDA 25.12. Newer connector versions target EDA 26.4 and later.
 >
@@ -35,7 +37,7 @@ Before running the Containerlab EDA Connector tool, ensure the following prerequ
 
 - **EDA Setup:**
   - Installed without simulation (`Simulate=False`).
-  - Contains a valid `hardware license` for version 26.4.1.
+  - Contains a valid `hardware license` for version 26.8.1.
 - **Network Connectivity:**
   - EDA nodes can ping the Containerlab's management IP.
 - **Containerlab:**

@@ -3,7 +3,7 @@ name: eda_tiny
 topology:
   kinds:
     nokia_srlinux:
-      image: ghcr.io/nokia/srlinux:25.3.1
+      image: ghcr.io/nokia/srlinux:26.7.2
   nodes:
     dut1:
       kind: nokia_srlinux
